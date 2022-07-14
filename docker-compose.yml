@@ -16,6 +16,10 @@ services:
     volumes:
       - .:/app
     working_dir: /app
+    environment:
+      DISCORD_BOT_TOKEN: '${DISCORD_BOT_TOKEN}'
+      DISCORD_BOT_PREFIX: '${DISCORD_BOT_PREFIX}'
+      PYTHONUNBUFFERED: '1'
     command:
       - bash
       - -c
