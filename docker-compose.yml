@@ -1,0 +1,22 @@
+version: '1'
+services:
+  lavalink:
+    image: jareddantis/cogcreators-lavalink:v1
+    ports:
+      - '2333:2333'
+    working_dir: /opt/app
+    command:
+      - bash
+      - -c
+      - "java -jar Lavalink.jar"
+  bot:
+    image: jareddantis/discord-bot-base:v1
+    depends_on:
+      - lavalink
+    volumes:
+      - .:/app
+    working_dir: /app
+    command:
+      - bash
+      - -c
+      - "python main.py"

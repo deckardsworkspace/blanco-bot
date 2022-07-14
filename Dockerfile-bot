@@ -1,0 +1,12 @@
+FROM python:slim
+
+# Copy bot sources to /app
+COPY . /app
+WORKDIR /app
+
+# Install requirements
+RUN pip install --upgrade -U pip
+RUN pip install --no-cache-dir -U -r requirements.txt
+
+# Run bot
+CMD ["bash", "-c", "python main.py"]
