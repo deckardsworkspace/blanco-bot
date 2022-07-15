@@ -1,7 +1,7 @@
 version: '1'
 services:
   lavalink:
-    image: jareddantis/cogcreators-lavalink:v1
+    image: jareddantis/cogcreators-lavalink:v2
     ports:
       - '2333:2333'
     working_dir: /opt/app
@@ -10,7 +10,7 @@ services:
       - -c
       - "java -jar Lavalink.jar"
   bot:
-    image: jareddantis/discord-bot-base:v1
+    image: jareddantis/discord-bot-base:v2
     depends_on:
       - lavalink
     volumes:
