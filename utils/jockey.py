@@ -1,7 +1,9 @@
 from collections import deque
+from dataclass.custom_embed import CustomEmbed
 from lavalink.events import *
 from lavalink.models import DefaultPlayer
-from nextcord.ext.commands import Context
+from nextcord import Interaction
+from nextcord.ext.commands import Bot, Context
 from .database import Database
 from .jockey_helpers import *
 from .lavalink import LavalinkVoiceClient
@@ -16,7 +18,8 @@ class Jockey:
     local instance of an in-memory database for fast queueing.
     """
 
-    def __init__(self, guild: int, db: Database, player: DefaultPlayer, spotify: Spotify):
+    def __init__(self, guild: int, db: Database, bot: Bot, player: DefaultPlayer, spotify: Spotify):
+        self._bot = bot
         self._guild = guild
         self._spotify = spotify
 
@@ -60,38 +63,34 @@ class Jockey:
             # Play next track in queue
             await self.skip(queue_end=True)
     
-    async def play(self, ctx: Context, query: str) -> bool:
+    async def play(self, itx: Interaction, query: str):
         # Get results for query
-        new_tracks = await parse_query(ctx, self._spotify, query)
+        new_tracks = await parse_query(itx, self._spotify, query)
         if len(new_tracks):
             # Connect to voice
             if not self.is_connected:
                 # Are we connected according to Discord?
-                for client in ctx.bot.voice_clients:
-                    if client.guild is ctx.guild:
+                for client in self._bot.voice_clients:
+                    if client.guild.id == self._guild:
                         # Remove old connection
                         await client.disconnect()
-                await ctx.author.voice.channel.connect(cls=LavalinkVoiceClient)
+                await itx.user.voice.channel.connect(cls=LavalinkVoiceClient)
 
             # Add new tracks to queue
             old_size = len(self._queue)
             self._queue.extend(new_tracks)
 
-            # Send embed
+            # Are we beginning a new queue?
             first = new_tracks[0]
             first_name = f'**{first.title}**\nby {first.artist}' if first.title is not None else query
-            embed = CustomEmbed(
-                color=Color.gold(),
-                title=':white_check_mark:｜Added to queue',
-                description=first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
-            )
-            await embed.send(ctx, as_reply=True)
-
-            # Are we beginning a new queue?
             if not self.is_playing:
                 # We are! Play the first track.
                 self._current = 0
-                return await lavalink_enqueue(ctx, self._player, new_tracks[0])
+                if not await lavalink_enqueue(self._player, new_tracks[0]):
+                    # Failed to enqueue
+                    self._queue.clear()
+                    self._current = -1
+                    return await itx.followup.send(embed=create_error_embed(f'Failed to enqueue {first_name}'))
             else:
                 # We are already playing from a queue.
                 # Update shuffle indices if applicable.
@@ -99,9 +98,14 @@ class Jockey:
                     # Append new indices to the end of the list
                     new_indices = [old_size + i for i in range(len(new_tracks))]
                     self._shuffle_indices.extend(new_indices)
-                return True
-        
-        return False
+
+            # Send embed
+            embed = CustomEmbed(
+                color=Color.gold(),
+                title=':white_check_mark:｜Added to queue',
+                description=first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
+            )
+            await itx.followup.send(embed=embed.get())
 
     async def skip(self, queue_end: bool = False):
         pass

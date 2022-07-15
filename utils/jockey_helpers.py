@@ -1,8 +1,7 @@
 from types import coroutine
 from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
-from nextcord import Color
-from nextcord.ext.commands import Context
+from nextcord import Color, Interaction
 from typing import Any
 from .exceptions import SpotifyInvalidURLError
 from .url_check import *
@@ -45,24 +44,24 @@ def manual_await(coro: coroutine) -> Any:
         return None
 
 
-async def parse_query(ctx: Context, spotify: Spotify, query: str) -> List[QueueItem]:
+async def parse_query(itx: Interaction, spotify: Spotify, query: str) -> List[QueueItem]:
     if check_url(query):
-        return await parse_query_url(ctx, spotify, query)
+        return await parse_query_url(itx, spotify, query)
 
     # Query is not a URL. Do a YouTube search for the query and choose the first result.
     result = get_youtube_matches(query, automatic=False)[0]
     return [QueueItem(
         title=result.title,
         artist=result.author,
-        requester=ctx.author.id,
+        requester=itx.user.id,
         url=result.url
     )]
 
 
-async def parse_query_url(ctx: Context, spotify: Spotify, query: str) -> List[QueueItem]:
+async def parse_query_url(itx: Interaction, spotify: Spotify, query: str) -> List[QueueItem]:
     if check_spotify_url(query):
         # Query is a Spotify URL.
-        return await parse_spotify_query(ctx, spotify, query)
+        return await parse_spotify_query(itx, spotify, query)
 
     if check_youtube_url(query):
         # Query is a YouTube URL.
@@ -72,7 +71,7 @@ async def parse_query_url(ctx: Context, spotify: Spotify, query: str) -> List[Qu
 
             # It is a playlist!
             # Let us get the playlist's tracks.
-            return await parse_youtube_playlist(ctx, playlist_id)
+            return await parse_youtube_playlist(itx, playlist_id)
         except YouTubeInvalidPlaylistError as e:
             # No tracks found
             embed = CustomEmbed(
@@ -80,7 +79,7 @@ async def parse_query_url(ctx: Context, spotify: Spotify, query: str) -> List[Qu
                 title=':x:｜Error enqueueing YouTube playlist',
                 description=e.message
             )
-            await embed.send(ctx, as_reply=True)
+            await itx.followup.send(embed=embed.get())
         except:
             pass
 
@@ -94,7 +93,7 @@ async def parse_query_url(ctx: Context, spotify: Spotify, query: str) -> List[Qu
             return [QueueItem(
                 title=video.title,
                 artist=video.author,
-                requester=ctx.author.id,
+                requester=itx.user.id,
                 url=video.url
             )]
         except YouTubeInvalidURLError:
@@ -103,7 +102,7 @@ async def parse_query_url(ctx: Context, spotify: Spotify, query: str) -> List[Qu
                 title=':x:｜Error enqueueing YouTube video',
                 description='The video has either been deleted, or made private, or never existed.'
             )
-            await embed.send(ctx, as_reply=True)
+            await itx.followup.send(embed=embed.get())
             return []
         except:
             embed = CustomEmbed(
@@ -111,17 +110,17 @@ async def parse_query_url(ctx: Context, spotify: Spotify, query: str) -> List[Qu
                 title=':x:｜YouTube URL is invalid',
                 description=f'Only YouTube video and playlist URLs are supported.'
             )
-            await embed.send(ctx)
+            await itx.followup.send(embed=embed.get())
             return []
 
     # Query is a non-Spotify URL.
     return [QueueItem(
-        requester=ctx.author.id,
+        requester=itx.user.id,
         url=query
     )]
 
 
-async def parse_spotify_query(ctx: Context, spotify: Spotify, query: str) -> List[QueueItem]:
+async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) -> List[QueueItem]:
     # Generally for Spotify tracks, we pick the YouTube result with
     # the same artist and title, and the closest duration to the Spotify track.
     try:
@@ -131,7 +130,8 @@ async def parse_spotify_query(ctx: Context, spotify: Spotify, query: str) -> Lis
             color=Color.red(),
             title=':x:｜Can only play tracks, albums, and playlists from Spotify.'
         )
-        return await embed.send(ctx, as_reply=True)
+        await itx.followup.send(embed=embed.get())
+        return []
     else:
         # Get artwork for Spotify track/album/playlist
         sp_art = ''
@@ -150,7 +150,7 @@ async def parse_spotify_query(ctx: Context, spotify: Spotify, query: str) -> Lis
 
     if len(track_queue) < 1:
         # No tracks.
-        return await ctx.reply(f'Spotify {sp_type} is empty.')
+        return await itx.followup.send(embed=embed.get())
 
     # At least one track.
     # Send embed if the list is longer than 1 track.
@@ -166,12 +166,12 @@ async def parse_spotify_query(ctx: Context, spotify: Spotify, query: str) -> Lis
             footer='This might take a while, please wait...',
             thumbnail_url=sp_art
         )
-        await embed.send(ctx)
+        await embed.send(itx.message.channel)
 
     for track in track_queue:
         track_name, track_artist, track_id, track_duration = track
         new_tracks.append(QueueItem(
-            requester=ctx.author.id,
+            requester=itx.user.id,
             title=track_name,
             artist=track_artist,
             spotify_id=track_id,
@@ -181,7 +181,7 @@ async def parse_spotify_query(ctx: Context, spotify: Spotify, query: str) -> Lis
     return new_tracks
 
 
-async def parse_youtube_playlist(ctx: Context, playlist_id: str) -> List[QueueItem]:
+async def parse_youtube_playlist(itx: Interaction, playlist_id: str) -> List[QueueItem]:
     # Get playlist tracks from YouTube
     new_tracks = []
     playlist_name, playlist_author, num_tracks = get_youtube_playlist_info(playlist_id)
@@ -202,12 +202,12 @@ async def parse_youtube_playlist(ctx: Context, playlist_id: str) -> List[QueueIt
             ],
             footer='This might take a while, please wait...'
         )
-        await embed.send(ctx)
+        await embed.send(itx.message.channel)
 
     tracks = get_youtube_playlist_tracks(playlist_id)
     for track in tracks:
         new_tracks.append(QueueItem(
-            requester=ctx.author.id,
+            requester=itx.user.id,
             title=track.title,
             artist=track.author,
             url=track.url

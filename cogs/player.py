@@ -1,6 +1,7 @@
-from discord.ext.commands import Cog, command, Context
 from lavalink import add_event_hook
 from lavalink.events import NodeConnectedEvent, NodeDisconnectedEvent
+from nextcord import Interaction, slash_command
+from nextcord.ext.commands import Cog
 from typing import get_args, Optional
 from utils.database import Database
 from utils.jockey import Jockey
@@ -13,8 +14,8 @@ from utils.spotify_client import Spotify
 
 class PlayerCog(Cog):
     def __init__(self, bot: LavalinkBot, db: Database):
-        self.bot = bot
-        self.db = db
+        self._bot = bot
+        self._db = db
         
         # Spotify client
         self.spotify_client = Spotify()
@@ -54,23 +55,24 @@ class PlayerCog(Cog):
         if guild not in self._jockeys:
             self._jockeys[guild] = Jockey(
                 guild=guild,
-                db=self.db,
-                player=self.bot.lavalink.player_manager.create(guild),
+                db=self._db,
+                bot=self._bot,
+                player=self._bot.lavalink.player_manager.create(guild),
                 spotify=self.spotify_client
             )
         
         return self._jockeys[guild]
 
-    @command(name='play', aliases=['p'])
-    async def play(self, ctx: Context, *, query: Optional[str] = None):
+    @slash_command(name='play', description='Play a song from a search query or a URL.')
+    async def play(self, interaction: Interaction, query: Optional[str] = None):
         """
         Play a song.
         """
-        async with ctx.typing():
-            # Throw error if no query was provided
-            if query == None:
-                return await ctx.reply(embed=create_error_embed('No query provided. To unpause, use the `unpause` command.'))
+        # Throw error if no query was provided
+        if query == None:
+            return await interaction.response.send_message(embed=create_error_embed('No query provided. To unpause, use the `unpause` command.'))
 
-            # Dispatch to jockey
-            jockey = self.get_jockey(ctx.guild.id)
-            await jockey.play(ctx, query)
+        # Dispatch to jockey
+        await interaction.response.defer()
+        jockey = self.get_jockey(interaction.guild_id)
+        await jockey.play(interaction, query)
