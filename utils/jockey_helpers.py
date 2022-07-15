@@ -11,6 +11,15 @@ from .youtube_client import *
 import asyncio
 
 
+def create_error_embed(message: str) -> CustomEmbed:
+    embed = CustomEmbed(
+        color=Color.red(),
+        title=':x:｜Error processing command',
+        description=message
+    )
+    return embed.get()
+
+
 def create_now_playing_embed(track: QueueItem) -> CustomEmbed:
     embed = CustomEmbed(
         title='Now playing',

@@ -26,10 +26,6 @@ async def on_message(message: Message):
     except Exception as e:
         await message.reply(f'Error while processing command: {e}')
 
-@client.event
-async def on_command_error(_: Context, error: DiscordException):
-    print(error)
-
 # Run client
 if __name__ == '__main__':
     print('Starting bot with prefix: {0}'.format(environ['DISCORD_BOT_PREFIX']))

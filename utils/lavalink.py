@@ -1,25 +1,13 @@
 from asyncio import sleep
 from nextcord import Client, StageChannel, VoiceChannel, VoiceClient
 from os import environ
+from lavalink import Client
 from typing import Union
 from yaml import safe_load
-import lavalink
 
 
-EventWithPlayer = Union[
-    lavalink.events.PlayerUpdateEvent,
-    lavalink.events.QueueEndEvent,
-    lavalink.events.TrackEndEvent,
-    lavalink.events.TrackExceptionEvent,
-    lavalink.events.TrackStuckEvent,
-    lavalink.events.TrackStartEvent,
-    lavalink.events.NodeChangedEvent,
-    lavalink.events.WebSocketClosedEvent
-]
-
-
-def init_lavalink(id: int) -> lavalink.Client: 
-    client = lavalink.Client(id)
+def init_lavalink(id: int) -> Client: 
+    client = Client(id)
 
     # Check that our inactivity timeout is valid
     inactivity_timeout = int(environ['INACTIVE_SEC'])

@@ -3,14 +3,20 @@ from lavalink import add_event_hook
 from typing import get_args, Optional
 from utils.database import Database
 from utils.jockey import Jockey
-from utils.lavalink import EventWithPlayer, init_lavalink
+from utils.jockey_helpers import create_error_embed
+from utils.lavalink import init_lavalink
+from utils.lavalink_helpers import EventWithPlayer
 from utils.lavalink_bot import LavalinkBot
+from utils.spotify_client import Spotify
 
 
 class PlayerCog(Cog):
     def __init__(self, bot: LavalinkBot, db: Database):
         self.bot = bot
         self.db = db
+        
+        # Spotify client
+        self.spotify_client = Spotify()
 
         # Jockey instances
         self._jockeys = {}
@@ -34,13 +40,33 @@ class PlayerCog(Cog):
         else:
             # Must be either a NodeConnectedEvent or a NodeDisconnectedEvent.
             print(event)
+    
+    def delete_jockey(self, guild: int):
+        if guild in self._jockeys:
+            del self._jockeys[guild]
+
+    def get_jockey(self, guild: int) -> Jockey:
+        # Create jockey for guild if it doesn't exist yet
+        if guild not in self._jockeys:
+            self._jockeys[guild] = Jockey(
+                guild=guild,
+                db=self.db,
+                player=self.bot.lavalink.player_manager.create(guild),
+                spotify=self.spotify_client
+            )
+        
+        return self._jockeys[guild]
 
     @command(name='play', aliases=['p'])
     async def play(self, ctx: Context, *, query: Optional[str] = None):
-        """Play a song"""
+        """
+        Play a song.
+        """
         async with ctx.typing():
-            guild_id = ctx.guild.id
-            # Create jockey for guild if it doesn't exist yet
-            if guild_id not in self._jockeys:
-                player = self.bot.lavalink.player_manager.create(guild_id)
-                self._jockeys[guild_id] = Jockey(guild_id, self.db, player, ctx.message.channel)
+            # Throw error if no query was provided
+            if query == None:
+                return await ctx.reply(embed=create_error_embed('No query provided. To unpause, use the `unpause` command.'))
+
+            # Dispatch to jockey
+            jockey = self.get_jockey(ctx.guild.id)
+            await jockey.play(ctx, query)
