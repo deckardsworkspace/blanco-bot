@@ -1,4 +1,5 @@
 version: '1'
+
 services:
   lavalink:
     image: jareddantis/cogcreators-lavalink:latest
@@ -7,15 +8,11 @@ services:
     volumes:
       - ./lavalink.yml:/opt/app/application.yml
   bot:
-    image: jareddantis/discord-bot-base:latest
+    image: blancobot
+    build:
+      context: .
+      dockerfile: ./Dockerfile
     depends_on:
       - lavalink
-    volumes:
-      - .:/app
-    working_dir: /app
     env_file:
       - .env
-    command:
-      - bash
-      - -c
-      - "pip install -r requirements.txt && PYTHONUNBUFFERED=1 python main.py"
