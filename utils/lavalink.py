@@ -6,6 +6,18 @@ from yaml import safe_load
 import lavalink
 
 
+EventWithPlayer = Union[
+    lavalink.events.PlayerUpdateEvent,
+    lavalink.events.QueueEndEvent,
+    lavalink.events.TrackEndEvent,
+    lavalink.events.TrackExceptionEvent,
+    lavalink.events.TrackStuckEvent,
+    lavalink.events.TrackStartEvent,
+    lavalink.events.NodeChangedEvent,
+    lavalink.events.WebSocketClosedEvent
+]
+
+
 def init_lavalink(id: int) -> lavalink.Client: 
     client = lavalink.Client(id)
 
