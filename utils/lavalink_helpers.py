@@ -35,14 +35,13 @@ async def lavalink_search(player: DefaultPlayer, queue_item: QueueItem):
         raise RuntimeError(f'Cannot process incomplete queue item {asdict(queue_item)}')
 
 
-async def lavalink_enqueue(ctx: Context, player: DefaultPlayer, query: QueueItem) -> bool:
+async def lavalink_enqueue(player: DefaultPlayer, query: QueueItem) -> bool:
     # Get the results for the query from Lavalink
     results = await lavalink_search(player, query)
 
     # Results could be None if Lavalink returns an invalid response (non-JSON/non-200 (OK)).
     # Alternatively, results['tracks'] could be an empty array if the query yielded no tracks.
     if not results or not results['tracks']:
-        await ctx.send(embed=create_error_embed(f'Nothing found for `{asdict(query)}`'))
         return False
 
     # Valid loadTypes are:
