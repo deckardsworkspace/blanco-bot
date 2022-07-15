@@ -39,7 +39,8 @@ class PlayerCog(Cog):
     async def play(self, ctx: Context, *, query: Optional[str] = None):
         """Play a song"""
         async with ctx.typing():
+            guild_id = ctx.guild.id
             # Create jockey for guild if it doesn't exist yet
-            if ctx.guild.id not in self._jockeys:
-                player = self.bot.lavalink.player_manager.create(ctx.guild.id)
-                self._jockeys[ctx.guild.id] = Jockey(self.bot, self.db, player, ctx.message.channel)
+            if guild_id not in self._jockeys:
+                player = self.bot.lavalink.player_manager.create(guild_id)
+                self._jockeys[guild_id] = Jockey(guild_id, self.db, player, ctx.message.channel)
