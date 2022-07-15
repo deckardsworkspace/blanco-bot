@@ -1,8 +1,11 @@
 from dataclass.youtube import YouTubeResult
 from typing import Dict, List, Tuple
+from urllib.parse import urlparse, parse_qs
 from youtubesearchpython import Playlist, Video, VideosSearch
-from .exceptions import YouTubeInvalidURLError
+from .exceptions import YouTubeInvalidURLError, YouTubeInvalidPlaylistError
 from .string import machine_readable_time
+from .url_check import check_youtube_url
+import re
 
 
 def parse_result(result: Dict) -> YouTubeResult:
@@ -73,3 +76,39 @@ def get_youtube_matches(query: str, desired_duration_ms: int = 0, num_results: i
             # results by distance to desired duration.
             results.sort(key=lambda x: abs(x.duration_ms - desired_duration_ms))
     return results
+
+
+def get_ytid_from_url(url, id_type: str = 'v') -> str:
+    # https://gist.github.com/kmonsoor/2a1afba4ee127cce50a0
+    if not check_youtube_url(url):
+        raise YouTubeInvalidURLError(url)
+
+    if url.startswith(('youtu', 'www')):
+        url = 'http://' + url
+
+    query = urlparse(url)
+    if 'youtube' in query.hostname:
+        if re.match(r"^/watch", query.path):
+            if len(query.query):
+                return parse_qs(query.query)[id_type][0]
+            return query.path.split("/")[2]
+        elif query.path.startswith(('/embed/', '/v/')):
+            return query.path.split('/')[2]
+    elif 'youtu.be' in query.hostname:
+        return query.path[1:]
+    
+    raise YouTubeInvalidURLError(url)
+
+
+def get_ytlistid_from_url(url: str) -> str:
+    if not check_youtube_url(url):
+        raise YouTubeInvalidPlaylistError(url)
+
+    if url.startswith(('youtu', 'www')):
+        url = 'http://' + url
+
+    query = urlparse(url)
+    if 'youtube' in query.hostname and len(query.query):
+        return parse_qs(query.query)['list'][0]
+    
+    raise YouTubeInvalidPlaylistError(url)
