@@ -14,7 +14,6 @@ services:
       - lavalink
     volumes:
       - .:/app
-    working_dir: /app
     env_file:
       - .env
     ports:
@@ -22,4 +21,4 @@ services:
     command:
       - bash
       - -c
-      - "pip install debugpy -t /tmp && pip install -r requirements.txt && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 main.py"
+      - "pip install debugpy -t /tmp && python3 /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 main.py"
