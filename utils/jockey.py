@@ -17,14 +17,14 @@ class Jockey:
         self._guild = guild
         self._channel = channel
 
+        # Database
+        self._db = db
+        self._db.init_guild(guild)
+
         # Player instance
         self._player = player
         player.set_volume(db.get_volume(guild))
         player.set_repeat(db.get_loop(guild))
-
-        # Database
-        self._db = db
-        self._db.init_guild(guild)
 
         # Queue
         self._queue = []
