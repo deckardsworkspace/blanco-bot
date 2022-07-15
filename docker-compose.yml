@@ -4,11 +4,8 @@ services:
     image: jareddantis/cogcreators-lavalink:latest
     ports:
       - '2333:2333'
-    working_dir: /opt/app
-    command:
-      - bash
-      - -c
-      - "java -jar Lavalink.jar"
+    volumes:
+      - ./lavalink.yml:/opt/app/application.yml
   bot:
     image: jareddantis/discord-bot-base:latest
     depends_on:
