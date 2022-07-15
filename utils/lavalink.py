@@ -23,9 +23,10 @@ def init_lavalink(id: int) -> lavalink.Client:
 
     # Add local node
     client.add_node(
-        host='127.0.0.1',
+        host='lavalink', # Docker container name
         port='2333',
         password=config['lavalink']['server']['password'],
+        region='us-central', # Local node, doesn't really matter what region it is
         resume_key='localhost',
         resume_timeout=inactivity_timeout,
         name='localhost'
