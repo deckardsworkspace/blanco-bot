@@ -12,5 +12,11 @@ services:
       dockerfile: ./Dockerfile
     depends_on:
       - lavalink
+    volumes:
+      - .:/app
     env_file:
       - .env
+    command:
+      - bash
+      - -c
+      - "python3 main.py"
