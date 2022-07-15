@@ -1,6 +1,9 @@
 from os import environ
 from typing import Dict, List, Tuple
+from urllib.parse import urlparse
 from .exceptions import SpotifyInvalidURLError
+from .url_check import check_spotify_url
+import re
 import spotipy
 
 
@@ -22,6 +25,24 @@ def extract_track_info(track_obj) -> Tuple[str, str, str, int]:
         track_obj['id'],
         int(track_obj['duration_ms'])
     )
+
+
+def parse_spotify_url(url: str, valid_types: list[str] = ["track", "album", "artist", "playlist"]) -> tuple[str, str]:
+    if not check_spotify_url(url):
+        raise SpotifyInvalidURLError(url)
+
+    parsed_path = []
+    if re.match(r"^https?://open\.spotify\.com", url):
+        # We are dealing with a link
+        parsed_url = urlparse(url)
+        parsed_path = parsed_url.path.split("/")[1:]
+    elif re.match(r"^spotify:[a-z]", url):
+        # We are dealing with a Spotify URI
+        parsed_path = url.split(":")[1:]
+    if len(parsed_path) < 2 or parsed_path[0] not in valid_types:
+        raise SpotifyInvalidURLError(url)
+
+    return parsed_path[0], parsed_path[1]
 
 
 class Spotify:
