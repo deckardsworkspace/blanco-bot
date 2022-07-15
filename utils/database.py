@@ -1,5 +1,4 @@
 import sqlite3 as sql
-from .constants import LOOP_DISABLED
 
 
 class Database:
@@ -12,11 +11,11 @@ class Database:
         self._cur = self._con.cursor()
 
         # Create table if it doesn't exist yet
-        self._cur.execute(f'''
+        self._cur.execute('''
             CREATE TABLE IF NOT EXISTS player_settings (
                 guild_id INTEGER PRIMARY KEY NOT NULL,
                 volume INTEGER NOT NULL DEFAULT 100,
-                loop INTEGER NOT NULL DEFAULT {LOOP_DISABLED},
+                loop INTEGER NOT NULL DEFAULT 0,
                 shuffle INTEGER NOT NULL DEFAULT 0
             )
         ''')
@@ -45,18 +44,18 @@ class Database:
         self._cur.execute(f'UPDATE player_settings SET volume = {volume} WHERE guild_id = {guild_id}')
         self._con.commit()
     
-    def get_loop(self, guild_id: int) -> int:
+    def get_loop(self, guild_id: int) -> bool:
         """
         Get the loop setting for a guild.
         """
         self._cur.execute(f'SELECT loop FROM player_settings WHERE guild_id = {guild_id}')
-        return self._cur.fetchone()[0]
+        return self._cur.fetchone()[0] == 1
     
-    def set_loop(self, guild_id: int, loop: int):
+    def set_loop(self, guild_id: int, loop: bool):
         """
         Set the loop setting for a guild.
         """
-        self._cur.execute(f'UPDATE player_settings SET loop = {loop} WHERE guild_id = {guild_id}')
+        self._cur.execute(f'UPDATE player_settings SET loop = {int(loop)} WHERE guild_id = {guild_id}')
         self._con.commit()
     
     def get_shuffle(self, guild_id: int) -> bool:
