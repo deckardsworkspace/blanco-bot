@@ -23,7 +23,7 @@ class Jockey:
 
         # Player instance
         self._player = player
-        player.set_volume(db.get_volume(guild))
+        manual_await(player.set_volume(db.get_volume(guild)))
         player.set_repeat(db.get_loop(guild))
 
         # Queue
@@ -33,6 +33,8 @@ class Jockey:
         # Shuffle indices
         self._shuffled = db.get_shuffle(guild)
         self._shuffle_indices = []
+
+        print(f'Created jockey for guild {guild}')
     
     async def handle_event(self, event: EventWithPlayer):
         """

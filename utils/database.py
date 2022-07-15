@@ -25,9 +25,9 @@ class Database:
     
     def init_guild(self, guild_id: int):
         """
-        Initialize a guild in the database.
+        Initialize a guild in the database if it hasn't been yet.
         """
-        self._cur.execute(f'INSERT INTO player_settings (guild_id) VALUES ({guild_id})')
+        self._cur.execute(f'INSERT OR IGNORE INTO player_settings (guild_id) VALUES ({guild_id})')
         self._con.commit()
     
     def get_volume(self, guild_id: int) -> int:
