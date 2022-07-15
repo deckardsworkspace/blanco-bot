@@ -1,5 +1,6 @@
 from discord.ext.commands import Cog, command, Context
 from lavalink import add_event_hook
+from lavalink.events import NodeConnectedEvent, NodeDisconnectedEvent
 from typing import get_args, Optional
 from utils.database import Database
 from utils.jockey import Jockey
@@ -39,7 +40,10 @@ class PlayerCog(Cog):
                 await self._jockeys[guild_id].handle_event(event)
         else:
             # Must be either a NodeConnectedEvent or a NodeDisconnectedEvent.
-            print(event)
+            if isinstance(event, NodeConnectedEvent):
+                print('Connected to Lavalink node.')
+            elif isinstance(event, NodeDisconnectedEvent):
+                print('Disconnected from Lavalink node.')
     
     def delete_jockey(self, guild: int):
         if guild in self._jockeys:
