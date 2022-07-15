@@ -3,8 +3,6 @@ version: '1'
 services:
   lavalink:
     image: jareddantis/cogcreators-lavalink:latest
-    ports:
-      - '2333:2333'
     volumes:
       - ./lavalink.yml:/opt/app/application.yml
   bot:
