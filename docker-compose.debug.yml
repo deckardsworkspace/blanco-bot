@@ -1,0 +1,27 @@
+version: '1'
+
+services:
+  lavalink:
+    image: jareddantis/cogcreators-lavalink:latest
+    ports:
+      - '2333:2333'
+    volumes:
+      - ./lavalink.yml:/opt/app/application.yml
+  bot:
+    image: blancobot
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    depends_on:
+      - lavalink
+    volumes:
+      - .:/app
+    working_dir: /app
+    env_file:
+      - .env
+    ports:
+      - 5678:5678
+    command:
+      - bash
+      - -c
+      - "pip install debugpy -t /tmp && pip install -r requirements.txt && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 main.py"
