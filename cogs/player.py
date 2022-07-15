@@ -13,7 +13,7 @@ class PlayerCog(Cog):
         self.db = db
 
         # Create Lavalink client instance
-        if not hasattr(bot, 'lavalink'):
+        if bot.lavalink == None:
             bot.lavalink = init_lavalink(bot.user.id)
 
         # Listen to Lavalink events
