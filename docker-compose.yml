@@ -13,11 +13,9 @@ services:
     volumes:
       - .:/app
     working_dir: /app
-    environment:
-      DISCORD_BOT_TOKEN: '${DISCORD_BOT_TOKEN}'
-      DISCORD_BOT_PREFIX: '${DISCORD_BOT_PREFIX}'
-      PYTHONUNBUFFERED: '1'
+    env_file:
+      - .env
     command:
       - bash
       - -c
-      - "pip install -r requirements.txt && python main.py"
+      - "pip install -r requirements.txt && PYTHONUNBUFFERED=1 python main.py"
