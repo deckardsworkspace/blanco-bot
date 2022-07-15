@@ -1,12 +1,13 @@
 from nextcord import DiscordException, Intents, Message
-from nextcord.ext.commands import Bot, Context
+from nextcord.ext.commands import Context
 from os import environ
+from utils.lavalink_bot import LavalinkBot
 
 
 # Create bot instance
 intents = Intents.default()
 intents.message_content = True
-client = Bot(command_prefix=environ['DISCORD_BOT_PREFIX'], intents=intents)
+client = LavalinkBot(command_prefix=environ['DISCORD_BOT_PREFIX'], intents=intents)
 
 # Event listeners
 @client.event
