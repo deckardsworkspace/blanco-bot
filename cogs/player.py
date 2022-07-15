@@ -1,6 +1,6 @@
 from lavalink import add_event_hook
 from lavalink.events import NodeConnectedEvent, NodeDisconnectedEvent
-from nextcord import Interaction, slash_command
+from nextcord import Interaction, slash_command, SlashOption
 from nextcord.ext.commands import Cog
 from typing import get_args, Optional
 from utils.database import Database
@@ -64,7 +64,7 @@ class PlayerCog(Cog):
         return self._jockeys[guild]
 
     @slash_command(name='play', description='Play a song from a search query or a URL.')
-    async def play(self, interaction: Interaction, query: Optional[str] = None):
+    async def play(self, interaction: Interaction, query: Optional[str] = SlashOption(description='Query string or URL', required=True)):
         """
         Play a song.
         """
