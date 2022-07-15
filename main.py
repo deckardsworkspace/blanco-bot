@@ -4,7 +4,7 @@ from utils.lavalink_bot import LavalinkBot
 
 
 # Create bot instance
-client = LavalinkBot(intents=Intents.none())
+client = LavalinkBot(intents=Intents.default())
 
 # Event listeners
 @client.event
