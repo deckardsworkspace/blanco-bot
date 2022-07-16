@@ -6,6 +6,7 @@ from nextcord import Interaction
 from nextcord.abc import Messageable
 from random import shuffle
 from typing import Optional
+from views.now_playing import NowPlayingView
 from .database import Database
 from .exceptions import EndOfQueueError
 from .jockey_helpers import *
@@ -86,7 +87,7 @@ class Jockey:
         if isinstance(event, TrackStartEvent):
             # Send now playing embed
             embed = create_now_playing_embed(self._player.current)
-            await self._channel.send(embed=embed)
+            await self._channel.send(embed=embed, view=NowPlayingView(self._bot, self._player))
         elif isinstance(event, QueueEndEvent):
             # Play next track in queue
             await self.skip()
