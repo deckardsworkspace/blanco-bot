@@ -1,4 +1,5 @@
 from asyncio import sleep
+from tabnanny import check
 from lavalink import add_event_hook
 from lavalink.events import NodeConnectedEvent, NodeDisconnectedEvent, Event as LavalinkEvent
 from nextcord import Interaction, Member, slash_command, SlashOption, VoiceState
@@ -132,6 +133,26 @@ class PlayerCog(Cog):
         elif channel is not None:
             await channel.send(embed=embed)
     
+    @slash_command(name='loop')
+    @application_checks.check(check_mutual_voice)
+    async def loop(self, itx: Interaction):
+        """
+        Loops the current track.
+        """
+        # Dispatch to jockey
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.toggle_loop(itx)
+    
+    @slash_command(name='loopall')
+    @application_checks.check(check_mutual_voice)
+    async def loopall(self, itx: Interaction):
+        """
+        Loops the whole queue.
+        """
+        # Dispatch to jockey
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.toggle_loop(itx, whole_queue=True)
+    
     @slash_command(name='nowplaying')
     @application_checks.check(check_mutual_voice)
     async def now_playing(self, itx: Interaction):
@@ -211,6 +232,26 @@ class PlayerCog(Cog):
         Stops the current song and disconnects from voice.
         """
         await self._disconnect(itx.guild_id, reason=f'Stopped by <@{itx.user.id}>', itx=itx)
+    
+    @slash_command(name='unloop')
+    @application_checks.check(check_mutual_voice)
+    async def unloop(self, itx: Interaction):
+        """
+        Stops looping the current track.
+        """
+        # Dispatch to jockey
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.toggle_loop(itx)
+    
+    @slash_command(name='unloopall')
+    @application_checks.check(check_mutual_voice)
+    async def unloopall(self, itx: Interaction):
+        """
+        Stops looping the whole queue.
+        """
+        # Dispatch to jockey
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.toggle_loop(itx, whole_queue=True)
     
     @slash_command(name='unpause')
     @application_checks.check(check_mutual_voice)

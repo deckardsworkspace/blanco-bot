@@ -41,6 +41,7 @@ class Jockey:
         # Queue
         self._queue = deque()
         self._current = -1
+        self._loop_whole = False
 
         # Shuffle indices
         self._shuffle_indices = []
@@ -52,7 +53,7 @@ class Jockey:
         return self._player.is_connected
     
     @property
-    def is_looping_all(self) -> bool:
+    def is_looping(self) -> bool:
         return self._player.repeat
     
     @property
@@ -195,7 +196,7 @@ class Jockey:
                             title=f':repeat:｜Looping back to the start',
                             description=[
                                 'Reached the end of the queue.',
-                                f'Use the `loop all` command to disable.'
+                                f'Use the `/unloopall` command to disable.'
                             ]
                         )
                         if itx is not None:
@@ -238,6 +239,20 @@ class Jockey:
             else:
                 embed = create_error_embed('Reached the start of the queue.')
                 await itx.followup.send(embed=embed)
+    
+    async def toggle_loop(self, itx: Interaction, whole_queue: bool = False):
+        if whole_queue:
+            self._loop_whole = not self._loop_whole
+            if self._loop_whole:
+                return await itx.response.send_message(embed=create_success_embed('Looping entire queue'))
+            else:
+                return await itx.response.send_message(embed=create_success_embed('Stopped looping entire queue'))
+        else:
+            self._player.set_repeat(repeat=not self._player.repeat)
+            if self._player.repeat:
+                return await itx.response.send_message(embed=create_success_embed('Looping current track'))
+            else:
+                return await itx.response.send_message(embed=create_success_embed('Stopped looping current track'))
     
     async def unpause(self, itx: Interaction):
         if self.is_paused:
