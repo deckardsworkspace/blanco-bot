@@ -1,7 +1,7 @@
 from types import coroutine
 from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
-from nextcord import Color, Interaction
+from nextcord import Color, Embed, Interaction
 from typing import Any
 from .exceptions import SpotifyInvalidURLError
 from .url_check import *
@@ -10,7 +10,7 @@ from .youtube_client import *
 import asyncio
 
 
-def create_error_embed(message: str) -> CustomEmbed:
+def create_error_embed(message: str) -> Embed:
     embed = CustomEmbed(
         color=Color.red(),
         title=':x:｜Error processing command',
@@ -19,7 +19,7 @@ def create_error_embed(message: str) -> CustomEmbed:
     return embed.get()
 
 
-def create_now_playing_embed(track: QueueItem) -> CustomEmbed:
+def create_now_playing_embed(track: QueueItem) -> Embed:
     embed = CustomEmbed(
         title='Now playing',
         description=[
