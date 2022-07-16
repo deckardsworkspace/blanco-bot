@@ -163,10 +163,10 @@ class Jockey:
                     if await lavalink_enqueue(self._player, track):
                         if itx is not None:
                             await self._player.skip()
+                            await itx.followup.send(embed=create_success_embed(f'Skipped to {"next" if forward else "previous"} track'))
 
                         # Save new queue index
                         self._current = next_i
-                        await itx.followup.send(embed=create_success_embed(f'Skipped to {"next" if forward else "previous"} track'))
                         return
                 except Exception as e:
                     embed = create_error_embed(f'Unable to play track: {track}. Reason: {e}')
