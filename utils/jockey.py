@@ -54,6 +54,10 @@ class Jockey:
         return self._player.repeat
     
     @property
+    def is_paused(self) -> bool:
+        return self._player.paused
+    
+    @property
     def is_playing(self) -> bool:
         return self._player is not None and (self._player.is_playing or self._player.paused)
     
@@ -85,6 +89,13 @@ class Jockey:
         elif isinstance(event, QueueEndEvent):
             # Play next track in queue
             await self.skip()
+    
+    async def pause(self, itx: Interaction):
+        if not self.is_paused:
+            await self._player.set_pause(pause=True)
+            await itx.followup.send(embed=create_success_embed('Paused'))
+        else:
+            await itx.followup.send(embed=create_error_embed('Nothing to pause'))
     
     async def play(self, itx: Interaction, query: str):
         # Get results for query
@@ -185,3 +196,10 @@ class Jockey:
             else:
                 embed = create_error_embed('Reached the start of the queue.')
                 await itx.followup.send(embed=embed)
+    
+    async def unpause(self, itx: Interaction):
+        if self.is_paused:
+            await self._player.set_pause(pause=False)
+            await itx.followup.send(embed=create_success_embed('Resumed'))
+        else:
+            await itx.followup.send(embed=create_error_embed('Nothing to resume'))

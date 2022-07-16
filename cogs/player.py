@@ -131,12 +131,24 @@ class PlayerCog(Cog):
             await itx.response.send_message(embed=embed)
         elif channel is not None:
             await channel.send(embed=embed)
+    
+    @slash_command(name='pause')
+    @application_checks.check(check_mutual_voice)
+    async def pause(self, itx: Interaction):
+        """
+        Pauses the current track.
+        """
+        # Dispatch to jockey
+        await itx.response.defer(ephemeral=True)
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.pause(itx)
 
     @slash_command(name='play')
     @application_checks.check(check_mutual_voice)
     async def play(self, itx: Interaction, query: Optional[str] = SlashOption(description='Query string or URL', required=True)):
         """
         Play a song from a search query or a URL.
+        If you want to unpause a paused player, use /unpause instead.
         """
         # Dispatch to jockey
         await itx.response.defer()
@@ -176,3 +188,14 @@ class PlayerCog(Cog):
         Stops the current song and disconnects from voice.
         """
         await self._disconnect(itx.guild_id, reason=f'Stopped by <@{itx.user.id}>', itx=itx)
+    
+    @slash_command(name='unpause')
+    @application_checks.check(check_mutual_voice)
+    async def unpause(self, itx: Interaction):
+        """
+        Unpauses the current track.
+        """
+        # Dispatch to jockey
+        await itx.response.defer(ephemeral=True)
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.unpause(itx)
