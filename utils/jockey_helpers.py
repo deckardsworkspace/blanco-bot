@@ -20,6 +20,15 @@ def create_error_embed(message: str) -> Embed:
     return embed.get()
 
 
+def create_success_embed(message: str) -> Embed:
+    embed = CustomEmbed(
+        color=Color.green(),
+        title=':white_check_mark:｜Success',
+        description=message
+    )
+    return embed.get()
+
+
 def create_now_playing_embed(track: AudioTrack) -> Embed:
     embed = CustomEmbed(
         title='Now playing',

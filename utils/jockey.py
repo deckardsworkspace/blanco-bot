@@ -61,10 +61,18 @@ class Jockey:
     def is_shuffling(self) -> bool:
         return len(self._shuffle_indices) > 0
 
-    async def destroy(self):
+    async def destroy(self) -> Messageable:
         # Disconnect Lavalink
         await self._player.stop()
+
+        # Disconnect from the voice channel
+        vc = self._bot.get_guild(self._guild).voice_client
+        if hasattr(vc, 'disconnect'):
+            await vc.disconnect(force=True)
         await self._bot.lavalink.player_manager.destroy(self._guild)
+
+        # Return channel for sending disconnection message
+        return self._channel
     
     async def handle_event(self, event: EventWithPlayer):
         """
@@ -115,12 +123,8 @@ class Jockey:
                     self._shuffle_indices.extend(new_indices)
 
             # Send embed
-            embed = CustomEmbed(
-                color=Color.gold(),
-                title=':white_check_mark:｜Added to queue',
-                description=first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
-            )
-            await itx.followup.send(embed=embed.get())
+            item_name = first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
+            await itx.followup.send(embed=create_success_embed(f'Added {item_name} to queue'))
 
     async def skip(self, itx: Optional[Interaction] = None, forward: bool = True):
         # Queue up the next valid track, if any
@@ -162,6 +166,8 @@ class Jockey:
 
                         # Save new queue index
                         self._current = next_i
+                        await itx.followup.send(embed=create_success_embed('Skipped to next track'))
+                        return
                 except Exception as e:
                     embed = create_error_embed(f'Unable to play track: {track}. Reason: {e}')
                     if itx is not None:
@@ -174,6 +180,7 @@ class Jockey:
         if itx is not None:
             if forward:
                 # Have PlayerCog disconnect us from voice.
+                await itx.followup.send(embed=create_success_embed('Skipped to the end'))
                 raise EndOfQueueError
             else:
                 embed = create_error_embed('Reached the start of the queue.')

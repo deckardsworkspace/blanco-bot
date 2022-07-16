@@ -6,10 +6,11 @@ from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
 from os import environ
-from typing import get_args, Optional
+from typing import Dict, get_args, Optional
+from dataclass.custom_embed import CustomEmbed
 from utils.database import Database
+from utils.exceptions import EndOfQueueError
 from utils.jockey import Jockey
-from utils.jockey_helpers import create_error_embed
 from utils.lavalink import init_lavalink
 from utils.lavalink_bot import LavalinkBot
 from utils.lavalink_helpers import EventWithPlayer
@@ -27,7 +28,7 @@ class PlayerCog(Cog):
         self.spotify_client = Spotify()
 
         # Jockey instances
-        self._jockeys = {}
+        self._jockeys: Dict[int, Jockey] = {}
 
         # Create Lavalink client instance
         if bot.lavalink == None:
@@ -91,10 +92,13 @@ class PlayerCog(Cog):
             if guild_id in self._jockeys.keys():
                 await self._jockeys[guild_id].handle_event(event)
     
-    async def delete_jockey(self, guild: int):
+    async def delete_jockey(self, guild: int) -> Optional[Messageable]:
+        channel = None
         if guild in self._jockeys:
-            await self._jockeys[guild].destroy()
+            channel = await self._jockeys[guild].destroy()
             del self._jockeys[guild]
+        
+        return channel
 
     def get_jockey(self, guild: int, channel: Optional[Messageable] = None) -> Jockey:
         # Create jockey for guild if it doesn't exist yet
@@ -115,17 +119,38 @@ class PlayerCog(Cog):
         return self._jockeys[guild]
     
     async def _disconnect(self, guild_id: int, reason: Optional[str] = None):
-        await self.delete_jockey(guild_id)
+        # Destroy jockey and player instances
+        channel = await self.delete_jockey(guild_id)
 
-    @slash_command(name='play', description='Play a song from a search query or a URL.')
-    @application_checks.check(check_user_voice)
+        # Send disconnection message
+        if channel is not None:
+            await channel.send(embed=CustomEmbed(
+                title=':wave:｜Disconnected from voice',
+                description=reason
+            ).get())
+
+    @slash_command(name='play')
+    @application_checks.check(check_mutual_voice)
     async def play(self, itx: Interaction, query: Optional[str] = SlashOption(description='Query string or URL', required=True)):
         """
-        Play a song.
+        Play a song from a search query or a URL.
         """
-        # Check that the user is in a voice channel
-        if check_mutual_voice(itx):
-            # Dispatch to jockey
-            await itx.response.defer()
-            jockey = self.get_jockey(itx.guild_id, itx.channel)
-            await jockey.play(itx, query)
+        # Dispatch to jockey
+        await itx.response.defer()
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.play(itx, query)
+    
+    @slash_command(name='skip')
+    @application_checks.check(check_mutual_voice)
+    async def skip(self, itx: Interaction):
+        """
+        Skip the current song.
+        """
+        # Dispatch to jockey
+        await itx.response.defer(ephemeral=True)
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        try:
+            await jockey.skip(itx)
+        except EndOfQueueError:
+            # Disconnect from voice
+            await self._disconnect(itx.guild_id, reason='Reached the end of the queue')
