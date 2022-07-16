@@ -1,5 +1,4 @@
 from asyncio import sleep
-from tabnanny import check
 from lavalink import add_event_hook
 from lavalink.events import NodeConnectedEvent, NodeDisconnectedEvent, Event as LavalinkEvent
 from nextcord import Interaction, Member, slash_command, SlashOption, VoiceState
