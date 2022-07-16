@@ -166,6 +166,18 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.skip(itx, forward=False)
     
+    @slash_command(name='shuffle')
+    @application_checks.check(check_mutual_voice)
+    async def shuffle(self, itx: Interaction):
+        """
+        Shuffle the current playlist.
+        If you want to unshuffle the current queue, use /unshuffle instead.
+        """
+        # Dispatch to jockey
+        await itx.response.defer()
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.shuffle(itx)
+    
     @slash_command(name='skip')
     @application_checks.check(check_mutual_voice)
     async def skip(self, itx: Interaction):
@@ -199,3 +211,14 @@ class PlayerCog(Cog):
         await itx.response.defer(ephemeral=True)
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.unpause(itx)
+
+    @slash_command(name='unshuffle')
+    @application_checks.check(check_mutual_voice)
+    async def unshuffle(self, itx: Interaction):
+        """
+        Unshuffle the current playlist.
+        """
+        # Dispatch to jockey
+        await itx.response.defer()
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.unshuffle(itx)

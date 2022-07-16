@@ -4,6 +4,7 @@ from lavalink.events import *
 from lavalink.models import DefaultPlayer
 from nextcord import Interaction
 from nextcord.abc import Messageable
+from random import shuffle
 from typing import Optional
 from .database import Database
 from .exceptions import EndOfQueueError
@@ -137,6 +138,26 @@ class Jockey:
             item_name = first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
             await itx.followup.send(embed=create_success_embed(f'Added {item_name} to queue'))
 
+    async def shuffle(self, itx: Interaction):
+        if not len(self._queue):
+            return await itx.followup.send(embed=create_error_embed('Queue is empty, nothing to shuffle'))
+        
+        # Are we already shuffling?
+        action = 'reshuffled' if self.is_shuffling else 'shuffled'
+
+        # Shuffle indices
+        indices = [i for i in range(len(self._queue)) if i != self._current]
+        shuffle(indices)
+
+        # Put current track at the start of the list
+        indices.insert(0, self._current)
+
+        # Save shuffled indices
+        self._shuffle_indices = indices
+
+        # Send reply
+        return await itx.followup.send(embed=create_success_embed(f'{len(self._queue)} tracks {action}'))
+
     async def skip(self, itx: Optional[Interaction] = None, forward: bool = True):
         # Queue up the next valid track, if any
         if isinstance(self._current, int):
@@ -177,7 +198,7 @@ class Jockey:
                             await itx.followup.send(embed=create_success_embed(f'Skipped to {"next" if forward else "previous"} track'))
 
                         # Save new queue index
-                        self._current = next_i
+                        self._current = track_index
                         return
                 except Exception as e:
                     embed = create_error_embed(f'Unable to play track: {track}. Reason: {e}')
@@ -203,3 +224,10 @@ class Jockey:
             await itx.followup.send(embed=create_success_embed('Resumed'))
         else:
             await itx.followup.send(embed=create_error_embed('Nothing to resume'))
+    
+    async def unshuffle(self, itx: Interaction):
+        if self.is_shuffling:
+            self._shuffle_indices = []
+            await itx.followup.send(embed=create_success_embed('Unshuffled'))
+        else:
+            await itx.followup.send(embed=create_error_embed('Current queue is not shuffled'))
