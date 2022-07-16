@@ -118,16 +118,19 @@ class PlayerCog(Cog):
 
         return self._jockeys[guild]
     
-    async def _disconnect(self, guild_id: int, reason: Optional[str] = None):
+    async def _disconnect(self, guild_id: int, reason: Optional[str] = None, itx: Optional[Interaction] = None):
         # Destroy jockey and player instances
         channel = await self.delete_jockey(guild_id)
 
         # Send disconnection message
-        if channel is not None:
-            await channel.send(embed=CustomEmbed(
-                title=':wave:｜Disconnected from voice',
-                description=reason
-            ).get())
+        embed = CustomEmbed(
+            title=':wave:｜Disconnected from voice',
+            description=reason
+        ).get()
+        if itx is not None:
+            await itx.response.send_message(embed=embed)
+        elif channel is not None:
+            await channel.send(embed=embed)
 
     @slash_command(name='play')
     @application_checks.check(check_mutual_voice)
@@ -165,3 +168,11 @@ class PlayerCog(Cog):
         except EndOfQueueError:
             # Disconnect from voice
             await self._disconnect(itx.guild_id, reason='Reached the end of the queue')
+    
+    @slash_command(name='stop')
+    @application_checks.check(check_mutual_voice)
+    async def stop(self, itx: Interaction):
+        """
+        Stops the current song and disconnects from voice.
+        """
+        await self._disconnect(itx.guild_id, reason=f'Stopped by <@{itx.user.id}>', itx=itx)
