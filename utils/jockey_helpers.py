@@ -33,7 +33,7 @@ def create_now_playing_embed(track: AudioTrack) -> Embed:
     embed = CustomEmbed(
         title='Now playing',
         description=[
-            f'**{track.title}**',
+            f'[**{track.title}**]({track.uri})',
             f'by {track.author}'
         ],
         color=Color.teal(),
