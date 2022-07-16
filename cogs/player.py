@@ -1,7 +1,11 @@
+from asyncio import sleep
 from lavalink import add_event_hook
 from lavalink.events import NodeConnectedEvent, NodeDisconnectedEvent
-from nextcord import Interaction, slash_command, SlashOption
+from nextcord import Interaction, Member, slash_command, SlashOption, VoiceState
+from nextcord.abc import Messageable
+from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
+from os import environ
 from typing import get_args, Optional
 from utils.database import Database
 from utils.jockey import Jockey
@@ -9,7 +13,9 @@ from utils.jockey_helpers import create_error_embed
 from utils.lavalink import init_lavalink
 from utils.lavalink_helpers import EventWithPlayer
 from utils.lavalink_bot import LavalinkBot
+from utils.player_checks import *
 from utils.spotify_client import Spotify
+from utils.string import human_readable_time
 
 
 class PlayerCog(Cog):
@@ -32,7 +38,47 @@ class PlayerCog(Cog):
 
         print(f'Loaded cog: {self.__class__.__name__}')
     
-    from .player_listeners import cog_before_invoke, cog_unload, on_voice_state_update
+    def cog_unload(self):
+        """
+        Cog unload handler.
+        This removes any event hooks that were registered.
+        """
+        self._bot.lavalink._event_hooks.clear()
+    
+    @Cog.listener()
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+        # Stop playing if we're left alone
+        voice_client = member.guild.voice_client
+        if voice_client is not None and len(voice_client.channel.members) == 1 and after.channel is None:
+            # Get the player for this guild from cache
+            guild_id = voice_client.guild.id
+            player = self.bot.lavalink.player_manager.get(guild_id)
+            return await self._disconnect(guild_id, reason='You left me alone :(')
+
+        # Only handle join events by this bot
+        if before.channel is None and after.channel is not None and member.id == self._bot.user.id:
+            # Get the player for this guild from cache
+            guild_id = after.channel.guild.id
+            player = self._bot.lavalink.player_manager.get(guild_id)
+
+            # Inactivity check
+            time = 0
+            inactive_sec = int(environ['INACTIVE_SEC'])
+            inactive_h, inactive_m, inactive_s = human_readable_time(inactive_sec * 1000)
+            inactive_h = f'{inactive_h}h ' if inactive_h else ''
+            inactive_m = f'{inactive_m}m ' if inactive_m else ''
+            inactive_s = f'{inactive_s}s' if inactive_s else ''
+            while True:
+                await sleep(1)
+                time = time + 1
+
+                if player is not None:
+                    if player.is_playing and not player.paused:
+                        time = 0
+                    if time == inactive_sec:
+                        await self._disconnect(guild_id, reason=f'Inactive for {inactive_h}{inactive_m}{inactive_s}')
+                    if not player.is_connected:
+                        break
     
     async def on_lavalink_event(self, event: EventWithPlayer):
         # Does the event have a player attribute?
@@ -48,33 +94,45 @@ class PlayerCog(Cog):
             elif isinstance(event, NodeDisconnectedEvent):
                 print('Disconnected from Lavalink node.')
     
-    def delete_jockey(self, guild: int):
+    async def delete_jockey(self, guild: int):
         if guild in self._jockeys:
+            await self._jockeys[guild].destroy()
             del self._jockeys[guild]
 
-    def get_jockey(self, guild: int) -> Jockey:
+    def get_jockey(self, guild: int, channel: Optional[Messageable] = None) -> Jockey:
         # Create jockey for guild if it doesn't exist yet
         if guild not in self._jockeys:
+            # Ensure that we have a valid channel
+            if channel is None:
+                raise RuntimeError('No channel provided for jockey creation.')
+
             self._jockeys[guild] = Jockey(
                 guild=guild,
                 db=self._db,
                 bot=self._bot,
                 player=self._bot.lavalink.player_manager.create(guild),
-                spotify=self.spotify_client
+                spotify=self.spotify_client,
+                channel=channel
             )
-        
+
         return self._jockeys[guild]
+    
+    async def _disconnect(self, guild_id: int, reason: Optional[str] = None):
+        await self.delete_jockey(guild_id)
 
     @slash_command(name='play', description='Play a song from a search query or a URL.')
-    async def play(self, interaction: Interaction, query: Optional[str] = SlashOption(description='Query string or URL', required=True)):
+    @application_checks.check(check_user_voice)
+    async def play(self, itx: Interaction, query: Optional[str] = SlashOption(description='Query string or URL', required=True)):
         """
         Play a song.
         """
         # Throw error if no query was provided
         if query == None:
-            return await interaction.response.send_message(embed=create_error_embed('No query provided. To unpause, use the `unpause` command.'))
+            return await itx.response.send_message(embed=create_error_embed('No query provided. To unpause, use the `unpause` command.'))
 
-        # Dispatch to jockey
-        await interaction.response.defer()
-        jockey = self.get_jockey(interaction.guild_id)
-        await jockey.play(interaction, query)
+        # Check that the user is in a voice channel
+        if check_mutual_voice(itx):
+            # Dispatch to jockey
+            await itx.response.defer()
+            jockey = self.get_jockey(itx.guild_id, itx.channel)
+            await jockey.play(itx, query)

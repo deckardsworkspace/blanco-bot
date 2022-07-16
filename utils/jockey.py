@@ -3,10 +3,11 @@ from dataclass.custom_embed import CustomEmbed
 from lavalink.events import *
 from lavalink.models import DefaultPlayer
 from nextcord import Interaction
-from nextcord.ext.commands import Bot, Context
+from nextcord.abc import Messageable
 from .database import Database
 from .jockey_helpers import *
 from .lavalink import LavalinkVoiceClient
+from .lavalink_bot import LavalinkBot
 from .lavalink_helpers import EventWithPlayer, lavalink_enqueue
 from .spotify_client import Spotify
 
@@ -18,10 +19,11 @@ class Jockey:
     local instance of an in-memory database for fast queueing.
     """
 
-    def __init__(self, guild: int, db: Database, bot: Bot, player: DefaultPlayer, spotify: Spotify):
+    def __init__(self, guild: int, db: Database, bot: LavalinkBot, player: DefaultPlayer, spotify: Spotify, channel: Messageable):
         self._bot = bot
         self._guild = guild
         self._spotify = spotify
+        self._channel = channel
 
         # Database
         self._db = db
@@ -49,6 +51,11 @@ class Jockey:
     @property
     def is_playing(self) -> bool:
         return self._player is not None and (self._player.is_playing or self._player.paused)
+
+    async def destroy(self):
+        # Disconnect Lavalink
+        await self._player.stop()
+        await self._bot.lavalink.player_manager.destroy(self._guild)
     
     async def handle_event(self, event: EventWithPlayer):
         """
