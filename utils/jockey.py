@@ -5,7 +5,7 @@ from lavalink.models import DefaultPlayer
 from nextcord import Interaction
 from nextcord.abc import Messageable
 from random import shuffle
-from typing import Optional
+from typing import Optional, Union
 from views.now_playing import NowPlayingView
 from .database import Database
 from .exceptions import EndOfQueueError
@@ -85,25 +85,33 @@ class Jockey:
         Handle an event from the Lavalink player.
         """
         if isinstance(event, TrackStartEvent):
-            # Delete last now playing message, if it exists
-            last_msg_id = self._db.get_now_playing(self._guild)
-            if last_msg_id != -1:
-                try:
-                    last_msg = await self._channel.fetch_message(last_msg_id)
-                    await last_msg.delete()
-                except:
-                    pass
-
             # Send now playing embed
-            embed = create_now_playing_embed(self._player.current)
-            message = await self._channel.send(embed=embed, view=NowPlayingView(self._bot, self._player))
-
-            # Save now playing message ID
-            self._db.set_now_playing(self._guild, message.id)
+            await self.now_playing(self._channel)
         elif isinstance(event, QueueEndEvent):
             # Play next track in queue
             await self.skip()
     
+    async def now_playing(self, recipient: Union[Interaction, Messageable]):
+        # Delete last now playing message, if it exists
+        last_msg_id = self._db.get_now_playing(self._guild)
+        if last_msg_id != -1:
+            try:
+                last_msg = await self._channel.fetch_message(last_msg_id)
+                await last_msg.delete()
+            except:
+                pass
+
+        # Send now playing embed
+        embed = create_now_playing_embed(self._player.current)
+        view = NowPlayingView(self._bot, self._player)
+        if isinstance(recipient, Interaction):
+            message = await recipient.followup.send(embed=embed, view=view)
+        else:
+            message = await recipient.send(embed=embed, view=view)
+
+        # Save now playing message ID
+        self._db.set_now_playing(self._guild, message.id)
+
     async def pause(self, itx: Interaction):
         if not self.is_paused:
             await self._player.set_pause(pause=True)

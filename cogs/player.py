@@ -132,6 +132,17 @@ class PlayerCog(Cog):
         elif channel is not None:
             await channel.send(embed=embed)
     
+    @slash_command(name='nowplaying')
+    @application_checks.check(check_mutual_voice)
+    async def now_playing(self, itx: Interaction):
+        """
+        Displays the currently playing track.
+        """
+        # Dispatch to jockey
+        await itx.response.defer()
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.now_playing(itx)
+
     @slash_command(name='pause')
     @application_checks.check(check_mutual_voice)
     async def pause(self, itx: Interaction):
