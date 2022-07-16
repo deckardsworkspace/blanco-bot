@@ -1,6 +1,6 @@
 from asyncio import sleep
 from lavalink import add_event_hook
-from lavalink.events import NodeConnectedEvent, NodeDisconnectedEvent
+from lavalink.events import NodeConnectedEvent, NodeDisconnectedEvent, Event as LavalinkEvent
 from nextcord import Interaction, Member, slash_command, SlashOption, VoiceState
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
@@ -11,8 +11,8 @@ from utils.database import Database
 from utils.jockey import Jockey
 from utils.jockey_helpers import create_error_embed
 from utils.lavalink import init_lavalink
-from utils.lavalink_helpers import EventWithPlayer
 from utils.lavalink_bot import LavalinkBot
+from utils.lavalink_helpers import EventWithPlayer
 from utils.player_checks import *
 from utils.spotify_client import Spotify
 from utils.string import human_readable_time
@@ -80,19 +80,16 @@ class PlayerCog(Cog):
                     if not player.is_connected:
                         break
     
-    async def on_lavalink_event(self, event: EventWithPlayer):
-        # Does the event have a player attribute?
-        if isinstance(event, get_args(EventWithPlayer)):
+    async def on_lavalink_event(self, event: LavalinkEvent):
+        if isinstance(event, NodeConnectedEvent):
+            print('Connected to Lavalink node.')
+        elif isinstance(event, NodeDisconnectedEvent):
+            print('Disconnected from Lavalink node.')
+        elif isinstance(event, get_args(EventWithPlayer)):
             # Dispatch event to appropriate jockey
-            guild_id = event.player.guild_id
-            if event.player.guild_id in self._jockeys:
+            guild_id = int(event.player.guild_id)
+            if guild_id in self._jockeys.keys():
                 await self._jockeys[guild_id].handle_event(event)
-        else:
-            # Must be either a NodeConnectedEvent or a NodeDisconnectedEvent.
-            if isinstance(event, NodeConnectedEvent):
-                print('Connected to Lavalink node.')
-            elif isinstance(event, NodeDisconnectedEvent):
-                print('Disconnected from Lavalink node.')
     
     async def delete_jockey(self, guild: int):
         if guild in self._jockeys:

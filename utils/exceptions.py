@@ -1,3 +1,6 @@
+class EndOfQueueError(Exception):
+    pass
+
 class SpotifyInvalidURLError(Exception):
     def __init__(self, url):
         self.message = "Invalid Spotify link or URI: {}".format(url)

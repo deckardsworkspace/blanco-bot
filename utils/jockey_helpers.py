@@ -1,6 +1,7 @@
 from types import coroutine
 from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
+from lavalink.models import AudioTrack
 from nextcord import Color, Embed, Interaction
 from typing import Any
 from .exceptions import SpotifyInvalidURLError
@@ -19,13 +20,12 @@ def create_error_embed(message: str) -> Embed:
     return embed.get()
 
 
-def create_now_playing_embed(track: QueueItem) -> Embed:
+def create_now_playing_embed(track: AudioTrack) -> Embed:
     embed = CustomEmbed(
         title='Now playing',
         description=[
             f'**{track.title}**',
-            f'by **{track.artist}**'
-            f'requested by <@{track.requester}>'
+            f'by {track.author}'
         ],
         color=Color.teal(),
         timestamp_now=True

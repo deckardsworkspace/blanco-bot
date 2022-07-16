@@ -4,7 +4,9 @@ from lavalink.events import *
 from lavalink.models import DefaultPlayer
 from nextcord import Interaction
 from nextcord.abc import Messageable
+from typing import Optional
 from .database import Database
+from .exceptions import EndOfQueueError
 from .jockey_helpers import *
 from .lavalink import LavalinkVoiceClient
 from .lavalink_bot import LavalinkBot
@@ -39,7 +41,6 @@ class Jockey:
         self._current = -1
 
         # Shuffle indices
-        self._shuffled = db.get_shuffle(guild)
         self._shuffle_indices = []
 
         print(f'Created jockey for guild {guild}')
@@ -49,8 +50,16 @@ class Jockey:
         return self._player.is_connected
     
     @property
+    def is_looping_all(self) -> bool:
+        return self._player.repeat
+    
+    @property
     def is_playing(self) -> bool:
         return self._player is not None and (self._player.is_playing or self._player.paused)
+    
+    @property
+    def is_shuffling(self) -> bool:
+        return len(self._shuffle_indices) > 0
 
     async def destroy(self):
         # Disconnect Lavalink
@@ -63,12 +72,11 @@ class Jockey:
         """
         if isinstance(event, TrackStartEvent):
             # Send now playing embed
-            current_item = self._queue[self._current]
-            embed = create_now_playing_embed(current_item)
+            embed = create_now_playing_embed(self._player.current)
             await self._channel.send(embed=embed)
         elif isinstance(event, QueueEndEvent):
             # Play next track in queue
-            await self.skip(queue_end=True)
+            await self.skip()
     
     async def play(self, itx: Interaction, query: str):
         # Get results for query
@@ -101,7 +109,7 @@ class Jockey:
             else:
                 # We are already playing from a queue.
                 # Update shuffle indices if applicable.
-                if len(self._shuffle_indices) > 0:
+                if self.is_shuffling:
                     # Append new indices to the end of the list
                     new_indices = [old_size + i for i in range(len(new_tracks))]
                     self._shuffle_indices.extend(new_indices)
@@ -114,5 +122,59 @@ class Jockey:
             )
             await itx.followup.send(embed=embed.get())
 
-    async def skip(self, queue_end: bool = False):
-        pass
+    async def skip(self, itx: Optional[Interaction] = None, forward: bool = True):
+        # Queue up the next valid track, if any
+        if isinstance(self._current, int):
+            # Set initial index
+            queue_size = len(self._queue)
+            next_i = self._shuffle_indices.index(self._current) if self.is_shuffling else self._current
+            while next_i < queue_size:
+                # Have we reached the end of the queue?
+                if next_i == queue_size - 1:
+                    # Reached the end of the queue, are we looping?
+                    if self.is_looping_all:
+                        embed = CustomEmbed(
+                            color=Color.dark_green(),
+                            title=f':repeat:｜Looping back to the start',
+                            description=[
+                                'Reached the end of the queue.',
+                                f'Use the `loop all` command to disable.'
+                            ]
+                        )
+                        if itx is not None:
+                            await itx.followup.send(embed=embed.get())
+                        else:
+                            await self._channel.send(embed=embed.get())
+                        next_i = 0
+                    else:
+                        # We are not looping
+                        break
+                else:
+                    next_i += 1 if forward else -1
+
+                # Try playing the track
+                track_index = self._shuffle_indices[next_i] if self.is_shuffling else next_i
+                track = self._queue[track_index]
+                try:
+                    if await lavalink_enqueue(self._player, track):
+                        if itx is not None:
+                            await self._player.skip()
+
+                        # Save new queue index
+                        self._current = next_i
+                except Exception as e:
+                    embed = create_error_embed(f'Unable to play track: {track}. Reason: {e}')
+                    if itx is not None:
+                        await itx.followup.send(embed=embed)
+                    else:
+                        await self._channel.send(embed=embed)
+
+        # If we reached this point, we are at one of either ends of the queue,
+        # and the user was expecting to skip to the next.
+        if itx is not None:
+            if forward:
+                # Have PlayerCog disconnect us from voice.
+                raise EndOfQueueError
+            else:
+                embed = create_error_embed('Reached the start of the queue.')
+                await itx.followup.send(embed=embed)
