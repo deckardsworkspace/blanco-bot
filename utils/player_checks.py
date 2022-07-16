@@ -2,19 +2,16 @@ from nextcord import Interaction
 from .exceptions import VoiceCommandError
 
 
-def check_user_voice(itx: Interaction) -> bool:
-    """ This check ensures that the command author is connected to voice. """
+def check_mutual_voice(itx: Interaction) -> bool:
+    """ This check ensures that the bot and command author are in the same voice channel. """
+    # Check that the user is in a voice channel in the first place.
     if itx.guild is not None:
         if not itx.user.voice or not itx.user.voice.channel:
             raise VoiceCommandError('Join a voice channel first.')
-        return True
+    else:
+        # Not allowed in DMs
+        raise VoiceCommandError('You can only use this command in a server.')
 
-    # Not allowed in DMs
-    raise VoiceCommandError('You can only use this command in a server.')
-
-
-def check_mutual_voice(itx: Interaction) -> bool:
-    """ This check ensures that the bot and command author are in the same voice channel. """
     player = itx.client.lavalink.player_manager.get(itx.guild.id)
     if player is None:
         if itx.application_command.name == 'play':
