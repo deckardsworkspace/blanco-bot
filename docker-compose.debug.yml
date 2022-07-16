@@ -2,7 +2,10 @@ version: '1'
 
 services:
   lavalink:
-    image: jareddantis/cogcreators-lavalink:latest
+    image: lavalink
+    build:
+      context: .
+      dockerfile: ./Dockerfile-lavalink
     volumes:
       - ./lavalink.yml:/opt/app/application.yml
   bot:
