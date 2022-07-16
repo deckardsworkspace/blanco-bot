@@ -273,3 +273,29 @@ class PlayerCog(Cog):
         await itx.response.defer()
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.unshuffle(itx)
+    
+    @slash_command(name='volume')
+    @application_checks.check(check_mutual_voice)
+    async def volume(
+        self,
+        itx: Interaction,
+        volume: Optional[int] = SlashOption(
+            description='Volume level. Leave empty to print current volume.',
+            required=False,
+            min_value=0,
+            max_value=1000
+        )
+    ):
+        """
+        Sets the volume level.
+        """
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+
+        # Is the volume argument empty?
+        if not volume:
+            # Print current volume
+            return await itx.response.send_message(f'The volume is set to {jockey.volume}.')
+
+        # Dispatch to jockey
+        await itx.response.defer()
+        await jockey.set_volume(itx, volume)

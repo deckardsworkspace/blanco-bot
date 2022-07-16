@@ -67,6 +67,10 @@ class Jockey:
     @property
     def is_shuffling(self) -> bool:
         return len(self._shuffle_indices) > 0
+    
+    @property
+    def volume(self) -> int:
+        return self._player.volume
 
     async def destroy(self) -> Messageable:
         # Disconnect Lavalink
@@ -173,6 +177,16 @@ class Jockey:
             # Send embed
             item_name = first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
             await itx.followup.send(embed=create_success_embed(f'Added {item_name} to queue'))
+    
+    async def set_volume(self, itx: Interaction, level: int):
+        # Set new volume
+        await self._player.set_volume(level)
+
+        # Save new volume to database
+        self._db.set_volume(self._guild, level)
+
+        # Send response
+        await itx.followup.send(embed=create_success_embed(f'Volume set to {level}'))
 
     async def shuffle(self, itx: Interaction):
         if not len(self._queue):
@@ -267,7 +281,6 @@ class Jockey:
                 return await itx.response.send_message(embed=create_success_embed('Stopped looping current track'))
             else:
                 return await itx.response.send_message(embed=create_success_embed('Not currently looping current track'))
-
     
     async def unpause(self, itx: Interaction):
         if self.is_paused:
