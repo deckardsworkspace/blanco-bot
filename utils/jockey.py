@@ -134,7 +134,7 @@ class Jockey:
             next_i = self._shuffle_indices.index(self._current) if self.is_shuffling else self._current
             while next_i < queue_size:
                 # Have we reached the end of the queue?
-                if next_i == queue_size - 1:
+                if next_i == queue_size - 1 and forward:
                     # Reached the end of the queue, are we looping?
                     if self.is_looping_all:
                         embed = CustomEmbed(
@@ -166,7 +166,7 @@ class Jockey:
 
                         # Save new queue index
                         self._current = next_i
-                        await itx.followup.send(embed=create_success_embed('Skipped to next track'))
+                        await itx.followup.send(embed=create_success_embed(f'Skipped to {"next" if forward else "previous"} track'))
                         return
                 except Exception as e:
                     embed = create_error_embed(f'Unable to play track: {track}. Reason: {e}')

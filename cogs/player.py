@@ -140,6 +140,17 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.play(itx, query)
     
+    @slash_command(name='previous')
+    @application_checks.check(check_mutual_voice)
+    async def previous(self, itx: Interaction):
+        """
+        Skip to the previous song.
+        """
+        # Dispatch to jockey
+        await itx.response.defer()
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.skip(itx, forward=False)
+    
     @slash_command(name='skip')
     @application_checks.check(check_mutual_voice)
     async def skip(self, itx: Interaction):
