@@ -175,7 +175,7 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
             footer='This might take a while, please wait...',
             thumbnail_url=sp_art
         )
-        await embed.send(itx.message.channel)
+        await itx.channel.send(embed=embed.get())
 
     for track in track_queue:
         track_name, track_artist, track_id, track_duration = track
@@ -211,7 +211,7 @@ async def parse_youtube_playlist(itx: Interaction, playlist_id: str) -> List[Que
             ],
             footer='This might take a while, please wait...'
         )
-        await embed.send(itx.message.channel)
+        await itx.channel.send(embed=embed.get())
 
     tracks = get_youtube_playlist_tracks(playlist_id)
     for track in tracks:
