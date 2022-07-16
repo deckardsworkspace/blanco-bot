@@ -92,6 +92,20 @@ class Jockey:
             # Play next track in queue
             await self.skip()
     
+    async def loop(self, itx: Interaction, whole_queue: bool = False):
+        if whole_queue:
+            if not self._loop_whole:
+                self._loop_whole = True
+                return await itx.response.send_message(embed=create_success_embed('Looping entire queue'))
+            else:
+                return await itx.response.send_message(embed=create_success_embed('Already looping entire queue'))
+        else:
+            if not self.is_looping:
+                self._player.set_repeat(repeat=True)
+                return await itx.response.send_message(embed=create_success_embed('Looping current track'))
+            else:
+                return await itx.response.send_message(embed=create_success_embed('Already looping current track'))
+    
     async def now_playing(self, recipient: Union[Interaction, Messageable]):
         # Delete last now playing message, if it exists
         last_msg_id = self._db.get_now_playing(self._guild)
@@ -240,19 +254,20 @@ class Jockey:
                 embed = create_error_embed('Reached the start of the queue.')
                 await itx.followup.send(embed=embed)
     
-    async def toggle_loop(self, itx: Interaction, whole_queue: bool = False):
+    async def unloop(self, itx: Interaction, whole_queue: bool = False):
         if whole_queue:
-            self._loop_whole = not self._loop_whole
             if self._loop_whole:
-                return await itx.response.send_message(embed=create_success_embed('Looping entire queue'))
-            else:
+                self._loop_whole = False
                 return await itx.response.send_message(embed=create_success_embed('Stopped looping entire queue'))
-        else:
-            self._player.set_repeat(repeat=not self._player.repeat)
-            if self._player.repeat:
-                return await itx.response.send_message(embed=create_success_embed('Looping current track'))
             else:
+                return await itx.response.send_message(embed=create_success_embed('Not currently looping entire queue'))
+        else:
+            if self._player.repeat:
+                self._player.set_repeat(repeat=False)
                 return await itx.response.send_message(embed=create_success_embed('Stopped looping current track'))
+            else:
+                return await itx.response.send_message(embed=create_success_embed('Not currently looping current track'))
+
     
     async def unpause(self, itx: Interaction):
         if self.is_paused:

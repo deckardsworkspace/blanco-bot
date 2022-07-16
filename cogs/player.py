@@ -140,7 +140,7 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.toggle_loop(itx)
+        await jockey.loop(itx)
     
     @slash_command(name='loopall')
     @application_checks.check(check_mutual_voice)
@@ -150,7 +150,7 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.toggle_loop(itx, whole_queue=True)
+        await jockey.loop(itx, whole_queue=True)
     
     @slash_command(name='nowplaying')
     @application_checks.check(check_mutual_voice)
@@ -240,7 +240,7 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.toggle_loop(itx)
+        await jockey.unloop(itx)
     
     @slash_command(name='unloopall')
     @application_checks.check(check_mutual_voice)
@@ -250,7 +250,7 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.toggle_loop(itx, whole_queue=True)
+        await jockey.unloop(itx, whole_queue=True)
     
     @slash_command(name='unpause')
     @application_checks.check(check_mutual_voice)
