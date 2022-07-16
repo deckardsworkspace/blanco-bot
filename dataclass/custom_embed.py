@@ -59,6 +59,10 @@ class CustomEmbed:
     
     # Get embed object
     def get(self) -> Embed:
+        # Add timestamp to embed
+        if self.timestamp_now:
+            self.embed.timestamp = datetime.now()
+
         return self.embed
         
     # Send embed
