@@ -85,9 +85,21 @@ class Jockey:
         Handle an event from the Lavalink player.
         """
         if isinstance(event, TrackStartEvent):
+            # Delete last now playing message, if it exists
+            last_msg_id = self._db.get_now_playing(self._guild)
+            if last_msg_id != -1:
+                try:
+                    last_msg = await self._channel.fetch_message(last_msg_id)
+                    await last_msg.delete()
+                except:
+                    pass
+
             # Send now playing embed
             embed = create_now_playing_embed(self._player.current)
-            await self._channel.send(embed=embed, view=NowPlayingView(self._bot, self._player))
+            message = await self._channel.send(embed=embed, view=NowPlayingView(self._bot, self._player))
+
+            # Save now playing message ID
+            self._db.set_now_playing(self._guild, message.id)
         elif isinstance(event, QueueEndEvent):
             # Play next track in queue
             await self.skip()

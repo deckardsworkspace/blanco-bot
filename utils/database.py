@@ -15,7 +15,8 @@ class Database:
             CREATE TABLE IF NOT EXISTS player_settings (
                 guild_id INTEGER PRIMARY KEY NOT NULL,
                 volume INTEGER NOT NULL DEFAULT 100,
-                loop INTEGER NOT NULL DEFAULT 0
+                loop INTEGER NOT NULL DEFAULT 0,
+                last_np_msg INTEGER NOT NULL DEFAULT -1
             )
         ''')
         self._con.commit()
@@ -55,4 +56,18 @@ class Database:
         Set the loop setting for a guild.
         """
         self._cur.execute(f'UPDATE player_settings SET loop = {int(loop)} WHERE guild_id = {guild_id}')
+        self._con.commit()
+    
+    def get_now_playing(self, guild_id: int) -> int:
+        """
+        Get the last now playing message ID for a guild.
+        """
+        self._cur.execute(f'SELECT last_np_msg FROM player_settings WHERE guild_id = {guild_id}')
+        return self._cur.fetchone()[0]
+    
+    def set_now_playing(self, guild_id: int, msg_id: int):
+        """
+        Set the last now playing message ID for a guild.
+        """
+        self._cur.execute(f'UPDATE player_settings SET last_np_msg = {msg_id} WHERE guild_id = {guild_id}')
         self._con.commit()
