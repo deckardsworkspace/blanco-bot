@@ -32,6 +32,8 @@ class PlayerCog(Cog):
 
         print(f'Loaded cog: {self.__class__.__name__}')
     
+    from .player_listeners import cog_before_invoke, cog_unload, on_voice_state_update
+    
     async def on_lavalink_event(self, event: EventWithPlayer):
         # Does the event have a player attribute?
         if isinstance(event, get_args(EventWithPlayer)):
