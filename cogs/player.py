@@ -123,10 +123,6 @@ class PlayerCog(Cog):
         """
         Play a song.
         """
-        # Throw error if no query was provided
-        if query == None:
-            return await itx.response.send_message(embed=create_error_embed('No query provided. To unpause, use the `unpause` command.'))
-
         # Check that the user is in a voice channel
         if check_mutual_voice(itx):
             # Dispatch to jockey
