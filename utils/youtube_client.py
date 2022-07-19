@@ -25,7 +25,7 @@ def get_youtube_playlist_info(playlist_id: str) -> Tuple[str, str, int]:
     return playlist_info['title'], playlist_info['channel']['name'], int(playlist_info['videoCount'])
 
 
-def get_youtube_playlist_tracks(playlist_id: str) -> Tuple[List[YouTubeResult]]:
+def get_youtube_playlist_tracks(playlist_id: str) -> List[YouTubeResult]:
     playlist = Playlist(f'http://youtube.com/playlist?list={playlist_id}')
     while playlist.hasMoreVideos:
         playlist.getNextVideos()
