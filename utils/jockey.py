@@ -90,6 +90,15 @@ class Jockey:
             await vc.disconnect(force=True)
         await self._bot.lavalink.player_manager.destroy(self._guild)
 
+        # Remove view from now playing message
+        last_msg_id = self._db.get_now_playing(self._guild)
+        if last_msg_id != -1:
+            try:
+                last_msg = await self._channel.fetch_message(last_msg_id)
+                await last_msg.edit(view=None)
+            except:
+                pass
+
         # Return channel for sending disconnection message
         return self._channel
     
