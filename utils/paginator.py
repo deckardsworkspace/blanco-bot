@@ -1,14 +1,18 @@
-from asyncio import TimeoutError
-from nextcord import Embed, Interaction, Member, Message, NotFound, Reaction
-from typing import Callable, List
+from asyncio import sleep
+from nextcord import Embed, Interaction, Message
+from typing import Callable, List, Optional
+from views.paginator import PaginatorView
 
 
 class Paginator:
     def __init__(self, itx: Interaction):
-        self.itx = itx
-        self.embeds = []
         self.current = 0
-        self.timeout = 60
+        self.embeds = []
+        self.home = 0
+        self.itx = itx
+        self.msg: Optional[Message] = None
+        self.original_timeout = 0
+        self.timeout = 0
     
     async def run(self, embeds: List[Embed], start: int = 0, timeout: int = 0, callback: Callable[[int], None] = None):
         # If there's only one page, just send it as is
@@ -20,10 +24,9 @@ class Paginator:
 
         # Based on https://github.com/toxicrecker/DiscordUtils/blob/master/DiscordUtils/Pagination.py
         # but with support for custom home page and adapted for Interaction responses
-        control_emojis = ('⏮️', '⏪', '🏠', '⏩', '⏭️')
         timeout = timeout if timeout > 0 else 60
+        self.original_timeout = timeout
         self.timeout = timeout
-        self.embeds = embeds
 
         # Add footer and timestamp to every embed
         for i in range(len(embeds)):
@@ -31,50 +34,43 @@ class Paginator:
             embeds[i].set_footer(text=f'Page {i + 1} of {len(embeds)}')
 
         # Send initial embed and call callback with message ID
+        self.home = start
         self.current = start
-        msg = await self.itx.followup.send(embed=embeds[start])
-        msg: Message = await msg.channel.fetch_message(msg.id)
+        self.embeds = embeds
+        msg = await self.itx.followup.send(embed=self.embeds[start], view=PaginatorView(self))
+        self.msg: Message = await msg.channel.fetch_message(msg.id)
         if callback is not None:
             callback(msg.id)
         
-        # Add reactions
-        for emoji in control_emojis:
-            try:
-                await msg.add_reaction(emoji)
-            except Exception as e:
-                print(f'Error adding emoji to {msg.id}: {e}')
-        
-        # Handle reactions
-        def check(r: Reaction, u: Member):
-            return u == self.itx.user and str(r.emoji) in control_emojis
+        # Remove controls if inactive for more than timeout amount
         while True:
-            # Wait for reaction add until timeout runs out
+            await sleep(1)
+            self.timeout -= 1
+            if self.timeout <= 0:
+                return await self.msg.edit(view=None)
+
+    async def _switch_page(self, new_page: int) -> Optional[Message]:
+        self.current = new_page
+        if self.msg is not None:
             try:
-                # Remove user reaction
-                try:
-                    r, u = await self.itx.client.wait_for('reaction_add', check=check, timeout=self.timeout)
-                    await msg.remove_reaction(r.emoji, u)
-                except NotFound:
-                    # Message has likely been deleted
-                    return
-
-                if str(r.emoji) == control_emojis[0]:     # Start
-                    self.current = 0
-                elif str(r.emoji) == control_emojis[1]:   # Back
-                    self.current = 0 if self.current <= 0 else self.current - 1
-                elif str(r.emoji) == control_emojis[2]:   # Home
-                    self.current = start
-                elif str(r.emoji) == control_emojis[3]:   # Next
-                    self.current = len(embeds) - 1 if self.current >= len(embeds) - 1 else self.current + 1
-                elif str(r.emoji) == control_emojis[4]:   # End
-                    self.current = len(embeds) - 1
-
-                await msg.edit(embed=self.embeds[self.current])
-            except TimeoutError:
-                # Remove all reactions
-                self.current = start
-                try:
-                    await msg.clear_reactions()
-                except:
-                    pass
-                return
+                msg = await self.msg.edit(embed=self.embeds[self.current])
+            except:
+                return None
+            else:
+                self.timeout = self.original_timeout
+                return msg
+    
+    async def first_page(self):
+        await self._switch_page(0)
+    
+    async def previous_page(self):
+        await self._switch_page(self.current - 1)
+    
+    async def home_page(self):
+        await self._switch_page(self.home)
+    
+    async def next_page(self):
+        await self._switch_page(self.current + 1)
+    
+    async def last_page(self):
+        await self._switch_page(len(self.embeds) - 1)
