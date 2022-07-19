@@ -10,6 +10,10 @@ class NowPlayingView(View):
         self._cog = bot.get_cog('PlayerCog')
         self._player = player
     
+    @button(label='Queue', style=ButtonStyle.green)
+    async def queue(self, _: Button, interaction: Interaction):
+        return await self._cog.queue(interaction)
+    
     @button(label='Prev', style=ButtonStyle.grey)
     async def skip_backward(self, _: Button, interaction: Interaction):
         return await self._cog.previous(interaction)
