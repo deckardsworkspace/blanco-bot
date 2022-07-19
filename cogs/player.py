@@ -53,7 +53,7 @@ class PlayerCog(Cog):
         if voice_client is not None and len(voice_client.channel.members) == 1 and after.channel is None:
             # Get the player for this guild from cache
             guild_id = voice_client.guild.id
-            player = self.bot.lavalink.player_manager.get(guild_id)
+            player = self._bot.lavalink.player_manager.get(guild_id)
             return await self._disconnect(guild_id, reason='You left me alone :(')
 
         # Only handle join events by this bot
