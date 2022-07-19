@@ -217,7 +217,7 @@ class Jockey:
     async def pause(self, itx: Interaction):
         if not self.is_paused:
             await self._player.set_pause(pause=True)
-            await itx.followup.send(embed=create_success_embed('Paused'))
+            await itx.followup.send(embed=create_success_embed('Paused'), delete_after=5)
         else:
             await itx.followup.send(embed=create_error_embed('Nothing to pause'))
     
@@ -311,9 +311,9 @@ class Jockey:
                             ]
                         )
                         if itx is not None:
-                            await itx.followup.send(embed=embed.get())
+                            await itx.followup.send(embed=embed.get(), delete_after=5)
                         else:
-                            await self._channel.send(embed=embed.get())
+                            await self._channel.send(embed=embed.get(), delete_after=5)
                         next_i = 0
                     else:
                         # We are not looping
@@ -328,7 +328,7 @@ class Jockey:
                     if await lavalink_enqueue(self._player, track):
                         if itx is not None:
                             await self._player.skip()
-                            await itx.followup.send(embed=create_success_embed(f'Skipped to {"next" if forward else "previous"} track'))
+                            await itx.followup.send(embed=create_success_embed(f'Skipped to {"next" if forward else "previous"} track'), delete_after=5)
 
                         # Save new queue index
                         self._current = track_index
@@ -368,7 +368,7 @@ class Jockey:
     async def unpause(self, itx: Interaction):
         if self.is_paused:
             await self._player.set_pause(pause=False)
-            await itx.followup.send(embed=create_success_embed('Resumed'))
+            await itx.followup.send(embed=create_success_embed('Resumed'), delete_after=5)
         else:
             await itx.followup.send(embed=create_error_embed('Nothing to resume'))
     
