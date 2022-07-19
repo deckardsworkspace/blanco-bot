@@ -1,11 +1,12 @@
 from collections import deque
 from dataclass.custom_embed import CustomEmbed
+from dataclass.queue_item import QueueItem
 from lavalink.events import *
 from lavalink.models import DefaultPlayer
-from nextcord import Interaction
+from nextcord import Color, Interaction
 from nextcord.abc import Messageable
 from random import shuffle
-from typing import Optional, Union
+from typing import Deque, Optional, Union
 from views.now_playing import NowPlayingView
 from .database import Database
 from .exceptions import EndOfQueueError
@@ -13,6 +14,7 @@ from .jockey_helpers import *
 from .lavalink import LavalinkVoiceClient
 from .lavalink_bot import LavalinkBot
 from .lavalink_helpers import EventWithPlayer, lavalink_enqueue
+from .paginator import Paginator
 from .spotify_client import Spotify
 
 
@@ -39,7 +41,7 @@ class Jockey:
         player.set_repeat(db.get_loop(guild))
 
         # Queue
-        self._queue = deque()
+        self._queue: Deque[QueueItem] = deque()
         self._current = -1
         self._loop_whole = False
 
@@ -102,6 +104,70 @@ class Jockey:
         # Return channel for sending disconnection message
         return self._channel
     
+    async def display_queue(self, itx: Interaction):
+        if len(self._queue) == 0:
+            await itx.followup.send(embed=create_error_embed('Queue is empty'))
+            return
+        
+        # Show loop status
+        embed_header = [f'{len(self._queue)} total']
+        if self.is_looping_all:
+            embed_header.append(':repeat: Looping entire queue (`/unloopall` to disable)')
+        
+        # Show shuffle status
+        queue = list(self._queue)
+        current = self._current
+        if self.is_shuffling:
+            embed_header.append(':twisted_rightwards_arrows: Shuffling queue  (`/unshuffle` to disable)')
+            current = self._shuffle_indices.index(current)
+
+            # Get shuffled version of queue
+            queue = [self._queue[i] for i in self._shuffle_indices]
+
+        # Show queue in chunks of 10 per page
+        pages = []
+        homepage = 0
+        count = 1
+        prefix_len = len(str(len(self._queue)))
+        for i, chunk in enumerate(list_chunks(queue)):
+            chunk_tracks = []
+
+            # Create page content
+            track: QueueItem
+            for track in chunk:
+                title, artist = track.get_details()
+
+                # Pad index with spaces if necessary
+                index = str(count)
+                while len(index) < prefix_len:
+                    index = ' ' + index
+                
+                # Is this the current track?
+                line_prefix = '  '
+                if count - 1 == current:
+                    line_prefix = '> '
+                    homepage = i
+                
+                # Create item line, max 50 chars
+                line_prefix = '> ' if count - 1 == current else '  '
+                line = f'{line_prefix} {index} :: {title} - {artist}'
+                chunk_tracks.append(f'{line:50}')
+                count += 1
+
+            # Create page
+            tracks = '\n'.join(chunk_tracks)
+            embed_body = embed_header + [f'```asciidoc\n{tracks}```']
+            embed = CustomEmbed(
+                title=f'Queue for {self._bot.get_guild(self._guild).name}',
+                description='\n'.join(embed_body),
+                color=Color.lighter_gray()
+            )
+            pages.append(embed.get())
+    
+        # Run paginator
+        paginator = Paginator(itx)
+        return await paginator.run(pages, start=homepage)
+
     async def handle_event(self, event: EventWithPlayer):
         """
         Handle an event from the Lavalink player.

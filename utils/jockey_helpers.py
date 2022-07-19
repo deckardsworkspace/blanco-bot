@@ -1,6 +1,7 @@
 from types import coroutine
 from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
+from itertools import islice
 from lavalink.models import AudioTrack
 from nextcord import Color, Embed, Interaction
 from typing import Any
@@ -40,6 +41,11 @@ def create_now_playing_embed(track: AudioTrack) -> Embed:
         timestamp_now=True
     )
     return embed.get()
+
+
+def list_chunks(data: List[Any]) -> List[Any]:
+    for i in range(0, len(data), 10):
+        yield islice(data, i, i + 10)
 
 
 def manual_await(coro: coroutine) -> Any:

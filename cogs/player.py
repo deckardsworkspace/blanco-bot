@@ -197,6 +197,17 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.skip(itx, forward=False)
     
+    @slash_command(name='queue')
+    @application_checks.check(check_mutual_voice)
+    async def queue(self, itx: Interaction):
+        """
+        Displays the current queue.
+        """
+        # Dispatch to jockey
+        await itx.response.defer()
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        await jockey.display_queue(itx)
+
     @slash_command(name='shuffle')
     @application_checks.check(check_mutual_voice)
     async def shuffle(self, itx: Interaction):
