@@ -292,6 +292,16 @@ class Jockey:
         return await itx.followup.send(embed=create_success_embed(f'{len(self._queue)} tracks {action}'))
 
     async def skip(self, itx: Optional[Interaction] = None, forward: bool = True):
+        # It takes a while for the player to skip, so let's remove the player controls
+        # while we wait to prevent the user from spamming them.
+        np_msg = self._db.get_now_playing(self._guild)
+        if np_msg != -1:
+            try:
+                np_msg = await self._channel.fetch_message(np_msg)
+                await np_msg.edit(view=None)
+            except:
+                pass
+
         # Queue up the next valid track, if any
         if isinstance(self._current, int):
             # Set initial index
@@ -339,6 +349,9 @@ class Jockey:
                         await itx.followup.send(embed=embed)
                     else:
                         await self._channel.send(embed=embed)
+                    
+                    # Restore now playing message controls
+                    await self.now_playing(itx.channel)
 
         # If we reached this point, we are at one of either ends of the queue,
         # and the user was expecting to skip to the next.
