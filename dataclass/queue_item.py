@@ -17,7 +17,7 @@ class QueueItem:
     # Track details
     title: Optional[str] = None
     artist: Optional[str] = None
-    duration: Optional[int] = 0
+    duration: Optional[int] = 0   # milliseconds
 
     # Get title and artist
     def get_details(self) -> Tuple[str, str]:
