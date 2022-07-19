@@ -63,6 +63,7 @@ async def parse_query(itx: Interaction, spotify: Spotify, query: str) -> List[Qu
         title=result.title,
         artist=result.author,
         requester=itx.user.id,
+        duration=result.duration_ms,
         url=result.url
     )]
 
@@ -103,6 +104,7 @@ async def parse_query_url(itx: Interaction, spotify: Spotify, query: str) -> Lis
                 title=video.title,
                 artist=video.author,
                 requester=itx.user.id,
+                duration=video.duration_ms,
                 url=video.url
             )]
         except YouTubeInvalidURLError:
@@ -219,6 +221,7 @@ async def parse_youtube_playlist(itx: Interaction, playlist_id: str) -> List[Que
             requester=itx.user.id,
             title=track.title,
             artist=track.author,
+            duration=track.duration_ms,
             url=track.url
         ))
 
