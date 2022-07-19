@@ -24,14 +24,14 @@ class QueueItem:
         if self.title is not None:
             title = self.title
             if self.artist is not None:
-                artist = f'by {self.artist}'
+                artist = self.artist
             else:
-                artist = 'by Unknown artist'
+                artist = 'Unknown artist'
         elif self.url is not None:
             title = self.url
-            artist = 'Direct link'
+            artist = '(direct link)'
         else:
-            title = self.query.replace('ytsearch:', '')
-            artist = 'Search query'
+            title = 'Unknown title'
+            artist = 'Unknown query'
         
         return title, artist
