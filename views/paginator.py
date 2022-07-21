@@ -16,7 +16,7 @@ class PaginatorView(View):
     
     @button(label='🏠', style=ButtonStyle.grey)
     async def home_page(self, _: Button, interaction: Interaction):
-        return await self.paginator.previous_page()
+        return await self.paginator.home_page()
 
     @button(label='⏩', style=ButtonStyle.grey)
     async def next_page(self, _: Button, interaction: Interaction):
