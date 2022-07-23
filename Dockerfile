@@ -1,15 +1,21 @@
-FROM python:3.10-slim
+FROM python:3.10-slim AS dependencies
 
-# Keeps Python from generating .pyc files in the container
-ENV PYTHONDONTWRITEBYTECODE=1
-
-# Turns off buffering for easier container logging
-ENV PYTHONUNBUFFERED=1
-
-# Install pip requirements
+# Install pip requirements under virtualenv
+RUN pip install --upgrade pip
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
 COPY requirements.txt .
-RUN python -m pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
-# Work inside the /app folder, where the bot files will be mounted
-WORKDIR /app
-CMD ["python3"]
+
+FROM python:3.10-slim AS main
+COPY --from=dependencies /opt/venv /opt/venv
+LABEL maintainer="Jared Dantis <jareddantis@gmail.com>"
+
+# Copy bot files and run bot
+COPY . /opt/app
+WORKDIR /opt/app
+ENV PATH="/opt/venv/bin:${PATH}"
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+CMD ["python3", "main.py"]
