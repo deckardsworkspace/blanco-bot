@@ -34,7 +34,7 @@ class PlayerCog(Cog):
 
         # Create Lavalink client instance
         if bot.lavalink == None:
-            bot.lavalink = init_lavalink(bot.user.id, bot.config['lavalink'])
+            bot.lavalink = init_lavalink(bot.user.id, bot.config['lavalink'], bot.config['bot']['inactivity_timeout'])
 
         # Listen to Lavalink events
         add_event_hook(self.on_lavalink_event)
