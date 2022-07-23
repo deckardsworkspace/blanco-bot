@@ -6,7 +6,7 @@ from .player import PlayerCog
 
 def setup(bot: LavalinkBot):
     # Create Database instance
-    db = Database(bot.config['database'])
+    db = Database(bot.config['bot']['database'])
 
     # Add cogs
     bot.add_cog(PlayerCog(bot, db))
