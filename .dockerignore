@@ -23,4 +23,6 @@
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
+blanco.db
+config.yml
 README.md
