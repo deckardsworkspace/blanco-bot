@@ -131,6 +131,9 @@ dmypy.json
 # SQLite database
 *.db
 
+# macOS stuff
+**/.DS_Store
+
 # Bot config
 docker-compose.yml
 config.yml
