@@ -51,8 +51,6 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: ${{ github.event_name != 'pull_request' }}
         tags: |
-          ${{ github.repository }}:${{ github.sha	}}
-          ghcr.io/${{ github.repository }}:${{ github.sha	}}
           ${{ github.repository }}:latest
           ghcr.io/${{ github.repository }}:latest
         labels: ${{ steps.meta.outputs.labels }}
