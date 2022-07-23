@@ -9,7 +9,7 @@ with open('config.yml') as f:
     try:
         config = safe_load(f)
     except Exception as e:
-        raise ValueError(f'Error parsing lavalink.yml: {e}')
+        raise ValueError(f'Error parsing config.yml: {e}')
 
 # Create bot instance
 client = LavalinkBot(intents=Intents.default())
