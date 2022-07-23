@@ -5,7 +5,6 @@ from nextcord import Interaction, Member, slash_command, SlashOption, VoiceState
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
-from os import environ
 from typing import Dict, get_args, Optional
 from dataclass.custom_embed import CustomEmbed
 from utils.database import Database
@@ -25,14 +24,17 @@ class PlayerCog(Cog):
         self._db = db
         
         # Spotify client
-        self.spotify_client = Spotify()
+        self.spotify_client = Spotify(
+            client_id=bot.config['spotify']['client_id'],
+            client_secret=bot.config['spotify']['client_secret']
+        )
 
         # Jockey instances
         self._jockeys: Dict[int, Jockey] = {}
 
         # Create Lavalink client instance
         if bot.lavalink == None:
-            bot.lavalink = init_lavalink(bot.user.id)
+            bot.lavalink = init_lavalink(bot.user.id, bot.config['lavalink'], bot.config['bot']['inactivity_timeout'])
 
         # Listen to Lavalink events
         add_event_hook(self.on_lavalink_event)
@@ -64,7 +66,7 @@ class PlayerCog(Cog):
 
             # Inactivity check
             time = 0
-            inactive_sec = int(environ['INACTIVE_SEC'])
+            inactive_sec = int(self._bot.config['bot']['inactivity_timeout'])
             inactive_h, inactive_m, inactive_s = human_readable_time(inactive_sec * 1000)
             inactive_h = f'{inactive_h}h ' if inactive_h else ''
             inactive_m = f'{inactive_m}m ' if inactive_m else ''

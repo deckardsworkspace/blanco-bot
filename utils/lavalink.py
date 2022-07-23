@@ -1,36 +1,27 @@
 from asyncio import sleep
 from nextcord import Client, StageChannel, VoiceChannel, VoiceClient
-from os import environ
 from lavalink import Client
-from typing import Union
-from yaml import safe_load
+from typing import Dict, List, Union
 
 
-def init_lavalink(id: int) -> Client: 
+def init_lavalink(id: int, nodes: List[Dict[str, str]], timeout: int) -> Client: 
     client = Client(id)
 
     # Check that our inactivity timeout is valid
-    inactivity_timeout = int(environ['INACTIVE_SEC'])
-    if inactivity_timeout < 1:
+    if timeout < 1:
         raise ValueError('$INACTIVE_SEC must be an integer greater than 0')
-    
-    # Parse Lavalink config
-    with open('lavalink.yml') as f:
-        try:
-            config = safe_load(f)
-        except Exception as e:
-            raise ValueError(f'Error parsing lavalink.yml: {e}')
 
     # Add local node
-    client.add_node(
-        host='lavalink', # Docker container name
-        port='2333',
-        password=config['lavalink']['server']['password'],
-        region='us-central', # Local node, doesn't really matter what region it is
-        resume_key='localhost',
-        resume_timeout=inactivity_timeout,
-        name='localhost'
-    )
+    for node in nodes:
+        client.add_node(
+            host=node['server'],
+            port=node['port'],
+            password=node['password'],
+            region=node['region'],
+            resume_key=node['id'],
+            resume_timeout=timeout,
+            name=node['id']
+        )
 
     return client
 

@@ -1,24 +1,14 @@
-version: '1'
+version: '3.8'
 
 services:
-  lavalink:
-    image: lavalink
-    build:
-      context: .
-      dockerfile: ./Dockerfile-lavalink
-    volumes:
-      - ./lavalink.yml:/opt/app/application.yml
   bot:
-    image: blancobot
+    image: blanco-bot
     build:
       context: .
       dockerfile: ./Dockerfile
-    depends_on:
-      - lavalink
     volumes:
-      - .:/app
-    env_file:
-      - .env
+      - ./config.yml:/opt/app/config.yml
+      - ./blanco.db:/opt/app/blanco.db
     ports:
       - 5678:5678
     command:

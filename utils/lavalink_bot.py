@@ -10,6 +10,7 @@ class LavalinkBot(Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._lavalink = None
+        self._config = {}
 
     @property
     def lavalink(self) -> Client:
@@ -18,3 +19,11 @@ class LavalinkBot(Bot):
     @lavalink.setter
     def lavalink(self, value: Client):
         self._lavalink = value
+    
+    @property
+    def config(self) -> dict:
+        return self._config
+    
+    @config.setter
+    def config(self, value: dict):
+        self._config = value
