@@ -1,11 +1,19 @@
 from nextcord import Intents, Interaction
-from os import environ
 from utils.jockey_helpers import create_error_embed
 from utils.lavalink_bot import LavalinkBot
+from yaml import safe_load
 
+
+# Parse config file
+with open('config.yml') as f:
+    try:
+        config = safe_load(f)
+    except Exception as e:
+        raise ValueError(f'Error parsing lavalink.yml: {e}')
 
 # Create bot instance
 client = LavalinkBot(intents=Intents.default())
+client.config = config
 
 # Event listeners
 @client.event
@@ -20,4 +28,4 @@ async def on_application_command_error(itx: Interaction, error: Exception):
 # Run client
 if __name__ == '__main__':
     print('Starting bot...')
-    client.run(environ['DISCORD_BOT_TOKEN'])
+    client.run(config['bot']['discord_token'])

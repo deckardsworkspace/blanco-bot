@@ -46,11 +46,11 @@ def parse_spotify_url(url: str, valid_types: list[str] = ["track", "album", "art
 
 
 class Spotify:
-    def __init__(self):
+    def __init__(self, client_id: str, client_secret: str):
         self._client = spotipy.Spotify(
             auth_manager=spotipy.oauth2.SpotifyClientCredentials(
-                client_id=environ['SPOTIFY_ID'],
-                client_secret=environ['SPOTIFY_SECRET']
+                client_id=client_id,
+                client_secret=client_secret
             )
         )
 

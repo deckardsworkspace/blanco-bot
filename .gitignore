@@ -130,3 +130,6 @@ dmypy.json
 
 # SQLite database
 *.db
+
+# Bot config
+config.yml
