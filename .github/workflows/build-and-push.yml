@@ -26,12 +26,19 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     -
-      name: Get Docker metadata
+      name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GH_PACKAGE_TOKEN }}
+    -
+      name: Get image metadata
       id: meta
       uses: docker/metadata-action@v4
       with:
         images: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/blanco-bot
+          ${{ github.repository }}
           ghcr.io/${{ github.repository }}
     -
       name: Checkout repository
@@ -43,5 +50,9 @@ jobs:
         context: .
         platforms: linux/amd64,linux/arm64
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
+        tags: |
+          ${{ github.repository }}:${{ github.ref }}
+          ghcr.io/${{ github.repository }}:${{ github.ref }}
+          ${{ github.repository }}:latest
+          ghcr.io/${{ github.repository }}:latest
         labels: ${{ steps.meta.outputs.labels }}
