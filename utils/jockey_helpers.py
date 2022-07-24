@@ -64,14 +64,23 @@ async def parse_query(itx: Interaction, spotify: Spotify, query: str) -> List[Qu
         return await parse_query_url(itx, spotify, query)
 
     # Query is not a URL. Do a YouTube search for the query and choose the first result.
-    result = get_youtube_matches(query, automatic=False)[0]
-    return [QueueItem(
-        title=result.title,
-        artist=result.author,
-        requester=itx.user.id,
-        duration=result.duration_ms,
-        url=result.url
-    )]
+    try:
+        result = get_youtube_matches(query, automatic=False)[0]
+    except IndexError:
+        embed = CustomEmbed(
+            color=Color.red(),
+            title=':x:｜No results found for query'
+        )
+        await itx.followup.send(embed=embed.get())
+        return []
+    else:
+        return [QueueItem(
+            title=result.title,
+            artist=result.author,
+            requester=itx.user.id,
+            duration=result.duration_ms,
+            url=result.url
+        )]
 
 
 async def parse_query_url(itx: Interaction, spotify: Spotify, query: str) -> List[QueueItem]:
