@@ -3,7 +3,6 @@ from typing import Dict, List, Tuple
 from urllib.parse import urlparse, parse_qs
 from youtubesearchpython import Playlist, Video, VideosSearch
 from .exceptions import YouTubeInvalidURLError, YouTubeInvalidPlaylistError
-from .string import machine_readable_time
 from .url_check import check_youtube_url
 import re
 
