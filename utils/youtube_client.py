@@ -11,7 +11,7 @@ import re
 def parse_result(result: Dict) -> YouTubeResult:
     duration = 0
     if 'duration' in result.keys() and result['duration'] is not None:
-        duration = machine_readable_time(result['duration'])
+        duration = int(result['duration']['secondsText']) * 1000
     return YouTubeResult(
         title=result['title'],
         author=result['channel']['name'],
