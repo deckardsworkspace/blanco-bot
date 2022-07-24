@@ -20,7 +20,7 @@ class Paginator:
             await self.itx.followup.send(embed=embeds[0])
             if callback is not None:
                 callback(msg.id)
-                return
+            return
 
         # Based on https://github.com/toxicrecker/DiscordUtils/blob/master/DiscordUtils/Pagination.py
         # but with support for custom home page and adapted for Interaction responses
