@@ -3,6 +3,7 @@ from typing import Dict, List, Tuple
 from urllib.parse import urlparse, parse_qs
 from youtubesearchpython import Playlist, Video, VideosSearch
 from .exceptions import YouTubeInvalidURLError, YouTubeInvalidPlaylistError
+from .string import machine_readable_time
 from .url_check import check_youtube_url
 import re
 
@@ -10,7 +11,12 @@ import re
 def parse_result(result: Dict) -> YouTubeResult:
     duration = 0
     if 'duration' in result.keys() and result['duration'] is not None:
-        duration = int(result['duration']['secondsText']) * 1000
+        if isinstance(result['duration'], str):
+            duration = machine_readable_time(result['duration'])
+        elif isinstance(result['duration'], dict) and 'secondsText' in result['duration'].keys():
+            duration = int(result['duration']['secondsText']) * 1000
+        else:
+            duration = 0
     return YouTubeResult(
         title=result['title'],
         author=result['channel']['name'],
