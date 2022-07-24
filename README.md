@@ -67,11 +67,11 @@ Then create a `docker-compose.yml` file in the same folder with the following co
 version: '3.8'
 services:
   blanco-bot:
-    image: ghcr.io/jareddantis/blanco-bot:latest
+    image: jareddantis/blanco-bot:latest
     container_name: blanco-bot
     volumes:
-      - /YOUR/PATH/HERE/config.yml:/home/blanco/config.yml
-      - /YOUR/PATH/HERE/blanco.db:/home/blanco/blanco.db
+      - /YOUR/PATH/HERE/config.yml:/opt/app/config.yml
+      - /YOUR/PATH/HERE/blanco.db:/opt/app/blanco.db
     restart: unless-stopped
 ```
 
