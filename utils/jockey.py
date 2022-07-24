@@ -204,7 +204,7 @@ class Jockey:
                 pass
 
         # Send now playing embed
-        embed = create_now_playing_embed(self._player.current)
+        embed = create_now_playing_embed(self._queue[self._current], self._player.current.uri)
         view = NowPlayingView(self._bot, self._player)
         if isinstance(recipient, Interaction):
             message = await recipient.followup.send(embed=embed, view=view)
