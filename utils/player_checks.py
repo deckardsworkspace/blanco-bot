@@ -27,7 +27,7 @@ def check_mutual_voice(itx: Interaction) -> bool:
             raise VoiceCommandError('I\'m not connected to voice.')
 
         # Bot needs to have permissions to connect to voice.
-        permissions = vc.permissions_for(itx.client.user)
+        permissions = vc.permissions_for(itx.guild.me)
         if not permissions.connect or not permissions.speak:
             raise VoiceCommandError('I need the `CONNECT` and `SPEAK` permissions to play music.')
 
