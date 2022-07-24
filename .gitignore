@@ -137,3 +137,6 @@ dmypy.json
 # Bot config
 docker-compose.yml
 config.yml
+
+# Miscellaneous Dockerfiles
+Dockerfile-*
