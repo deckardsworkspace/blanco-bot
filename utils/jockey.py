@@ -44,6 +44,7 @@ class Jockey:
         self._queue: Deque[QueueItem] = deque()
         self._current = -1
         self._loop_whole = False
+        self._skipping = False
 
         # Shuffle indices
         self._shuffle_indices = []
@@ -175,8 +176,10 @@ class Jockey:
         if isinstance(event, TrackStartEvent):
             # Send now playing embed
             await self.now_playing(self._channel)
+            self._skipping = False
         elif isinstance(event, QueueEndEvent):
             # Play next track in queue
+            self._skipping = True
             await self.skip()
     
     async def loop(self, itx: Interaction, whole_queue: bool = False):
@@ -202,9 +205,14 @@ class Jockey:
                 await last_msg.delete()
             except:
                 pass
+        
+        # If invoked from event, self._current isn't updated yet. Advance it if necessary.
+        current = self._current
+        if self._skipping:
+            current += 1
 
         # Send now playing embed
-        embed = create_now_playing_embed(self._queue[self._current], self._player.current.uri)
+        embed = create_now_playing_embed(self._queue[current], self._player.current.uri)
         view = NowPlayingView(self._bot, self._player)
         if isinstance(recipient, Interaction):
             message = await recipient.followup.send(embed=embed, view=view)
@@ -294,6 +302,7 @@ class Jockey:
     async def skip(self, itx: Optional[Interaction] = None, forward: bool = True):
         # It takes a while for the player to skip, so let's remove the player controls
         # while we wait to prevent the user from spamming them.
+        self._skipping = True
         np_msg = self._db.get_now_playing(self._guild)
         if np_msg != -1:
             try:
