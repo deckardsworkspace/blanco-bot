@@ -1,8 +1,8 @@
-from dataclass.youtube import YouTubeResult
+from dataclass.lavalink_result import LavalinkResult
 from lavalink.models import DefaultPlayer
 from typing import Dict, List, Tuple
 from urllib.parse import urlparse, parse_qs
-from .exceptions import YouTubeInvalidURLError, YouTubeInvalidPlaylistError, YouTubeSearchError
+from .exceptions import LavalinkInvalidURLError, LavalinkInvalidPlaylistError, LavalinkSearchError
 from .url_check import check_youtube_url
 import re
 
@@ -10,8 +10,8 @@ import re
 blacklist = ('karaoke', 'live', 'instrumental', 'piano', 'cover', 'minus one', 'reverb', 'slowed', 'remix', 'mashup')
 
 
-def parse_result(result: Dict[str, str]) -> YouTubeResult:
-    return YouTubeResult(
+def parse_result(result: Dict[str, str]) -> LavalinkResult:
+    return LavalinkResult(
         title=result['info']['title'],
         author=result['info']['author'],
         duration_ms=result['info']['length'],
@@ -20,40 +20,40 @@ def parse_result(result: Dict[str, str]) -> YouTubeResult:
     )
 
 
-async def get_youtube_playlist(player: DefaultPlayer, playlist_id: str) -> Tuple[str, List[YouTubeResult]]:
+async def get_playlist(player: DefaultPlayer, playlist_id: str) -> Tuple[str, List[LavalinkResult]]:
     try:
         result = await player.node.get_tracks(playlist_id)
         if result['loadType'] != 'PLAYLIST_LOADED':
-            raise YouTubeInvalidPlaylistError(playlist_id)
+            raise LavalinkInvalidPlaylistError(playlist_id)
     except:
-        raise YouTubeInvalidPlaylistError(playlist_id)
+        raise LavalinkInvalidPlaylistError(playlist_id)
     else:
         tracks = result['tracks']
         return result['playlistInfo']['name'], [parse_result(track) for track in tracks]
 
 
-async def get_youtube_video(player: DefaultPlayer, video_id: str) -> YouTubeResult:
+async def get_youtube_video(player: DefaultPlayer, video_id: str) -> LavalinkResult:
     try:
         result = await player.node.get_tracks(video_id)
         if result['loadType'] != 'TRACK_LOADED':
-            raise YouTubeInvalidURLError(video_id)
+            raise LavalinkInvalidURLError(video_id)
     except:
-        raise YouTubeInvalidURLError(video_id)
+        raise LavalinkInvalidURLError(video_id)
     else:
         return parse_result(result[0])
 
 
-async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duration_ms: int = 0, automatic: bool = True) -> List[YouTubeResult]:
-    results: List[YouTubeResult] = []
+async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duration_ms: int = 0, automatic: bool = True) -> List[LavalinkResult]:
+    results: List[LavalinkResult] = []
 
     try:
         search = await player.node.get_tracks(f'ytsearch:{query}')
         if search['loadType'] != 'SEARCH_RESULT':
-            raise YouTubeSearchError(query, reason='Invalid search result')
+            raise LavalinkSearchError(query, reason='Invalid search result')
         elif len(search['tracks']) == 0:
-            raise YouTubeSearchError(query, reason='No results found')
+            raise LavalinkSearchError(query, reason='No results found')
     except:
-        raise YouTubeSearchError(query)
+        raise LavalinkSearchError(query)
     else:
         search_results = search['tracks']
         for result in search_results:
@@ -90,7 +90,7 @@ async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duratio
 def get_ytid_from_url(url, id_type: str = 'v') -> str:
     # https://gist.github.com/kmonsoor/2a1afba4ee127cce50a0
     if not check_youtube_url(url):
-        raise YouTubeInvalidURLError(url)
+        raise LavalinkInvalidURLError(url)
 
     if url.startswith(('youtu', 'www')):
         url = 'http://' + url
@@ -106,12 +106,12 @@ def get_ytid_from_url(url, id_type: str = 'v') -> str:
     elif 'youtu.be' in query.hostname:
         return query.path[1:]
     
-    raise YouTubeInvalidURLError(url)
+    raise LavalinkInvalidURLError(url)
 
 
 def get_ytlistid_from_url(url: str) -> str:
     if not check_youtube_url(url):
-        raise YouTubeInvalidPlaylistError(url)
+        raise LavalinkInvalidPlaylistError(url)
 
     if url.startswith(('youtu', 'www')):
         url = 'http://' + url
@@ -120,4 +120,4 @@ def get_ytlistid_from_url(url: str) -> str:
     if 'youtube' in query.hostname and len(query.query):
         return parse_qs(query.query)['list'][0]
     
-    raise YouTubeInvalidPlaylistError(url)
+    raise LavalinkInvalidPlaylistError(url)

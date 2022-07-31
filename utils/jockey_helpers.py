@@ -7,7 +7,7 @@ from typing import Any, Coroutine, Optional
 from .exceptions import SpotifyInvalidURLError
 from .url_check import *
 from .spotify_client import parse_spotify_url, Spotify
-from .youtube_client import *
+from .lavalink_client import *
 import asyncio
 
 
@@ -100,7 +100,7 @@ async def parse_query_url(itx: Interaction, player: DefaultPlayer, spotify: Spot
             # It is a playlist!
             # Let us get the playlist's tracks.
             return await parse_youtube_playlist(itx, player, playlist_id)
-        except YouTubeInvalidPlaylistError as e:
+        except LavalinkInvalidPlaylistError as e:
             # No tracks found
             embed = CustomEmbed(
                 color=Color.red(),
@@ -127,7 +127,7 @@ async def parse_query_url(itx: Interaction, player: DefaultPlayer, spotify: Spot
                 url=video.url,
                 lavalink_track=video.lavalink_track
             )]
-        except YouTubeInvalidURLError:
+        except LavalinkInvalidURLError:
             embed = CustomEmbed(
                 color=Color.red(),
                 title=':x:｜Error enqueueing YouTube video',
@@ -216,10 +216,10 @@ async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, playli
     # Get playlist tracks from YouTube
     new_tracks = []
     try:
-        playlist_name, tracks = await get_youtube_playlist(player, playlist_id)
+        playlist_name, tracks = await get_playlist(player, playlist_id)
     except:
         # No tracks.
-        raise YouTubeInvalidPlaylistError(f'Playlist {playlist_id} is empty, private, or nonexistent')
+        raise LavalinkInvalidPlaylistError(f'Playlist {playlist_id} is empty, private, or nonexistent')
     else:
         embed = CustomEmbed(
             color=Color.dark_red(),

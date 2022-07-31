@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class YouTubeResult:
+class LavalinkResult:
     title: str
     author: str
     duration_ms: int
