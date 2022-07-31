@@ -106,7 +106,7 @@ class Jockey:
 
         return True
 
-    async def _try_enqueue(self, itx: Interaction, index: int) -> bool:
+    async def _try_enqueue(self, itx: Optional[Interaction], index: int) -> bool:
         track_index = self._shuffle_indices[index] if self.is_shuffling else index
         track = self._queue[track_index]
         try:
@@ -119,7 +119,7 @@ class Jockey:
                 if itx is not None:
                     await itx.followup.send(embed=create_success_embed(f'Skipped'), delete_after=5)
         except Exception as e:
-            embed = create_error_embed(f'Unable to skip to track {index}. Reason: {e}')
+            embed = create_error_embed(f'Unable to play track {index}. Reason: {e}')
             if itx is not None:
                 await itx.followup.send(embed=embed)
             else:
@@ -296,24 +296,26 @@ class Jockey:
             old_size = len(self._queue)
             self._queue.extend(new_tracks)
 
+            # Update shuffle indices if applicable
+            if self.is_shuffling:
+                new_indices = [old_size + i for i in range(len(new_tracks))]
+                self._shuffle_indices.extend(new_indices)
+
             # Are we beginning a new queue?
             first = new_tracks[0]
             first_name = f'**{first.title}** by **{first.artist}**' if first.title is not None else query
             if not self.is_playing:
                 # We are! Play the first track.
-                self._current = 0
+                current = self._current
+                self._current = old_size
                 if not await self._enqueue(new_tracks[0]):
-                    # Failed to enqueue
-                    self._queue.clear()
-                    self._current = -1
+                    # Failed to enqueue, restore state
+                    self._queue = self._queue[:old_size]
+                    self._current = current
+                    if self.is_shuffling:
+                        self._shuffle_indices = self._shuffle_indices[:old_size]
+
                     return await itx.followup.send(embed=create_error_embed(f'Failed to enqueue {first_name}'))
-            else:
-                # We are already playing from a queue.
-                # Update shuffle indices if applicable.
-                if self.is_shuffling:
-                    # Append new indices to the end of the list
-                    new_indices = [old_size + i for i in range(len(new_tracks))]
-                    self._shuffle_indices.extend(new_indices)
 
             # Send embed
             item_name = first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
