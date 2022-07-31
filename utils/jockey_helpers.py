@@ -68,7 +68,7 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
 
     # Query is not a URL. Do a YouTube search for the query and choose the first result.
     try:
-        result = await get_youtube_matches(player, query, automatic=False)[0]
+        results = await get_youtube_matches(player, query, automatic=False)
     except IndexError:
         embed = CustomEmbed(
             color=Color.red(),
@@ -78,11 +78,11 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
         return []
     else:
         return [QueueItem(
-            title=result.title,
-            artist=result.author,
+            title=results[0].title,
+            artist=results[0].author,
             requester=itx.user.id,
-            duration=result.duration_ms,
-            url=result.url
+            duration=results[0].duration_ms,
+            url=results[0].url
         )]
 
 
