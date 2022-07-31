@@ -7,6 +7,7 @@ from typing import Any, Coroutine, Optional
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 from .url_check import *
 from .spotify_client import parse_spotify_url, Spotify
+from .string import human_readable_time
 from .lavalink_client import *
 import asyncio
 
@@ -33,12 +34,18 @@ def create_now_playing_embed(track: QueueItem, uri: Optional[str] = '') -> Embed
     # Construct Spotify URL if it exists
     if track.spotify_id is not None:
         uri = f'https://open.spotify.com/track/{track.spotify_id}'
+    
+    # Get track duration
+    duration = None
+    if track.duration != 0:
+        duration = human_readable_time(track.duration)
 
     embed = CustomEmbed(
         title='Now playing',
         description=[
             f'[**{track.title}**]({uri})',
-            f'{track.artist}'
+            f'{track.artist}',
+            duration
         ],
         color=Color.teal(),
         timestamp_now=True
