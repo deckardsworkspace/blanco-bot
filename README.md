@@ -12,6 +12,7 @@ The bot stores settings in a local SQLite database. This database is populated a
 - [Requirements](#requirements)
 - [Deployment](#deployment)
   - [Lavalink in composition](#lavalink-in-composition)
+  - [Debugging](#debugging)
 
 ## Before you proceed
 
@@ -153,3 +154,17 @@ lavalink:
 ```
 
 Then run `docker compose up -d` as usual.
+
+## Debugging
+
+Blanco has the ability to switch to a debug mode, which at the moment is only used to register slash commands in a specified guild instead of globally like normal.
+
+If you would like to enable debugging mode in your own instance, edit the `bot` section in `config.yml` as such, then (re)start your instance:
+
+```yaml
+bot:
+  # ...
+  debug:
+    enabled: true
+    guild_id: <your guild id>
+```
