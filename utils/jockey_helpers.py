@@ -123,7 +123,10 @@ async def parse_sc_query(itx: Interaction, player: DefaultPlayer, query: str) ->
                 color=Color.orange(),
                 header=f'Enqueueing SoundCloud set',
                 title=set_name,
-                description=[f'[{len(tracks)} track(s)]({query})'],
+                description=[
+                    f'{len(tracks)} track(s)',
+                    query
+                ],
                 footer='This might take a while, please wait...'
             )
             await itx.channel.send(embed=embed.get())
@@ -178,8 +181,9 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
             header=f'Enqueueing Spotify {sp_type}',
             title=list_name,
             description=[
-                f'by **[{list_author}]({query})**',
-                f'{len(track_queue)} track(s)'
+                f'by **{list_author}**',
+                f'{len(track_queue)} track(s)',
+                query
             ],
             footer='This might take a while, please wait...',
             thumbnail_url=sp_art
@@ -200,9 +204,8 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
 
 
 async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, playlist_id: str) -> List[QueueItem]:
-    # Get playlist tracks from YouTube
-    new_tracks = []
     try:
+        # Get playlist tracks from YouTube
         playlist_name, tracks = await get_tracks(player, playlist_id)
     except:
         # No tracks.
@@ -212,22 +215,22 @@ async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, playli
             color=Color.dark_red(),
             header=f'Enqueueing YouTube playlist',
             title=playlist_name,
-            description=[f'[{len(tracks)} track(s)](http://youtube.com/playlist?list={playlist_id})'],
+            description=[
+                f'{len(tracks)} track(s)',
+                f'https://youtube.com/playlist?list={playlist_id}'
+            ],
             footer='This might take a while, please wait...'
         )
         await itx.channel.send(embed=embed.get())
 
-        for track in tracks:
-            new_tracks.append(QueueItem(
-                requester=itx.user.id,
-                title=track.title,
-                artist=track.author,
-                duration=track.duration_ms,
-                url=track.url,
-                lavalink_track=track.lavalink_track
-            ))
-
-        return new_tracks
+        return [QueueItem(
+            requester=itx.user.id,
+            title=track.title,
+            artist=track.author,
+            duration=track.duration_ms,
+            url=track.url,
+            lavalink_track=track.lavalink_track
+        ) for track in tracks]
 
 
 async def parse_youtube_query(itx: Interaction, player: DefaultPlayer, query: str) -> List[QueueItem]:
