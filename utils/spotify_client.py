@@ -1,4 +1,3 @@
-from os import environ
 from typing import Dict, List, Tuple
 from urllib.parse import urlparse
 from .exceptions import SpotifyInvalidURLError
