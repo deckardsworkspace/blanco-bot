@@ -307,7 +307,7 @@ class PlayerCog(Cog):
         # Is the volume argument empty?
         if not volume:
             # Print current volume
-            return await itx.response.send_message(f'The volume is set to {jockey.volume}.')
+            return await itx.response.send_message(f'The volume is set to {jockey.volume}.', ephemeral=True)
 
         # Dispatch to jockey
         await itx.response.defer()
