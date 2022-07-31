@@ -1,4 +1,4 @@
-from nextcord import Intents, Interaction
+from nextcord import Activity, ActivityType, Intents, Interaction
 from utils.jockey_helpers import create_error_embed
 from utils.lavalink_bot import LavalinkBot
 from yaml import safe_load
@@ -20,6 +20,12 @@ client.config = config
 async def on_ready():
     print('Logged in as {0}!'.format(client.user))
     client.load_extension('cogs')
+
+    # Change presence
+    if client.debug:
+        await client.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening))
+    else:
+        await client.change_presence(activity=Activity(name='/play', type=ActivityType.listening))
 
 @client.event
 async def on_application_command_error(itx: Interaction, error: Exception):
