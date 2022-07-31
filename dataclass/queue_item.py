@@ -18,6 +18,7 @@ class QueueItem:
     title: Optional[str] = None
     artist: Optional[str] = None
     duration: Optional[int] = 0   # milliseconds
+    lavalink_track: Optional[str] = None
 
     # Get title and artist
     def get_details(self) -> Tuple[str, str]:

@@ -36,38 +36,24 @@ async def lavalink_search(player: DefaultPlayer, queue_item: QueueItem):
 
 
 async def lavalink_enqueue(player: DefaultPlayer, query: QueueItem) -> bool:
-    # Get the results for the query from Lavalink
-    results = await lavalink_search(player, query)
+    if query.lavalink_track is not None:
+        # Track has already been processed by Lavalink so just play it directly
+        player.add(requester=query.requester, track=query.lavalink_track)
+    else:
+        # Get the results for the query from Lavalink
+        results = await lavalink_search(player, query)
 
-    # Results could be None if Lavalink returns an invalid response (non-JSON/non-200 (OK)).
-    # Alternatively, results['tracks'] could be an empty array if the query yielded no tracks.
-    if not results or not results['tracks']:
-        return False
+        # Results could be None if Lavalink returns an invalid response (non-JSON/non-200 (OK)).
+        # Alternatively, results['tracks'] could be an empty array if the query yielded no tracks.
+        if not results or not results['tracks']:
+            return False
 
-    # Valid loadTypes are:
-    #   TRACK_LOADED    - single video/direct URL
-    #   PLAYLIST_LOADED - direct URL to playlist
-    #   SEARCH_RESULT   - query prefixed with either ytsearch: or scsearch:.
-    #   NO_MATCHES      - query yielded no results
-    #   LOAD_FAILED     - most likely, the video encountered an exception during loading.
-    if results['loadType'] == 'SEARCH_RESULT' or results['loadType'] == 'TRACK_LOADED':
-        track = results['tracks'][0]
-
-        # Save track metadata to player storage
-        if hasattr(track, 'identifier'):
-            player.store(track['identifier'], track)
-
-            # Add Spotify data to track metadata
-            if query.spotify_id is not None:
-                player.store(f'{track["identifier"]}-spotify', {
-                    'name': query.title,
-                    'artist': query.artist,
-                    'id': query.spotify_id
-                })
-
-        # Add track directly to Lavalink queue
-        track = AudioTrack(track, query.requester)
-        player.add(requester=query.requester, track=track)
+        # Try to add track directly to Lavalink queue
+        if results['loadType'] == 'SEARCH_RESULT' or results['loadType'] == 'TRACK_LOADED':
+            track = AudioTrack(results['tracks'][0], query.requester)
+            player.add(requester=query.requester, track=track)
+        else:
+            return False
 
     # We don't want to call .play() if the player is not idle
     # as that will effectively skip the current track.

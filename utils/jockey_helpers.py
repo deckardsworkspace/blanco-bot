@@ -107,7 +107,8 @@ async def parse_query_url(itx: Interaction, player: DefaultPlayer, spotify: Spot
                 title=':x:｜Error enqueueing YouTube playlist',
                 description=e.message
             )
-            return await itx.followup.send(embed=embed.get())
+            await itx.followup.send(embed=embed.get())
+            return []
         except:
             pass
 
@@ -123,7 +124,8 @@ async def parse_query_url(itx: Interaction, player: DefaultPlayer, spotify: Spot
                 artist=video.author,
                 requester=itx.user.id,
                 duration=video.duration_ms,
-                url=video.url
+                url=video.url,
+                lavalink_track=video.lavalink_track
             )]
         except YouTubeInvalidURLError:
             embed = CustomEmbed(
@@ -142,7 +144,7 @@ async def parse_query_url(itx: Interaction, player: DefaultPlayer, spotify: Spot
             await itx.followup.send(embed=embed.get())
             return []
 
-    # Query is a non-Spotify URL.
+    # Query is a non-YouTube URL.
     return [QueueItem(
         requester=itx.user.id,
         url=query
@@ -234,7 +236,8 @@ async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, playli
                 title=track.title,
                 artist=track.author,
                 duration=track.duration_ms,
-                url=track.url
+                url=track.url,
+                lavalink_track=track.lavalink_track
             ))
 
         return new_tracks

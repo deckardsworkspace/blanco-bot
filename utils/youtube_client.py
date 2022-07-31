@@ -16,8 +16,9 @@ def parse_result(result: Dict[str, str]) -> YouTubeResult:
         author=result['info']['author'],
         duration_ms=result['info']['length'],
         url=result['info']['uri'],
-        lavalink_track=result['track']
+        lavalink_track=result
     )
+
 
 async def get_youtube_playlist(player: DefaultPlayer, playlist_id: str) -> Tuple[str, List[YouTubeResult]]:
     try:
