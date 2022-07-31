@@ -47,7 +47,7 @@ async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duratio
     results: List[YouTubeResult] = []
 
     try:
-        search = await player.node.get_tracks(query)
+        search = await player.node.get_tracks(f'ytsearch:{query}')
         if search['loadType'] != 'SEARCH_RESULT':
             raise YouTubeSearchError(query, reason='Invalid search result')
         elif len(search['tracks']) == 0:
