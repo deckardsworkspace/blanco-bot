@@ -268,7 +268,7 @@ class Jockey:
 
             # Are we beginning a new queue?
             first = new_tracks[0]
-            first_name = f'**{first.title}**\nby {first.artist}' if first.title is not None else query
+            first_name = f'**{first.title}** by **{first.artist}**' if first.title is not None else query
             if not self.is_playing:
                 # We are! Play the first track.
                 self._current = 0
