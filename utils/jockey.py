@@ -172,7 +172,7 @@ class Jockey:
                 # Create item line, max 50 chars
                 line_prefix = '> ' if count - 1 == current else '  '
                 line = f'{line_prefix} {index} :: {title} - {artist}'
-                chunk_tracks.append(f'{line:50}')
+                chunk_tracks.append(f'{line:50.50}')
                 count += 1
 
             # Create page
