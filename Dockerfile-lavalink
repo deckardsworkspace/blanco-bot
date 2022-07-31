@@ -1,0 +1,12 @@
+FROM eclipse-temurin:17-jre-focal
+
+# Run as non-root user
+RUN groupadd -g 322 lavalink && \
+    useradd -r -u 322 -g lavalink lavalink
+USER lavalink
+
+# Download Lavalink
+WORKDIR /opt/Lavalink
+RUN curl -Lo Lavalink.jar https://github.com/Cog-Creators/Lavalink-Jars/releases/latest/download/Lavalink.jar
+
+ENTRYPOINT ["java", "-Djdk.tls.client.protocols=TLSv1.1,TLSv1.2", "-Xmx1G", "-jar", "Lavalink.jar"]

@@ -135,8 +135,4 @@ dmypy.json
 **/.DS_Store
 
 # Bot config
-docker-compose.yml
-config.yml
-
-# Miscellaneous Dockerfiles
-Dockerfile-*
+**/*.yml
