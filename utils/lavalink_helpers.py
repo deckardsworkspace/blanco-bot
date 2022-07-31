@@ -28,7 +28,7 @@ async def lavalink_search(player: DefaultPlayer, queue_item: QueueItem):
     if queue_item.title is not None:
         # If the duration is specified, use it to find the track
         if queue_item.duration > 0:
-            results = get_youtube_matches(f'{queue_item.title} {queue_item.artist}', desired_duration_ms=queue_item.duration)
+            results = await get_youtube_matches(f'{queue_item.title} {queue_item.artist}', desired_duration_ms=queue_item.duration)
             return await player.node.get_tracks(results[0].url)
         return await player.node.get_tracks(f'ytsearch:{queue_item.title} {queue_item.artist} audio')
     else:

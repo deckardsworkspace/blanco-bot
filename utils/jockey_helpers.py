@@ -1,9 +1,9 @@
-from types import coroutine
 from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
 from itertools import islice
+from lavalink.models import DefaultPlayer
 from nextcord import Color, Embed, Interaction
-from typing import Any, Optional
+from typing import Any, Coroutine, Optional
 from .exceptions import SpotifyInvalidURLError
 from .url_check import *
 from .spotify_client import parse_spotify_url, Spotify
@@ -51,7 +51,7 @@ def list_chunks(data: List[Any]) -> List[Any]:
         yield islice(data, i, i + 10)
 
 
-def manual_await(coro: coroutine) -> Any:
+def manual_await(coro: Coroutine) -> Any:
     """
     Await a coroutine, but don't raise an exception if it fails.
     """
@@ -62,13 +62,13 @@ def manual_await(coro: coroutine) -> Any:
         return None
 
 
-async def parse_query(itx: Interaction, spotify: Spotify, query: str) -> List[QueueItem]:
+async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify, query: str) -> List[QueueItem]:
     if check_url(query):
-        return await parse_query_url(itx, spotify, query)
+        return await parse_query_url(itx, player, spotify, query)
 
     # Query is not a URL. Do a YouTube search for the query and choose the first result.
     try:
-        result = get_youtube_matches(query, automatic=False)[0]
+        result = await get_youtube_matches(player, query, automatic=False)[0]
     except IndexError:
         embed = CustomEmbed(
             color=Color.red(),
@@ -86,7 +86,7 @@ async def parse_query(itx: Interaction, spotify: Spotify, query: str) -> List[Qu
         )]
 
 
-async def parse_query_url(itx: Interaction, spotify: Spotify, query: str) -> List[QueueItem]:
+async def parse_query_url(itx: Interaction, player: DefaultPlayer, spotify: Spotify, query: str) -> List[QueueItem]:
     if check_spotify_url(query):
         # Query is a Spotify URL.
         return await parse_spotify_query(itx, spotify, query)
@@ -99,7 +99,7 @@ async def parse_query_url(itx: Interaction, spotify: Spotify, query: str) -> Lis
 
             # It is a playlist!
             # Let us get the playlist's tracks.
-            return await parse_youtube_playlist(itx, playlist_id)
+            return await parse_youtube_playlist(itx, player, playlist_id)
         except YouTubeInvalidPlaylistError as e:
             # No tracks found
             embed = CustomEmbed(
@@ -107,7 +107,7 @@ async def parse_query_url(itx: Interaction, spotify: Spotify, query: str) -> Lis
                 title=':x:｜Error enqueueing YouTube playlist',
                 description=e.message
             )
-            await itx.followup.send(embed=embed.get())
+            return await itx.followup.send(embed=embed.get())
         except:
             pass
 
@@ -117,7 +117,7 @@ async def parse_query_url(itx: Interaction, spotify: Spotify, query: str) -> Lis
 
             # It is a video!
             # Let us get the video's details.
-            video = get_youtube_video(video_id)
+            video = await get_youtube_video(player, video_id)
             return [QueueItem(
                 title=video.title,
                 artist=video.author,
@@ -210,37 +210,31 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
     return new_tracks
 
 
-async def parse_youtube_playlist(itx: Interaction, playlist_id: str) -> List[QueueItem]:
+async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, playlist_id: str) -> List[QueueItem]:
     # Get playlist tracks from YouTube
     new_tracks = []
-    playlist_name, playlist_author, num_tracks = get_youtube_playlist_info(playlist_id)
-    if num_tracks < 1:
+    try:
+        playlist_name, tracks = await get_youtube_playlist(player, playlist_id)
+    except:
         # No tracks.
-        raise YouTubeInvalidPlaylistError(f'Playlist {playlist_id} is empty.')
-
-    # At least one track.
-    # Send embed if the list is longer than 1 track.
-    if num_tracks > 1:
+        raise YouTubeInvalidPlaylistError(f'Playlist {playlist_id} is empty, private, or nonexistent')
+    else:
         embed = CustomEmbed(
             color=Color.dark_red(),
             header=f'Enqueueing YouTube playlist',
             title=playlist_name,
-            description=[
-                f'by [{playlist_author}](http://youtube.com/playlist?list={playlist_id})',
-                f'{num_tracks} track(s)'
-            ],
+            description=[f'[{len(tracks)} track(s)](http://youtube.com/playlist?list={playlist_id})'],
             footer='This might take a while, please wait...'
         )
         await itx.channel.send(embed=embed.get())
 
-    tracks = get_youtube_playlist_tracks(playlist_id)
-    for track in tracks:
-        new_tracks.append(QueueItem(
-            requester=itx.user.id,
-            title=track.title,
-            artist=track.author,
-            duration=track.duration_ms,
-            url=track.url
-        ))
+        for track in tracks:
+            new_tracks.append(QueueItem(
+                requester=itx.user.id,
+                title=track.title,
+                artist=track.author,
+                duration=track.duration_ms,
+                url=track.url
+            ))
 
-    return new_tracks
+        return new_tracks

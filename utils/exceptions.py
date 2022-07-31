@@ -13,6 +13,12 @@ class VoiceCommandError(Exception):
         super().__init__(self.message)
 
 
+class YouTubeSearchError(Exception):
+    def __init__(self, query, reason=None):
+        self.message = f'Could not search for "{query}" on YouTube. Reason: {reason}'
+        super().__init__(self.message)
+
+
 class YouTubeInvalidURLError(Exception):
     def __init__(self, url, reason=None):
         self.message = f'Invalid YouTube video: {url}. Reason: {reason}'

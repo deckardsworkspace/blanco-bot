@@ -1,59 +1,62 @@
 from dataclass.youtube import YouTubeResult
+from lavalink.models import DefaultPlayer
 from typing import Dict, List, Tuple
 from urllib.parse import urlparse, parse_qs
-from youtubesearchpython import Playlist, Video, VideosSearch
-from .exceptions import YouTubeInvalidURLError, YouTubeInvalidPlaylistError
-from .string import machine_readable_time
+from .exceptions import YouTubeInvalidURLError, YouTubeInvalidPlaylistError, YouTubeSearchError
 from .url_check import check_youtube_url
 import re
 
 
-def parse_result(result: Dict) -> YouTubeResult:
-    duration = 0
-    if 'duration' in result.keys() and result['duration'] is not None:
-        if isinstance(result['duration'], str):
-            duration = machine_readable_time(result['duration'])
-        elif isinstance(result['duration'], dict) and 'secondsText' in result['duration'].keys():
-            duration = int(result['duration']['secondsText']) * 1000
-        else:
-            duration = 0
+blacklist = ('karaoke', 'live', 'instrumental', 'piano', 'cover', 'minus one', 'reverb', 'slowed', 'remix', 'mashup')
+
+
+def parse_result(result: Dict[str, str]) -> YouTubeResult:
     return YouTubeResult(
-        title=result['title'],
-        author=result['channel']['name'],
-        duration_ms=duration,
-        url=f'https://www.youtube.com/watch?v={result["id"]}'
+        title=result['info']['title'],
+        author=result['info']['author'],
+        duration_ms=result['info']['length'],
+        url=result['info']['uri'],
+        lavalink_track=result['track']
     )
 
-
-def get_youtube_playlist_info(playlist_id: str) -> Tuple[str, str, int]:
-    playlist_info = Playlist.getInfo(f'http://youtube.com/playlist?list={playlist_id}')
-    return playlist_info['title'], playlist_info['channel']['name'], int(playlist_info['videoCount'])
-
-
-def get_youtube_playlist_tracks(playlist_id: str) -> List[YouTubeResult]:
-    playlist = Playlist(f'http://youtube.com/playlist?list={playlist_id}')
-    while playlist.hasMoreVideos:
-        playlist.getNextVideos()
-    return [parse_result(i) for i in playlist.videos]
-
-
-def get_youtube_video(video_id: str) -> YouTubeResult:
+async def get_youtube_playlist(player: DefaultPlayer, playlist_id: str) -> Tuple[str, List[YouTubeResult]]:
     try:
-        video = Video.get(video_id)
+        result = await player.node.get_tracks(playlist_id)
+        if result['loadType'] != 'PLAYLIST_LOADED':
+            raise YouTubeInvalidPlaylistError(playlist_id)
+    except:
+        raise YouTubeInvalidPlaylistError(playlist_id)
+    else:
+        tracks = result['tracks']
+        return result['playlistInfo']['name'], [parse_result(track) for track in tracks]
+
+
+async def get_youtube_video(player: DefaultPlayer, video_id: str) -> YouTubeResult:
+    try:
+        result = await player.node.get_tracks(video_id)
+        if result['loadType'] != 'TRACK_LOADED':
+            raise YouTubeInvalidURLError(video_id)
     except:
         raise YouTubeInvalidURLError(video_id)
     else:
-        return parse_result(video)
+        return parse_result(result[0])
 
 
-def get_youtube_matches(query: str, desired_duration_ms: int = 0, num_results: int = 10, automatic: bool = True) -> List[YouTubeResult]:
+async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duration_ms: int = 0, automatic: bool = True) -> List[YouTubeResult]:
     results: List[YouTubeResult] = []
-    blacklist = ('karaoke', 'live', 'instrumental', 'piano', 'cover', 'minus one', 'reverb', 'slowed', 'remix', 'mashup')
-    search = VideosSearch(query, limit=num_results)
-    search_results = search.result()
-    if 'result' in search_results.keys():
-        for result in search_results['result']:
-            if 'duration' not in result.keys() or result['duration'] is None:
+
+    try:
+        search = await player.node.get_tracks(query)
+        if search['loadType'] != 'SEARCH_RESULT':
+            raise YouTubeSearchError(query, reason='Invalid search result')
+        elif len(search['tracks']) == 0:
+            raise YouTubeSearchError(query, reason='No results found')
+    except:
+        raise YouTubeSearchError(query)
+    else:
+        search_results = search['tracks']
+        for result in search_results:
+            if 'length' not in result['info'].keys() or result['info']['length'] is None:
                 # Can't play a track with no duration
                 continue
 
@@ -62,7 +65,7 @@ def get_youtube_matches(query: str, desired_duration_ms: int = 0, num_results: i
             valid = True
             if automatic:
                 for word in blacklist:
-                    if word in result['title'].lower() and not word in query.lower():
+                    if word in result['info']['title'].lower() and not word in query.lower():
                         valid = False
                         break
 

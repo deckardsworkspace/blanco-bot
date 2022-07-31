@@ -7,3 +7,4 @@ class YouTubeResult:
     author: str
     duration_ms: int
     url: str
+    lavalink_track: str

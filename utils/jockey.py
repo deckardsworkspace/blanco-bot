@@ -231,7 +231,7 @@ class Jockey:
     
     async def play(self, itx: Interaction, query: str):
         # Get results for query
-        new_tracks = await parse_query(itx, self._spotify, query)
+        new_tracks = await parse_query(itx, self._player, self._spotify, query)
         if len(new_tracks):
             # Connect to voice
             if not self.is_connected:
