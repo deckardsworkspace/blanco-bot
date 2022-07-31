@@ -64,7 +64,18 @@ def manual_await(coro: Coroutine) -> Any:
 
 async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify, query: str) -> List[QueueItem]:
     if check_url(query):
-        return await parse_query_url(itx, player, spotify, query)
+        if check_spotify_url(query):
+            # Query is a Spotify URL.
+            return await parse_spotify_query(itx, spotify, query)
+        elif check_youtube_url(query):
+            # Query is a YouTube URL.
+            return await parse_youtube_query(itx, player, spotify, query)
+        else:
+            # Query is a non-YouTube URL.
+            return [QueueItem(
+                requester=itx.user.id,
+                url=query
+            )]
 
     # Query is not a URL. Try to find a match on Spotify.
     try:
@@ -92,71 +103,6 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
             duration=result.duration_ms,
             url=result.url
         )]
-
-
-async def parse_query_url(itx: Interaction, player: DefaultPlayer, spotify: Spotify, query: str) -> List[QueueItem]:
-    if check_spotify_url(query):
-        # Query is a Spotify URL.
-        return await parse_spotify_query(itx, spotify, query)
-
-    if check_youtube_url(query):
-        # Query is a YouTube URL.
-        # Is it a playlist?
-        try:
-            playlist_id = get_ytlistid_from_url(query)
-
-            # It is a playlist!
-            # Let us get the playlist's tracks.
-            return await parse_youtube_playlist(itx, player, playlist_id)
-        except LavalinkInvalidPlaylistError as e:
-            # No tracks found
-            embed = CustomEmbed(
-                color=Color.red(),
-                title=':x:｜Error enqueueing YouTube playlist',
-                description=e.message
-            )
-            await itx.followup.send(embed=embed.get())
-            return []
-        except:
-            pass
-
-        # Is it a video?
-        try:
-            video_id = get_ytid_from_url(query)
-
-            # It is a video!
-            # Let us get the video's details.
-            video = await get_youtube_video(player, video_id)
-            return [QueueItem(
-                title=video.title,
-                artist=video.author,
-                requester=itx.user.id,
-                duration=video.duration_ms,
-                url=video.url,
-                lavalink_track=video.lavalink_track
-            )]
-        except LavalinkInvalidURLError:
-            embed = CustomEmbed(
-                color=Color.red(),
-                title=':x:｜Error enqueueing YouTube video',
-                description='The video has either been deleted, or made private, or never existed.'
-            )
-            await itx.followup.send(embed=embed.get())
-            return []
-        except:
-            embed = CustomEmbed(
-                color=Color.red(),
-                title=':x:｜YouTube URL is invalid',
-                description=f'Only YouTube video and playlist URLs are supported.'
-            )
-            await itx.followup.send(embed=embed.get())
-            return []
-
-    # Query is a non-YouTube URL.
-    return [QueueItem(
-        requester=itx.user.id,
-        url=query
-    )]
 
 
 async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) -> List[QueueItem]:
@@ -249,3 +195,56 @@ async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, playli
             ))
 
         return new_tracks
+
+
+async def parse_youtube_query(itx: Interaction, player: DefaultPlayer, query: str) -> List[QueueItem]:
+    # Is it a playlist?
+    try:
+        playlist_id = get_ytlistid_from_url(query)
+
+        # It is a playlist!
+        # Let us get the playlist's tracks.
+        return await parse_youtube_playlist(itx, player, playlist_id)
+    except LavalinkInvalidPlaylistError as e:
+        # No tracks found
+        embed = CustomEmbed(
+            color=Color.red(),
+            title=':x:｜Error enqueueing YouTube playlist',
+            description=e.message
+        )
+        await itx.followup.send(embed=embed.get())
+        return []
+    except:
+        pass
+
+    # Is it a video?
+    try:
+        video_id = get_ytid_from_url(query)
+
+        # It is a video!
+        # Let us get the video's details.
+        video = await get_youtube_video(player, video_id)
+        return [QueueItem(
+            title=video.title,
+            artist=video.author,
+            requester=itx.user.id,
+            duration=video.duration_ms,
+            url=video.url,
+            lavalink_track=video.lavalink_track
+        )]
+    except LavalinkInvalidURLError:
+        embed = CustomEmbed(
+            color=Color.red(),
+            title=':x:｜Error enqueueing YouTube video',
+            description='The video has either been deleted, or made private, or never existed.'
+        )
+        await itx.followup.send(embed=embed.get())
+        return []
+    except:
+        embed = CustomEmbed(
+            color=Color.red(),
+            title=':x:｜YouTube URL is invalid',
+            description=f'Only YouTube video and playlist URLs are supported.'
+        )
+        await itx.followup.send(embed=embed.get())
+        return []
