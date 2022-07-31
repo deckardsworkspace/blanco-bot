@@ -38,7 +38,12 @@ def create_now_playing_embed(track: QueueItem, uri: Optional[str] = '') -> Embed
     # Get track duration
     duration = None
     if track.duration != 0:
-        duration = human_readable_time(track.duration)
+        h, m, s = human_readable_time(track.duration)
+        duration = f'{s}s'
+        if m > 0:
+            duration = f'{m}m {duration}'
+        if h > 0:
+            duration = f'{h}h {duration}'
 
     embed = CustomEmbed(
         title='Now playing',
