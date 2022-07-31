@@ -1,7 +1,20 @@
 from asyncio import sleep
 from nextcord import Client, StageChannel, VoiceChannel, VoiceClient
 from lavalink import Client
+from lavalink.events import *
 from typing import Dict, List, Union
+
+
+EventWithPlayer = Union[
+    PlayerUpdateEvent,
+    QueueEndEvent,
+    TrackEndEvent,
+    TrackExceptionEvent,
+    TrackStuckEvent,
+    TrackStartEvent,
+    NodeChangedEvent,
+    WebSocketClosedEvent
+]
 
 
 def init_lavalink(id: int, nodes: List[Dict[str, str]], timeout: int) -> Client: 

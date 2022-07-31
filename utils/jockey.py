@@ -11,9 +11,8 @@ from views.now_playing import NowPlayingView
 from .database import Database
 from .exceptions import EndOfQueueError
 from .jockey_helpers import *
-from .lavalink import LavalinkVoiceClient
+from .lavalink import EventWithPlayer, LavalinkVoiceClient
 from .lavalink_bot import LavalinkBot
-from .lavalink_helpers import EventWithPlayer, lavalink_enqueue
 from .paginator import Paginator
 from .spotify_client import Spotify
 
@@ -82,6 +81,27 @@ class Jockey:
     @property
     def volume(self) -> int:
         return self._player.volume
+    
+    async def _enqueue(self, query: QueueItem) -> bool:
+        if query.lavalink_track is not None:
+            # Track has already been processed by Lavalink so just play it directly
+            self._player.add(requester=query.requester, track=query.lavalink_track)
+        else:
+            # Get the results for the query from Lavalink
+            try:
+                results = await get_youtube_matches(self._player, f'{query.title} {query.artist} audio', desired_duration_ms=query.duration)
+            except:
+                return False
+
+            # Try to add first result directly to Lavalink queue
+            self._player.add(requester=query.requester, track=results[0].lavalink_track)
+
+        # We don't want to call .play() if the player is not idle
+        # as that will effectively skip the current track.
+        if not self.is_playing:
+            await self._player.play()
+
+        return True
 
     async def destroy(self) -> Messageable:
         # Disconnect Lavalink
@@ -252,7 +272,7 @@ class Jockey:
             if not self.is_playing:
                 # We are! Play the first track.
                 self._current = 0
-                if not await lavalink_enqueue(self._player, new_tracks[0]):
+                if not await self._enqueue(new_tracks[0]):
                     # Failed to enqueue
                     self._queue.clear()
                     self._current = -1
@@ -344,7 +364,7 @@ class Jockey:
                 track_index = self._shuffle_indices[next_i] if self.is_shuffling else next_i
                 track = self._queue[track_index]
                 try:
-                    if await lavalink_enqueue(self._player, track):
+                    if await self._enqueue(track):
                         if itx is not None:
                             await self._player.skip()
                             await itx.followup.send(embed=create_success_embed(f'Skipped to {"next" if forward else "previous"} track'), delete_after=5)
