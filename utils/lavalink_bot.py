@@ -27,3 +27,10 @@ class LavalinkBot(Bot):
     @config.setter
     def config(self, value: dict):
         self._config = value
+    
+    @property
+    def debug(self) -> bool:
+        try:
+            return self.config['bot']['debug']['enabled'] and self.config['bot']['debug']['guild_id']
+        except KeyError:
+            return False
