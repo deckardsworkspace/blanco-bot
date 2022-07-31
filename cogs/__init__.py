@@ -12,7 +12,7 @@ def setup(bot: LavalinkBot):
     bot.add_cog(PlayerCog(bot, db))
 
     # Sync slash commands
-    if bot.config['bot']['debug']['enabled']:
+    if 'debug' in bot.config['bot'].keys() and bot.config['bot']['debug']['enabled']:
         print('Syncing slash commands...')
         manual_await(bot.sync_application_commands(guild_id=bot.config['bot']['debug']['guild_id']))
         print('Synced slash commands!')
