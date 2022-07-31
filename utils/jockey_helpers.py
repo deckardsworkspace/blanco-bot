@@ -5,10 +5,10 @@ from lavalink.models import DefaultPlayer
 from nextcord import Color, Embed, Interaction
 from typing import Any, Coroutine, Optional
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
-from .url_check import *
-from .spotify_client import parse_spotify_url, Spotify
-from .string import human_readable_time
 from .lavalink_client import *
+from .spotify_client import Spotify
+from .string import human_readable_time
+from .url import *
 import asyncio
 
 
@@ -157,7 +157,7 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
     # Generally for Spotify tracks, we pick the YouTube result with
     # the same artist and title, and the closest duration to the Spotify track.
     try:
-        sp_type, sp_id = parse_spotify_url(query, valid_types=['track', 'album', 'playlist'])
+        sp_type, sp_id = get_spinfo_from_url(query, valid_types=['track', 'album', 'playlist'])
     except SpotifyInvalidURLError:
         embed = CustomEmbed(
             color=Color.red(),
