@@ -33,6 +33,12 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GH_PACKAGE_TOKEN }}
     -
+      name: Delete all prior versions on GHCR
+      uses: actions/delete-package-versions@v3
+      with:
+        package-name: ${{ github.event.repository.name }}
+        min-versions-to-keep: 0
+    -
       name: Get image metadata
       id: meta
       uses: docker/metadata-action@v4
