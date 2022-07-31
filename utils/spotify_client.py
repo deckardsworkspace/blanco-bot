@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
 from urllib.parse import urlparse
-from .exceptions import SpotifyInvalidURLError
+from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 from .url_check import check_spotify_url
 import re
 import spotipy
@@ -110,3 +110,10 @@ class Spotify:
             offset = offset + len(response['items'])
 
         return list_name, list_author, list(map(extract_track_info, tracks))
+
+    def search(self, query) -> Tuple[str, str, str, int]:
+        response = self._client.search(query, limit=1, type='track')
+        if len(response['tracks']['items']) == 0:
+            raise SpotifyNoResultsError()
+
+        return extract_track_info(response['tracks']['items'][0])

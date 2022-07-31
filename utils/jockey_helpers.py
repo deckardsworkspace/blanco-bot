@@ -4,7 +4,7 @@ from itertools import islice
 from lavalink.models import DefaultPlayer
 from nextcord import Color, Embed, Interaction
 from typing import Any, Coroutine, Optional
-from .exceptions import SpotifyInvalidURLError
+from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 from .url_check import *
 from .spotify_client import parse_spotify_url, Spotify
 from .lavalink_client import *
@@ -66,9 +66,17 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
     if check_url(query):
         return await parse_query_url(itx, player, spotify, query)
 
-    # Query is not a URL. Do a YouTube search for the query and choose the first result.
+    # Query is not a URL. Try to find a match on Spotify.
     try:
+        sp_title, sp_artist, _, sp_duration = spotify.search(query)
+    except SpotifyNoResultsError:
         results = await get_youtube_matches(player, query, automatic=False)
+    else:
+        results = await get_youtube_matches(player, f'{sp_title} {sp_artist}', desired_duration_ms=sp_duration, automatic=True)
+
+    # Play an equivalent on YouTube.
+    try:
+        result = results[0]
     except IndexError:
         embed = CustomEmbed(
             color=Color.red(),
@@ -78,11 +86,11 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
         return []
     else:
         return [QueueItem(
-            title=results[0].title,
-            artist=results[0].author,
+            title=sp_title if sp_title else result.title,
+            artist=sp_artist if sp_artist else result.author,
             requester=itx.user.id,
-            duration=results[0].duration_ms,
-            url=results[0].url
+            duration=result.duration_ms,
+            url=result.url
         )]
 
 

@@ -26,6 +26,10 @@ class SpotifyInvalidURLError(Exception):
         super().__init__(self.message)
 
 
+class SpotifyNoResultsError(Exception):
+    pass
+
+
 class VoiceCommandError(Exception):
     def __init__(self, reason):
         self.message = reason
