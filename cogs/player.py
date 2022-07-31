@@ -133,6 +133,22 @@ class PlayerCog(Cog):
         elif channel is not None:
             await channel.send(embed=embed)
     
+    @slash_command(name='jump')
+    @application_checks.check(check_mutual_voice)
+    async def jump(self, itx: Interaction, position: int = SlashOption(description='Position to jump to', required=True)):
+        """
+        Jumps to the specified position in the queue.
+        """
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+
+        # First check if the value is within range
+        if position < 1 or position > jockey.queue_size:
+            return await itx.response.send_message(f'Specify a number from 1 to {str(jockey.queue_size)}.', ephemeral=True)
+        
+        # Dispatch to jockey
+        await itx.response.defer()
+        await jockey.skip(itx, index=position - 1)
+    
     @slash_command(name='loop')
     @application_checks.check(check_mutual_voice)
     async def loop(self, itx: Interaction):
