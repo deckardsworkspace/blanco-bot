@@ -1,8 +1,8 @@
 from dataclass.lavalink_result import LavalinkResult
 from lavalink.models import DefaultPlayer
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse, parse_qs
-from .exceptions import LavalinkInvalidURLError, LavalinkInvalidPlaylistError, LavalinkSearchError
+from .exceptions import LavalinkInvalidIdentifierError, LavalinkInvalidIdentifierError, LavalinkSearchError
 from .url_check import check_youtube_url
 import re
 
@@ -20,27 +20,22 @@ def parse_result(result: Dict[str, str]) -> LavalinkResult:
     )
 
 
-async def get_playlist(player: DefaultPlayer, playlist_id: str) -> Tuple[str, List[LavalinkResult]]:
+async def get_tracks(player: DefaultPlayer, id_or_url: str) -> Tuple[Optional[str], List[LavalinkResult]]:
     try:
-        result = await player.node.get_tracks(playlist_id)
-        if result['loadType'] != 'PLAYLIST_LOADED':
-            raise LavalinkInvalidPlaylistError(playlist_id)
-    except:
-        raise LavalinkInvalidPlaylistError(playlist_id)
+        result = await player.node.get_tracks(id_or_url)
+        if result['loadType'] == 'LOAD_FAILED':
+            reason = result['exception']['message']
+            raise LavalinkInvalidIdentifierError(id_or_url, reason=reason)
+        elif result['loadType'] == 'NO_MATCHES':
+            raise LavalinkSearchError(id_or_url, reason=f'No matches found for "{id_or_url}"')
+    except Exception as e:
+        raise LavalinkSearchError(id_or_url, reason=f'Could not get tracks for "{id_or_url}" ({e})')
     else:
         tracks = result['tracks']
-        return result['playlistInfo']['name'], [parse_result(track) for track in tracks]
-
-
-async def get_youtube_video(player: DefaultPlayer, video_id: str) -> LavalinkResult:
-    try:
-        result = await player.node.get_tracks(video_id)
-        if result['loadType'] != 'TRACK_LOADED':
-            raise LavalinkInvalidURLError(video_id)
-    except:
-        raise LavalinkInvalidURLError(video_id)
-    else:
-        return parse_result(result[0])
+        if len(result['playlistInfo'].keys()) > 0:
+            return result['playlistInfo']['name'], [parse_result(track) for track in tracks]
+        else:
+            return None, [parse_result(track) for track in tracks]
 
 
 async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duration_ms: int = 0, automatic: bool = True) -> List[LavalinkResult]:
@@ -87,11 +82,31 @@ async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duratio
     return results
 
 
-def get_ytid_from_url(url, id_type: str = 'v') -> str:
-    # https://gist.github.com/kmonsoor/2a1afba4ee127cce50a0
-    if not check_youtube_url(url):
-        raise LavalinkInvalidURLError(url)
+def get_sctype_from_url(url: str) -> bool:
+    """
+    Determine SoundCloud entity type from URL.
 
+    Returns
+    -------
+    True if URL is a SoundCloud track, False if URL is a SoundCloud playlist.
+    """
+    if url.startswith(('soundcloud', 'www')):
+        url = 'http://' + url
+
+    query = urlparse(url)
+    path = [x for x in query.path.split('/') if x]
+    if len(path) == 1:
+        raise LavalinkInvalidIdentifierError(url, reason='SoundCloud URL does not point to a track or set.')
+    elif len(path) == 2 and path[1] != 'sets':
+        return True
+    elif path[1] == 'sets':
+        return False
+    else:
+        raise LavalinkInvalidIdentifierError(url, reason='Unrecognized SoundCloud URL.')
+
+
+def get_ytid_from_url(url: str, id_type: str = 'v') -> str:
+    # https://gist.github.com/kmonsoor/2a1afba4ee127cce50a0
     if url.startswith(('youtu', 'www')):
         url = 'http://' + url
 
@@ -106,13 +121,10 @@ def get_ytid_from_url(url, id_type: str = 'v') -> str:
     elif 'youtu.be' in query.hostname:
         return query.path[1:]
     
-    raise LavalinkInvalidURLError(url)
+    raise LavalinkInvalidIdentifierError(url, reason='Could not get playlist ID from YouTube URL')
 
 
 def get_ytlistid_from_url(url: str) -> str:
-    if not check_youtube_url(url):
-        raise LavalinkInvalidPlaylistError(url)
-
     if url.startswith(('youtu', 'www')):
         url = 'http://' + url
 
@@ -120,4 +132,4 @@ def get_ytlistid_from_url(url: str) -> str:
     if 'youtube' in query.hostname and len(query.query):
         return parse_qs(query.query)['list'][0]
     
-    raise LavalinkInvalidPlaylistError(url)
+    raise LavalinkInvalidIdentifierError(url, reason='Not a valid YouTube URL')

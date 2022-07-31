@@ -69,7 +69,10 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
             return await parse_spotify_query(itx, spotify, query)
         elif check_youtube_url(query):
             # Query is a YouTube URL.
-            return await parse_youtube_query(itx, player, spotify, query)
+            return await parse_youtube_query(itx, player, query)
+        elif check_sc_url(query):
+            # Query is a SoundCloud URL.
+            return await parse_sc_query(itx, player, query)
         else:
             # Query is a non-YouTube URL.
             return [QueueItem(
@@ -103,6 +106,36 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
             duration=result.duration_ms,
             url=result.url
         )]
+
+
+async def parse_sc_query(itx: Interaction, player: DefaultPlayer, query: str) -> List[QueueItem]:
+    # Get entity type
+    entity_type = get_sctype_from_url(query)
+
+    try:
+        # Get results with Lavalink
+        set_name, tracks = await get_tracks(player, query)
+    except:
+        raise LavalinkInvalidIdentifierError(f'Entity {query} is private, nonexistent, or has no stream URL')
+    else:
+        if not entity_type:
+            embed = CustomEmbed(
+                color=Color.orange(),
+                header=f'Enqueueing SoundCloud set',
+                title=set_name,
+                description=[f'[{len(tracks)} track(s)]({query})'],
+                footer='This might take a while, please wait...'
+            )
+            await itx.channel.send(embed=embed.get())
+
+        return [QueueItem(
+            requester=itx.user.id,
+            title=track.title,
+            artist=track.author,
+            duration=track.duration_ms,
+            url=track.url,
+            lavalink_track=track.lavalink_track
+        ) for track in tracks]
 
 
 async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) -> List[QueueItem]:
@@ -170,10 +203,10 @@ async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, playli
     # Get playlist tracks from YouTube
     new_tracks = []
     try:
-        playlist_name, tracks = await get_playlist(player, playlist_id)
+        playlist_name, tracks = await get_tracks(player, playlist_id)
     except:
         # No tracks.
-        raise LavalinkInvalidPlaylistError(f'Playlist {playlist_id} is empty, private, or nonexistent')
+        raise LavalinkInvalidIdentifierError(f'Playlist {playlist_id} is empty, private, or nonexistent')
     else:
         embed = CustomEmbed(
             color=Color.dark_red(),
@@ -205,7 +238,7 @@ async def parse_youtube_query(itx: Interaction, player: DefaultPlayer, query: st
         # It is a playlist!
         # Let us get the playlist's tracks.
         return await parse_youtube_playlist(itx, player, playlist_id)
-    except LavalinkInvalidPlaylistError as e:
+    except LavalinkInvalidIdentifierError as e:
         # No tracks found
         embed = CustomEmbed(
             color=Color.red(),
@@ -223,16 +256,16 @@ async def parse_youtube_query(itx: Interaction, player: DefaultPlayer, query: st
 
         # It is a video!
         # Let us get the video's details.
-        video = await get_youtube_video(player, video_id)
+        _, video = await get_tracks(player, video_id)
         return [QueueItem(
-            title=video.title,
-            artist=video.author,
+            title=video[0].title,
+            artist=video[0].author,
             requester=itx.user.id,
-            duration=video.duration_ms,
-            url=video.url,
-            lavalink_track=video.lavalink_track
+            duration=video[0].duration_ms,
+            url=video[0].url,
+            lavalink_track=video[0].lavalink_track
         )]
-    except LavalinkInvalidURLError:
+    except LavalinkInvalidIdentifierError:
         embed = CustomEmbed(
             color=Color.red(),
             title=':x:｜Error enqueueing YouTube video',

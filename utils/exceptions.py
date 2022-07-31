@@ -2,15 +2,9 @@ class EndOfQueueError(Exception):
     pass
 
 
-class LavalinkInvalidPlaylistError(Exception):
+class LavalinkInvalidIdentifierError(Exception):
     def __init__(self, url, reason=None):
-        self.message = f'Invalid YouTube playlist: {url}. Reason: {reason}'
-        super().__init__(self.message)
-
-
-class LavalinkInvalidURLError(Exception):
-    def __init__(self, url, reason=None):
-        self.message = f'Invalid YouTube video: {url}. Reason: {reason}'
+        self.message = f'Error encountered while processing "{url}": `{reason}`'
         super().__init__(self.message)
 
 
