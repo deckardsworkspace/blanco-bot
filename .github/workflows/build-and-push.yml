@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: Build and push image to GHCR and Docker Hub
+    name: Build and push image to Docker Hub
     runs-on: ubuntu-latest
     steps:
     -
@@ -26,27 +26,11 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     -
-      name: Log in to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GH_PACKAGE_TOKEN }}
-    -
-      name: Delete all prior versions on GHCR
-      uses: actions/delete-package-versions@v3
-      if: ${{ github.ref == 'refs/heads/main' }}
-      with:
-        package-name: ${{ github.event.repository.name }}
-        min-versions-to-keep: 0
-    -
       name: Get image metadata
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: |
-          ${{ github.repository }}
-          ghcr.io/${{ github.repository }}
+        images: ${{ github.repository }}
     -
       name: Checkout repository
       uses: actions/checkout@v3
@@ -57,9 +41,7 @@ jobs:
         context: .
         platforms: linux/amd64,linux/arm64
         push: ${{ github.event_name != 'pull_request' }}
-        tags: |
-          ${{ github.repository }}:latest
-          ghcr.io/${{ github.repository }}:latest
+        tags: ${{ github.repository }}:latest
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
