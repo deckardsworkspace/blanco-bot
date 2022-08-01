@@ -1,15 +1,7 @@
 from nextcord import Activity, ActivityType, Intents, Interaction
+from utils.config import config
 from utils.jockey_helpers import create_error_embed
 from utils.lavalink_bot import LavalinkBot
-from yaml import safe_load
-
-
-# Parse config file
-with open('config.yml') as f:
-    try:
-        config = safe_load(f)
-    except Exception as e:
-        raise ValueError(f'Error parsing config.yml: {e}')
 
 # Create bot instance
 client = LavalinkBot(intents=Intents.default(), config=config)

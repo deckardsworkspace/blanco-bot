@@ -7,6 +7,7 @@ from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
 from typing import Dict, get_args, Optional
 from dataclass.custom_embed import CustomEmbed
+from utils.config import get_debug_guilds
 from utils.database import Database
 from utils.exceptions import EndOfQueueError
 from utils.jockey import Jockey
@@ -133,7 +134,7 @@ class PlayerCog(Cog):
         elif channel is not None:
             await channel.send(embed=embed)
     
-    @slash_command(name='jump')
+    @slash_command(guild_ids=get_debug_guilds(), name='jump')
     @application_checks.check(check_mutual_voice)
     async def jump(self, itx: Interaction, position: int = SlashOption(description='Position to jump to', required=True)):
         """
@@ -149,7 +150,7 @@ class PlayerCog(Cog):
         await itx.response.defer()
         await jockey.skip(itx, index=position - 1)
     
-    @slash_command(name='loop')
+    @slash_command(guild_ids=get_debug_guilds(), name='loop')
     @application_checks.check(check_mutual_voice)
     async def loop(self, itx: Interaction):
         """
@@ -159,7 +160,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.loop(itx)
     
-    @slash_command(name='loopall')
+    @slash_command(guild_ids=get_debug_guilds(), name='loopall')
     @application_checks.check(check_mutual_voice)
     async def loopall(self, itx: Interaction):
         """
@@ -169,7 +170,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.loop(itx, whole_queue=True)
     
-    @slash_command(name='nowplaying')
+    @slash_command(guild_ids=get_debug_guilds(), name='nowplaying')
     @application_checks.check(check_mutual_voice)
     async def now_playing(self, itx: Interaction):
         """
@@ -180,7 +181,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.now_playing(itx)
 
-    @slash_command(name='pause')
+    @slash_command(guild_ids=get_debug_guilds(), name='pause')
     @application_checks.check(check_mutual_voice)
     async def pause(self, itx: Interaction):
         """
@@ -191,7 +192,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.pause(itx)
 
-    @slash_command(name='play')
+    @slash_command(guild_ids=get_debug_guilds(), name='play')
     @application_checks.check(check_mutual_voice)
     async def play(self, itx: Interaction, query: Optional[str] = SlashOption(description='Query string or URL', required=True)):
         """
@@ -203,7 +204,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.play(itx, query)
     
-    @slash_command(name='previous')
+    @slash_command(guild_ids=get_debug_guilds(), name='previous')
     @application_checks.check(check_mutual_voice)
     async def previous(self, itx: Interaction):
         """
@@ -214,7 +215,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.skip(itx, forward=False)
     
-    @slash_command(name='queue')
+    @slash_command(guild_ids=get_debug_guilds(), name='queue')
     @application_checks.check(check_mutual_voice)
     async def queue(self, itx: Interaction):
         """
@@ -225,7 +226,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.display_queue(itx)
 
-    @slash_command(name='shuffle')
+    @slash_command(guild_ids=get_debug_guilds(), name='shuffle')
     @application_checks.check(check_mutual_voice)
     async def shuffle(self, itx: Interaction):
         """
@@ -237,7 +238,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.shuffle(itx)
     
-    @slash_command(name='skip')
+    @slash_command(guild_ids=get_debug_guilds(), name='skip')
     @application_checks.check(check_mutual_voice)
     async def skip(self, itx: Interaction):
         """
@@ -252,7 +253,7 @@ class PlayerCog(Cog):
             # Disconnect from voice
             await self._disconnect(itx.guild_id, reason='Reached the end of the queue')
     
-    @slash_command(name='stop')
+    @slash_command(guild_ids=get_debug_guilds(), name='stop')
     @application_checks.check(check_mutual_voice)
     async def stop(self, itx: Interaction):
         """
@@ -260,7 +261,7 @@ class PlayerCog(Cog):
         """
         await self._disconnect(itx.guild_id, reason=f'Stopped by <@{itx.user.id}>', itx=itx)
     
-    @slash_command(name='unloop')
+    @slash_command(guild_ids=get_debug_guilds(), name='unloop')
     @application_checks.check(check_mutual_voice)
     async def unloop(self, itx: Interaction):
         """
@@ -270,7 +271,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.unloop(itx)
     
-    @slash_command(name='unloopall')
+    @slash_command(guild_ids=get_debug_guilds(), name='unloopall')
     @application_checks.check(check_mutual_voice)
     async def unloopall(self, itx: Interaction):
         """
@@ -280,7 +281,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.unloop(itx, whole_queue=True)
     
-    @slash_command(name='unpause')
+    @slash_command(guild_ids=get_debug_guilds(), name='unpause')
     @application_checks.check(check_mutual_voice)
     async def unpause(self, itx: Interaction):
         """
@@ -291,7 +292,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.unpause(itx)
 
-    @slash_command(name='unshuffle')
+    @slash_command(guild_ids=get_debug_guilds(), name='unshuffle')
     @application_checks.check(check_mutual_voice)
     async def unshuffle(self, itx: Interaction):
         """
@@ -302,7 +303,7 @@ class PlayerCog(Cog):
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.unshuffle(itx)
     
-    @slash_command(name='volume')
+    @slash_command(guild_ids=get_debug_guilds(), name='volume')
     @application_checks.check(check_mutual_voice)
     async def volume(
         self,

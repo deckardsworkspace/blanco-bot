@@ -166,5 +166,7 @@ bot:
   # ...
   debug:
     enabled: true
-    guild_id: <your guild id>
+    guild_ids:
+      - <your guild id>
+      # can add more than 1 guild here
 ```
