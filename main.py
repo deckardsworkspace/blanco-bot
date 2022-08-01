@@ -1,5 +1,5 @@
 from nextcord import Activity, ActivityType, Intents, Interaction
-from utils.config import config
+from utils.config import config, get_debug_status
 from utils.jockey_helpers import create_error_embed
 from utils.lavalink_bot import LavalinkBot
 
@@ -13,7 +13,7 @@ async def on_ready():
     client.load_extension('cogs')
 
     # Change presence
-    if config['bot']['debug']['enabled']:
+    if get_debug_status():
         await client.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening))
     else:
         await client.change_presence(activity=Activity(name='/play', type=ActivityType.listening))
