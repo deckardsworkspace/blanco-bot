@@ -94,7 +94,7 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
 
     # Query is not a URL. Try to find a match on Spotify.
     try:
-        sp_title, sp_artist, _, sp_duration = spotify.search(query)
+        sp_title, sp_artist, sp_id, sp_duration = spotify.search(query)
     except SpotifyNoResultsError:
         results = await get_youtube_matches(player, query, automatic=False)
     else:
@@ -115,8 +115,10 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
             title=sp_title if sp_title else result.title,
             artist=sp_artist if sp_artist else result.author,
             requester=itx.user.id,
-            duration=result.duration_ms,
-            url=result.url
+            duration=sp_duration if sp_duration else result.duration_ms,
+            url=result.url,
+            spotify_id=sp_id,
+            lavalink_track=result.lavalink_track
         )]
 
 
