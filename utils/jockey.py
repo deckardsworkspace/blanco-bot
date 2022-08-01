@@ -115,8 +115,8 @@ class Jockey:
             self._current = track_index
 
             if await self._enqueue(track):
-                await self._player.skip()
                 if itx is not None:
+                    await self._player.skip()
                     await itx.followup.send(embed=create_success_embed(f'Skipped'), delete_after=5)
         except Exception as e:
             embed = create_error_embed(f'Unable to play track {index}. Reason: {e}')
