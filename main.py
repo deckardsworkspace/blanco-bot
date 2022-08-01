@@ -12,8 +12,7 @@ with open('config.yml') as f:
         raise ValueError(f'Error parsing config.yml: {e}')
 
 # Create bot instance
-client = LavalinkBot(intents=Intents.default())
-client.config = config
+client = LavalinkBot(intents=Intents.default(), config=config)
 
 # Event listeners
 @client.event
