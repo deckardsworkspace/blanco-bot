@@ -13,6 +13,6 @@ with open('config.yml') as f:
 
 def get_debug_guilds() -> List[int]:
     try:
-        return [config['bot']['debug']['guild_ids']]
+        return config['bot']['debug']['guild_ids']
     except KeyError:
         return []
