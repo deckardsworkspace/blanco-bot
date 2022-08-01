@@ -13,7 +13,7 @@ async def on_ready():
     client.load_extension('cogs')
 
     # Change presence
-    if client.debug:
+    if config['bot']['debug']['enabled']:
         await client.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening))
     else:
         await client.change_presence(activity=Activity(name='/play', type=ActivityType.listening))
