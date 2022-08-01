@@ -45,3 +45,11 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+    -
+      name: Update Docker Hub readme
+      uses: ms-jpq/sync-dockerhub-readme@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        readme: "./README.md"
