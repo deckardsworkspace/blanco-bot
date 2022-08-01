@@ -147,7 +147,7 @@ Then edit the Lavalink configuration in `config.yml` to match the following:
 ```yaml
 lavalink:
   - id: main
-    server: lavalink              # Must match the container name in docker-compose.yml
+    server: lavalink              # Must match the service name in docker-compose.yml
     port: 2333
     password: youshallnotpass     # Must match the server password in lavalink.yml
     region: us-central
