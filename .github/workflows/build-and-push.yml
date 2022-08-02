@@ -61,5 +61,6 @@ jobs:
       - name: Invoke deployment hook
         uses: distributhor/workflow-webhook@v2
         env:
+          webhook_type: 'form-urlencoded'
           webhook_url: ${{ secrets.DEPLOY_WEBHOOK_URL }}
           webhook_secret: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}
