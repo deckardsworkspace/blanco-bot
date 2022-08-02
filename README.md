@@ -1,6 +1,9 @@
 blanco-bot
 ===
 
+[![Docker Image CI](https://github.com/jareddantis/blanco-bot/actions/workflows/build-and-push.yml/badge.svg)](https://github.com/jareddantis/blanco-bot/actions/workflows/build-and-push.yml)
+![Docker Pulls](https://img.shields.io/docker/pulls/jareddantis/blanco-bot)
+
 This is a self-contained Discord music bot that supports pulling music metadata from Spotify, made with [Nextcord v2](https://nextcord.dev).
 
 Music playback is handled by the [Lavalink.py](https://github.com/Devoxin/Lavalink.py) client for the [Lavalink](https://github.com/freyacodes/Lavalink) server.
