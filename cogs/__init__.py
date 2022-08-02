@@ -1,3 +1,4 @@
+from utils.config import get_debug_guilds
 from utils.database import Database
 from utils.jockey_helpers import manual_await
 from utils.lavalink_bot import LavalinkBot
@@ -14,9 +15,4 @@ def setup(bot: LavalinkBot):
     bot.add_cog(PlayerCog(bot, db))
 
     # Sync slash commands
-    if bot.debug:
-        print('Syncing slash commands...')
-        manual_await(bot.sync_application_commands(guild_id=bot.config['bot']['debug']['guild_id']))
-        print('Synced slash commands!')
-    else:
-        manual_await(bot.sync_application_commands())
+    manual_await(bot.sync_all_application_commands())
