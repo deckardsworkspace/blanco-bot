@@ -46,7 +46,7 @@ class LavalinkBot(Bot):
     async def _bot_loop_before(self):
         await self.wait_until_ready()
     
-    async def _begin_presence(self):
+    def _begin_presence(self):
         if self.debug:
             manual_await(self.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening)))
         else:
