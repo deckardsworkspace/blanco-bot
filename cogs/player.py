@@ -11,11 +11,11 @@ from utils.config import get_debug_guilds
 from utils.database import Database
 from utils.exceptions import EndOfQueueError
 from utils.jockey import Jockey
-from utils.lavalink import EventWithPlayer, init_lavalink
+from utils.lavalink_voice import EventWithPlayer, init_lavalink
 from utils.lavalink_bot import LavalinkBot
 from utils.player_checks import *
 from utils.spotify_client import Spotify
-from utils.string import human_readable_time
+from utils.string_util import human_readable_time
 
 
 class PlayerCog(Cog):

@@ -11,7 +11,7 @@ from views.now_playing import NowPlayingView
 from .database import Database
 from .exceptions import EndOfQueueError
 from .jockey_helpers import *
-from .lavalink import EventWithPlayer, LavalinkVoiceClient
+from .lavalink_voice import EventWithPlayer, LavalinkVoiceClient
 from .lavalink_bot import LavalinkBot
 from .paginator import Paginator
 from .spotify_client import Spotify

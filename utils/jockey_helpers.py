@@ -7,7 +7,7 @@ from typing import Any, Coroutine, Optional
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 from .lavalink_client import *
 from .spotify_client import Spotify
-from .string import human_readable_time
+from .string_util import human_readable_time
 from .url import *
 import asyncio
 
