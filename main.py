@@ -4,7 +4,9 @@ from utils.jockey_helpers import create_error_embed
 from utils.lavalink_bot import LavalinkBot
 
 # Create bot instance
-client = LavalinkBot(intents=Intents.default(), config=config)
+intents = Intents.default()
+intents.members = True
+client = LavalinkBot(intents=intents, config=config)
 
 
 # Event listeners
