@@ -1,4 +1,3 @@
-from utils.config import get_debug_guilds
 from utils.database import Database
 from utils.jockey_helpers import manual_await
 from utils.lavalink_bot import LavalinkBot
