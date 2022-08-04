@@ -265,7 +265,7 @@ class Jockey:
         embed = create_now_playing_embed(self._queue[self._current], self._player.current.uri)
         view = NowPlayingView(self._bot, self._player)
         if isinstance(recipient, Interaction):
-            if self._bot.is_owner(recipient.user):
+            if await self._bot.is_owner(recipient.user):
                 embed.set_footer(text=f'Connected to node `{self._player.node.name}`')
             message = await recipient.followup.send(embed=embed, view=view)
         else:
