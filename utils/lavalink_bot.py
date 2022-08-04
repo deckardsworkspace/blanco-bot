@@ -2,6 +2,9 @@ from lavalink import Client
 from nextcord import Activity, ActivityType
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
+from typing import Dict, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .jockey import Jockey
 
 
 class LavalinkBot(Bot):
@@ -11,8 +14,9 @@ class LavalinkBot(Bot):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._lavalink = None
         self._config = kwargs.get('config', {})
+        self._jockeys: Dict[int, 'Jockey'] = {}
+        self._lavalink = None
         self._presence_show_servers = False
 
     @property
@@ -33,6 +37,10 @@ class LavalinkBot(Bot):
             return self.config['bot']['debug']['enabled'] and self.config['bot']['debug']['guild_id']
         except KeyError:
             return False
+
+    @property
+    def jockeys(self) -> dict:
+        return self._jockeys
 
     @loop(seconds=1800)
     async def _bot_loop(self):

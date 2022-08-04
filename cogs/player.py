@@ -29,9 +29,6 @@ class PlayerCog(Cog):
             client_secret=bot.config['spotify']['client_secret']
         )
 
-        # Jockey instances
-        self._jockeys: Dict[int, Jockey] = {}
-
         # Create Lavalink client instance
         if bot.lavalink == None:
             bot.lavalink = init_lavalink(bot.user.id, bot.config['lavalink'], bot.config['bot']['inactivity_timeout'])
@@ -91,25 +88,25 @@ class PlayerCog(Cog):
         elif isinstance(event, get_args(EventWithPlayer)):
             # Dispatch event to appropriate jockey
             guild_id = int(event.player.guild_id)
-            if guild_id in self._jockeys.keys():
-                await self._jockeys[guild_id].handle_event(event)
+            if guild_id in self._bot.jockeys.keys():
+                await self._bot.jockeys[guild_id].handle_event(event)
     
     async def delete_jockey(self, guild: int) -> Optional[Messageable]:
         channel = None
-        if guild in self._jockeys:
-            channel = await self._jockeys[guild].destroy()
-            del self._jockeys[guild]
+        if guild in self._bot.jockeys:
+            channel = await self._bot.jockeys[guild].destroy()
+            del self._bot.jockeys[guild]
         
         return channel
 
     def get_jockey(self, guild: int, channel: Optional[Messageable] = None) -> Jockey:
         # Create jockey for guild if it doesn't exist yet
-        if guild not in self._jockeys:
+        if guild not in self._bot.jockeys:
             # Ensure that we have a valid channel
             if channel is None:
                 raise RuntimeError('No channel provided for jockey creation.')
 
-            self._jockeys[guild] = Jockey(
+            self._bot.jockeys[guild] = Jockey(
                 guild=guild,
                 db=self._db,
                 bot=self._bot,
@@ -118,7 +115,7 @@ class PlayerCog(Cog):
                 channel=channel
             )
 
-        return self._jockeys[guild]
+        return self._bot.jockeys[guild]
     
     async def _disconnect(self, guild_id: int, reason: Optional[str] = None, itx: Optional[Interaction] = None):
         # Destroy jockey and player instances
