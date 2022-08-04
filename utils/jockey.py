@@ -47,7 +47,7 @@ class Jockey:
         # Shuffle indices
         self._shuffle_indices = []
 
-        print(f'Created jockey for guild {guild}')
+        print(f'Created jockey for guild {guild} (bound to node "{player.node.name}")')
     
     @property
     def is_connected(self) -> bool:
