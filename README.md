@@ -31,6 +31,7 @@ This bot has been tested on
 
 - Windows 11 + Docker Desktop on Ubuntu/WSL2,
 - Arch Linux + Docker 20.10.17 & Docker Compose 2.6.1,
+- Ubuntu Server 20.04.4 arm64 + Docker 20.10.17 & Docker Compose 2.6.0,
 - macOS 12 Monterey + Docker Desktop, and
 - macOS 13 Ventura Public Beta + Docker Desktop.
 
