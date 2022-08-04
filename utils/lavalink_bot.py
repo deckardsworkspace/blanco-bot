@@ -2,7 +2,6 @@ from lavalink import Client
 from nextcord import Activity, ActivityType
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
-from .jockey_helpers import manual_await
 
 
 class LavalinkBot(Bot):
@@ -45,9 +44,3 @@ class LavalinkBot(Bot):
     @_bot_loop.before_loop
     async def _bot_loop_before(self):
         await self.wait_until_ready()
-    
-    def _begin_presence(self):
-        if self.debug:
-            manual_await(self.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening)))
-        else:
-            self._bot_loop.start()
