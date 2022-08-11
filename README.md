@@ -19,7 +19,7 @@ The bot stores settings in a local SQLite database. This database is populated a
 
 ## Before you proceed
 
-**Do not monetize any instance of this bot.** The Lavalink audio server pulls audio data from YouTube, which is fine for personal use, but not for commercial use (see [YouTube Terms of Service](https://www.youtube.com/t/terms) for more information). If you equip your bot with a premium tier or a similar concept, you risk running the same fate as Groovy and Rythm.
+**Do not monetize, or attempt to submit for verification, any instance of this bot.** The Lavalink audio server pulls audio data from YouTube, which goes against the [YouTube Terms of Service.](https://www.youtube.com/t/terms) At best, Discord will reject your application for verification, and at worst, your developer account will get banned.
 
 You will need a working Lavalink server for your own bot instance to work; there is a list of free servers [here.](https://lavalink.darrennathanael.com/) You could also choose to run Lavalink along with your bot in a separate container. Follow everything in [Deployment](#deployment), then edit `docker-compose.yml` and create `Dockerfile-lavalink` according to the instructions in [Lavalink in composition](#lavalink-in-composition).
 
