@@ -4,7 +4,21 @@ from typing import Dict, List, Optional, Tuple
 from .exceptions import LavalinkInvalidIdentifierError, LavalinkInvalidIdentifierError, LavalinkSearchError
 
 
-blacklist = ('karaoke', 'live', 'instrumental', 'piano', 'cover', 'minus one', 'reverb', 'slowed', 'remix', 'mashup')
+blacklist = (
+    'karaoke',
+    'live',
+    'instrumental',
+    'piano',
+    'cover',
+    'minus one',
+    'reverb',
+    'slowed',
+    'remix',
+    'mashup',
+    '8d',
+    '3d',
+    'performance'
+)
 
 
 def parse_result(result: Dict[str, str]) -> LavalinkResult:
