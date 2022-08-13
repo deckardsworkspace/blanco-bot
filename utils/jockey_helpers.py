@@ -93,6 +93,7 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
             )]
 
     # Query is not a URL. Try to find a match on Spotify.
+    sp_title, sp_artist, sp_id, sp_duration = (None, None, None, None)
     try:
         sp_title, sp_artist, sp_id, sp_duration = spotify.search(query)
     except SpotifyNoResultsError:

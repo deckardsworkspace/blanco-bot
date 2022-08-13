@@ -5,19 +5,20 @@ from .exceptions import LavalinkInvalidIdentifierError, LavalinkInvalidIdentifie
 
 
 blacklist = (
+    '3d'
+    '8d',
+    'cover',
+    'instrumental',
     'karaoke',
     'live',
-    'instrumental',
-    'piano',
-    'cover',
-    'minus one',
-    'reverb',
-    'slowed',
-    'remix',
     'mashup',
-    '8d',
-    '3d',
-    'performance'
+    'minus one',
+    'performance',
+    'piano',
+    'remix',
+    'rendition',
+    'reverb',
+    'slowed'
 )
 
 

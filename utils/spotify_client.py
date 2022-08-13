@@ -88,7 +88,10 @@ class Spotify:
             tracks.extend(response['items'])
             offset = offset + len(response['items'])
 
-        return list_name, list_author, [extract_track_info(x) for x in tracks if x['track'] is not None]
+        if list_type == 'playlist':
+            return list_name, list_author, [extract_track_info(x) for x in tracks if x['track'] is not None]
+        else:
+            return list_name, list_author, [extract_track_info(x) for x in tracks]
 
     def search(self, query) -> Tuple[str, str, str, int]:
         response = self._client.search(query, limit=1, type='track')
