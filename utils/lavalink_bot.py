@@ -14,7 +14,7 @@ class LavalinkBot(Bot):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._config = kwargs.get('config', {})
+        self._config = {}
         self._jockeys: Dict[int, 'Jockey'] = {}
         self._lavalink = None
         self._presence_show_servers = False
@@ -30,6 +30,10 @@ class LavalinkBot(Bot):
     @property
     def config(self) -> dict:
         return self._config
+    
+    @config.setter
+    def config(self, value: dict):
+        self._config = value
     
     @property
     def debug(self) -> bool:

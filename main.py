@@ -6,7 +6,8 @@ from utils.lavalink_bot import LavalinkBot
 # Create bot instance
 intents = Intents.default()
 intents.members = True
-client = LavalinkBot(intents=intents, config=config)
+client = LavalinkBot(intents=intents)
+client.config = config
 
 
 # Event listeners
