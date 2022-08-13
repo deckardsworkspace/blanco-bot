@@ -312,7 +312,8 @@ class Jockey:
                 self._current = old_size
                 if not await self._enqueue(new_tracks[0]):
                     # Failed to enqueue, restore state
-                    self._queue = self._queue[:old_size]
+                    for _ in range(old_size, len(self._queue)):
+                        del self._queue[-1]
                     self._current = current
                     if self.is_shuffling:
                         self._shuffle_indices = self._shuffle_indices[:old_size]
