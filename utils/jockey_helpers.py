@@ -92,16 +92,8 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
                 url=query
             )]
 
-    # Query is not a URL. Try to find a match on Spotify.
-    sp_title, sp_artist, sp_id, sp_duration = (None, None, None, None)
-    try:
-        sp_title, sp_artist, sp_id, sp_duration = spotify.search(query)
-    except SpotifyNoResultsError:
-        results = await get_youtube_matches(player, query, automatic=False)
-    else:
-        results = await get_youtube_matches(player, f'{sp_title} {sp_artist}', desired_duration_ms=sp_duration, automatic=True)
-
-    # Play an equivalent on YouTube.
+    # Play the first matching track on YouTube.
+    results = await get_youtube_matches(player, query, automatic=False)
     try:
         result = results[0]
     except IndexError:
@@ -113,12 +105,11 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
         return []
     else:
         return [QueueItem(
-            title=sp_title if sp_title else result.title,
-            artist=sp_artist if sp_artist else result.author,
+            title=result.title,
+            artist=result.author,
             requester=itx.user.id,
-            duration=sp_duration if sp_duration else result.duration_ms,
+            duration=result.duration_ms,
             url=result.url,
-            spotify_id=sp_id,
             lavalink_track=result.lavalink_track
         )]
 

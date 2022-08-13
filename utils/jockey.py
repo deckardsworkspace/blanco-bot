@@ -92,7 +92,10 @@ class Jockey:
         else:
             # Get the results for the query from Lavalink
             try:
-                results = await get_youtube_matches(self._player, f'{query.title} {query.artist} audio', desired_duration_ms=query.duration)
+                search_query = f'{query.title} {query.artist}'
+                if query.spotify_id is not None:
+                    search_query = f'{search_query} lyrics'
+                results = await get_youtube_matches(self._player, search_query, desired_duration_ms=query.duration)
             except:
                 return False
 
