@@ -8,6 +8,9 @@ on:
     branches:
       - 'main'
 
+env:
+  DOCKERHUB_REPOSITORY: 'jareddantis/blanco-bot'
+
 jobs:
   build:
     name: Build and push image to Docker Hub
@@ -30,7 +33,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: ${{ github.repository }}
+        images: ${{ env.DOCKERHUB_REPOSITORY }}
     -
       name: Checkout repository
       uses: actions/checkout@v3
@@ -41,7 +44,7 @@ jobs:
         context: .
         platforms: linux/amd64,linux/arm64
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ github.repository }}:latest
+        tags: ${{ env.DOCKERHUB_REPOSITORY }}:latest
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
@@ -51,7 +54,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-        repository: ${{ github.repository }}
+        repository: ${{ env.DOCKERHUB_REPOSITORY }}
         readme: "./README.md"
   deploy:
     name: Deploy to Oracle Cloud
