@@ -10,24 +10,24 @@ class NowPlayingView(View):
         self._cog = bot.get_cog('PlayerCog')
         self._player = player
     
-    @button(label='Queue', style=ButtonStyle.green)
+    @button(label=' 📋 ', style=ButtonStyle.green)
     async def queue(self, _: Button, interaction: Interaction):
         return await self._cog.queue(interaction)
     
-    @button(label='Prev', style=ButtonStyle.grey)
+    @button(label=' ⏮️ ', style=ButtonStyle.grey)
     async def skip_backward(self, _: Button, interaction: Interaction):
         return await self._cog.previous(interaction)
 
-    @button(label='Play/Pause', style=ButtonStyle.blurple)
+    @button(label=' ⏯️ ', style=ButtonStyle.blurple)
     async def toggle_pause(self, _: Button, interaction: Interaction):
         if self._player.paused:
             return await self._cog.unpause(interaction)
         return await self._cog.pause(interaction)
 
-    @button(label='Next', style=ButtonStyle.grey)
+    @button(label=' ⏭️ ', style=ButtonStyle.grey)
     async def skip_forward(self, _: Button, interaction: Interaction):
         return await self._cog.skip(interaction)
     
-    @button(label='Stop', style=ButtonStyle.red)
+    @button(label=' ⏹️ ', style=ButtonStyle.red)
     async def stop(self, _: Button, interaction: Interaction):
         return await self._cog.stop(interaction)
