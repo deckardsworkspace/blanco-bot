@@ -190,7 +190,7 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
             description=[
                 f'by **{list_author}**',
                 f'{len(track_queue)} track(s)',
-                query
+                f'https://open.spotify.com/{sp_type}/{sp_id}'
             ],
             footer='This might take a while, please wait...',
             thumbnail_url=sp_art
