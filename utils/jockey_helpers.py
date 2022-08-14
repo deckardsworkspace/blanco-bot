@@ -45,12 +45,13 @@ def create_now_playing_embed(track: QueueItem, uri: Optional[str] = '') -> Embed
         if h > 0:
             duration = f'{h}h {duration}'
 
+    is_stream = track.lavalink_track['info']['isStream']
     embed = CustomEmbed(
-        title='Now playing',
+        title='Now streaming' if is_stream else 'Now playing',
         description=[
             f'[**{track.title}**]({uri})',
             f'{track.artist}',
-            duration
+            duration if not is_stream else None
         ],
         color=Color.teal(),
         timestamp_now=True
