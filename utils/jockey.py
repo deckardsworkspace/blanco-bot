@@ -305,7 +305,7 @@ class Jockey:
 
             # Are we beginning a new queue?
             first = new_tracks[0]
-            first_name = f'**{first.title}** by **{first.artist}**' if first.title is not None else query
+            first_name = f'**{first.title}**\n{first.artist}' if first.title is not None else query
             if not self.is_playing:
                 # We are! Play the first track.
                 current = self._current
@@ -322,7 +322,10 @@ class Jockey:
 
             # Send embed
             item_name = first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
-            await itx.followup.send(embed=create_success_embed(f'Added {item_name} to queue'))
+            await itx.followup.send(embed=create_success_embed(
+                title='Added to queue',
+                body=item_name
+            ))
     
     async def set_volume(self, itx: Interaction, level: int):
         # Set new volume

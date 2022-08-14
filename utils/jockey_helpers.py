@@ -21,11 +21,11 @@ def create_error_embed(message: str) -> Embed:
     return embed.get()
 
 
-def create_success_embed(message: str) -> Embed:
+def create_success_embed(title: str = 'Success', body: str = 'Command executed') -> Embed:
     embed = CustomEmbed(
         color=Color.green(),
-        title=':white_check_mark:｜Success',
-        description=message
+        title=f':white_check_mark:｜{title}',
+        description=body
     )
     return embed.get()
 
