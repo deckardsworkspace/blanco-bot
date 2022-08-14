@@ -208,7 +208,7 @@ class Jockey:
                 if len(line) > 55:
                     line = line[:55] + '...'
                 else:
-                    line = f'{line:55}'
+                    line = f'{line:55.55}'
                 chunk_tracks.append(line)
                 count += 1
 
