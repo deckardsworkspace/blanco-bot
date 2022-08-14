@@ -5,12 +5,13 @@ from nextcord import Interaction, Member, slash_command, SlashOption, VoiceState
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
-from typing import Dict, get_args, Optional
+from typing import get_args, Optional
 from dataclass.custom_embed import CustomEmbed
 from utils.config import get_debug_guilds
 from utils.database import Database
 from utils.exceptions import EndOfQueueError
 from utils.jockey import Jockey
+from utils.jockey_helpers import create_error_embed
 from utils.lavalink_voice import EventWithPlayer, init_lavalink
 from utils.lavalink_bot import LavalinkBot
 from utils.player_checks import *
@@ -222,6 +223,35 @@ class PlayerCog(Cog):
         await itx.response.defer()
         jockey = self.get_jockey(itx.guild_id, itx.channel)
         await jockey.display_queue(itx)
+    
+    @slash_command(guild_ids=get_debug_guilds(), name='remove')
+    @application_checks.check(check_mutual_voice)
+    async def remove(
+        self,
+        itx: Interaction,
+        position: int = SlashOption(
+            description='Position to remove',
+            required=True
+        )
+    ):
+        """
+        Remove a track from queue.
+        """
+        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        if position < 1 or position > jockey.queue_size:
+            return await itx.response.send_message(embed=create_error_embed(
+                message=f'Specify a number from 1 to {str(jockey.queue_size)}.',
+                ephemeral=True
+            ))
+        elif position - 1 == jockey.current_index:
+            return await itx.response.send_message(embed=create_error_embed(
+                message='You cannot remove the currently playing track.',
+                ephemeral=True
+            ))
+        
+        # Dispatch to jockey
+        await itx.response.defer()
+        await jockey.remove(itx, index=position - 1)
 
     @slash_command(guild_ids=get_debug_guilds(), name='shuffle')
     @application_checks.check(check_mutual_voice)

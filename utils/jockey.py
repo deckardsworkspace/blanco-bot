@@ -50,6 +50,10 @@ class Jockey:
         print(f'Created jockey for guild {guild} (bound to node "{player.node.name}")')
     
     @property
+    def current_index(self) -> int:
+        return self._current
+
+    @property
     def is_connected(self) -> bool:
         return self._player.is_connected
     
@@ -326,6 +330,31 @@ class Jockey:
                 title='Added to queue',
                 body=item_name
             ))
+    
+    async def remove(self, itx: Interaction, index: int):
+        # Translate index if shuffling
+        actual_index = index
+        if self.is_shuffling:
+            actual_index = self._shuffle_indices[index]
+
+        # Remove track from queue
+        removed_track = self._queue[actual_index]
+        del self._queue[actual_index]
+        if self.is_shuffling:
+            del self._shuffle_indices[index]
+        
+            # Decrement future shuffle indices by 1
+            self._shuffle_indices = [i - 1 if i > actual_index else i for i in self._shuffle_indices]
+        
+        # Adjust current index
+        if self._current > actual_index:
+            self._current -= 1
+        
+        # Send embed
+        await itx.followup.send(embed=create_success_embed(
+            title='Removed from queue',
+            body=f'**{removed_track.title}**\n{removed_track.artist}'
+        ))
     
     async def set_volume(self, itx: Interaction, level: int):
         # Set new volume
