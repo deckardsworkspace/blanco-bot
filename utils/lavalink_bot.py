@@ -17,7 +17,6 @@ class LavalinkBot(Bot):
         self._config = {}
         self._jockeys: Dict[int, 'Jockey'] = {}
         self._lavalink = None
-        self._presence_show_servers = False
 
     @property
     def lavalink(self) -> Client:
@@ -46,12 +45,10 @@ class LavalinkBot(Bot):
     def jockeys(self) -> dict:
         return self._jockeys
 
-    @loop(seconds=1800)
+    @loop(seconds=3600)
     async def _bot_loop(self):
-        status = f'{len(self.guilds)} servers | /play' if self._presence_show_servers else '/play'
-        activity = Activity(name=status, type=ActivityType.listening)
+        activity = Activity(name=f'{len(self.guilds)} servers | /play', type=ActivityType.listening)
         await self.change_presence(activity=activity)
-        self._presence_show_servers = not self._presence_show_servers
 
     @_bot_loop.before_loop
     async def _bot_loop_before(self):
