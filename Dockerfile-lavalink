@@ -8,7 +8,7 @@ USER lavalink
 # Download Lavalink
 WORKDIR /opt/Lavalink
 ADD --chown=322:322 \
-    https://github.com/Cog-Creators/Lavalink-Jars/releases/download/3.4.0_1350/Lavalink.jar \
+    https://github.com/Cog-Creators/Lavalink-Jars/releases/latest/download/Lavalink.jar \
     Lavalink.jar
 
 ENTRYPOINT ["java", "-Djdk.tls.client.protocols=TLSv1.1,TLSv1.2", "-Xmx512M", "-jar", "Lavalink.jar"]
