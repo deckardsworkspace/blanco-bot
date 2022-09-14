@@ -127,10 +127,15 @@ class PlayerCog(Cog):
             title=':wave:｜Disconnected from voice',
             description=reason
         ).get()
-        if itx is not None:
-            await itx.response.send_message(embed=embed)
-        elif channel is not None:
-            await channel.send(embed=embed)
+
+        # Try to send disconnection message
+        try:
+            if itx is not None:
+                await itx.response.send_message(embed=embed)
+            elif channel is not None:
+                await channel.send(embed=embed)
+        except:
+            pass
     
     @slash_command(guild_ids=get_debug_guilds(), name='jump')
     @application_checks.check(check_mutual_voice)
