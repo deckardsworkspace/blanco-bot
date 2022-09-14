@@ -1,3 +1,4 @@
+from venv import create
 from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
 from itertools import islice
@@ -83,7 +84,8 @@ def manual_await(coro: Coroutine) -> Any:
 
 
 async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify, query: str) -> List[QueueItem]:
-    if check_url(query):
+    query_is_url = check_url(query)
+    if query_is_url:
         if check_spotify_url(query):
             # Query is a Spotify URL.
             return await parse_spotify_query(itx, spotify, query)
@@ -93,23 +95,23 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
         elif check_sc_url(query):
             # Query is a SoundCloud URL.
             return await parse_sc_query(itx, player, query)
-        else:
-            # Query is a non-YouTube URL.
-            return [QueueItem(
-                requester=itx.user.id,
-                url=query
-            )]
-
-    # Play the first matching track on YouTube.
-    results = await get_youtube_matches(player, query, automatic=False)
+    
     try:
+        if query_is_url:
+            # Try to get track details directly from URL
+            _, results = await get_tracks(player, query)
+        else:
+            # Play the first matching track on YouTube
+            results = await get_youtube_matches(player, query, automatic=False)
+        
         result = results[0]
     except IndexError:
-        embed = CustomEmbed(
-            color=Color.red(),
-            title=':x:｜No results found for query'
-        )
-        await itx.followup.send(embed=embed.get())
+        embed = create_error_embed(message=f'No results found for "`{query}`": `{e}`')
+        await itx.followup.send(embed=embed)
+        return []
+    except Exception as e:
+        embed = create_error_embed(message=f'Could not load track: `{e}`')
+        await itx.followup.send(embed=embed)
         return []
     else:
         return [QueueItem(
