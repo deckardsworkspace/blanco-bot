@@ -51,7 +51,7 @@ def create_now_playing_embed(track: QueueItem, uri: Optional[str] = '') -> Embed
             duration = f'{h}h {duration}'
 
     try:
-        is_stream = track.lavalink_track['info']['isStream']
+        is_stream = track.lavalink_track.stream
     except:
         is_stream = False
     embed = CustomEmbed(
