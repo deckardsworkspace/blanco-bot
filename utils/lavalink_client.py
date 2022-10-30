@@ -45,7 +45,7 @@ async def get_tracks(player: 'DefaultPlayer', id_or_url: str) -> Tuple[Optional[
         raise LavalinkSearchError(id_or_url, reason=f'Could not get tracks for "{id_or_url}" ({e})')
     else:
         tracks = result['tracks']
-        if len(result['playlistInfo'].keys()) > 0:
+        if isinstance(result['playlistInfo'], dict) and 'name' in result['playlistInfo']:
             return result['playlistInfo']['name'], [parse_result(track) for track in tracks]
         else:
             return None, [parse_result(track) for track in tracks]
