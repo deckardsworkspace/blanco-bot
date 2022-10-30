@@ -1,7 +1,8 @@
 from dataclass.lavalink_result import LavalinkResult
-from lavalink.models import DefaultPlayer
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple, TYPE_CHECKING
 from .exceptions import LavalinkInvalidIdentifierError, LavalinkInvalidIdentifierError, LavalinkSearchError
+if TYPE_CHECKING:
+    from lavalink.models import AudioTrack, DefaultPlayer
 
 
 blacklist = (
@@ -22,17 +23,17 @@ blacklist = (
 )
 
 
-def parse_result(result: Dict[str, str]) -> LavalinkResult:
+def parse_result(result: 'AudioTrack') -> LavalinkResult:
     return LavalinkResult(
-        title=result['info']['title'],
-        author=result['info']['author'],
-        duration_ms=result['info']['length'],
-        url=result['info']['uri'],
+        title=result.title,
+        author=result.author,
+        duration_ms=result.duration,
+        url=result.uri,
         lavalink_track=result
     )
 
 
-async def get_tracks(player: DefaultPlayer, id_or_url: str) -> Tuple[Optional[str], List[LavalinkResult]]:
+async def get_tracks(player: 'DefaultPlayer', id_or_url: str) -> Tuple[Optional[str], List[LavalinkResult]]:
     try:
         result = await player.node.get_tracks(id_or_url)
         if result['loadType'] == 'LOAD_FAILED':
@@ -44,13 +45,13 @@ async def get_tracks(player: DefaultPlayer, id_or_url: str) -> Tuple[Optional[st
         raise LavalinkSearchError(id_or_url, reason=f'Could not get tracks for "{id_or_url}" ({e})')
     else:
         tracks = result['tracks']
-        if len(result['playlistInfo'].keys()) > 0:
+        if isinstance(result['playlistInfo'], dict) and 'name' in result['playlistInfo']:
             return result['playlistInfo']['name'], [parse_result(track) for track in tracks]
         else:
             return None, [parse_result(track) for track in tracks]
 
 
-async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duration_ms: int = 0, automatic: bool = True) -> List[LavalinkResult]:
+async def get_youtube_matches(player: 'DefaultPlayer', query: str, desired_duration_ms: int = 0, automatic: bool = True) -> List[LavalinkResult]:
     results: List[LavalinkResult] = []
 
     try:
@@ -64,7 +65,7 @@ async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duratio
     else:
         search_results = search['tracks']
         for result in search_results:
-            if 'length' not in result['info'].keys() or result['info']['length'] is None:
+            if not result.duration:
                 # Can't play a track with no duration
                 continue
 
@@ -73,7 +74,7 @@ async def get_youtube_matches(player: DefaultPlayer, query: str, desired_duratio
             valid = True
             if automatic:
                 for word in blacklist:
-                    if word in result['info']['title'].lower() and not word in query.lower():
+                    if word in result.title.lower() and not word in query.lower():
                         valid = False
                         break
 
