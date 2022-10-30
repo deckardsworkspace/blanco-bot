@@ -57,6 +57,7 @@ lavalink:
     port: 2333
     password: youshallnotpass
     region: us-central
+    ssl: false                   # Set to true if node supports SSL (https://, wss://)
 # You may add more than one node here
 # - id: backup
 #   ...

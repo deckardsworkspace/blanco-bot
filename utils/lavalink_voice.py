@@ -25,16 +25,20 @@ def init_lavalink(id: int, nodes: List[Dict[str, str]], timeout: int) -> Client:
         raise ValueError('$INACTIVE_SEC must be an integer greater than 0')
 
     # Add local node
-    for node in nodes:
-        client.add_node(
-            host=node['server'],
-            port=node['port'],
-            password=node['password'],
-            region=node['region'],
-            resume_key=node['id'],
-            resume_timeout=timeout,
-            name=node['id']
-        )
+    for i, node in enumerate(nodes):
+        try:
+            client.add_node(
+                host=node['server'],
+                port=node['port'],
+                password=node['password'],
+                region=node['region'],
+                resume_key=node['id'],
+                resume_timeout=timeout,
+                name=node['id'],
+                ssl=node['ssl']
+            )
+        except KeyError as e:
+            raise RuntimeError(f'Invalid config for Lavalink node {i}: {e.args[0]} is missing')
 
     return client
 
