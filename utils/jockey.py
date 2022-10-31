@@ -280,7 +280,10 @@ class Jockey:
                 pass
 
         # Send now playing embed
-        embed = create_now_playing_embed(self._queue[self._current], self._player.current.uri)
+        real_uri = ''
+        if self._player.current is not None:
+            real_uri = self._player.current.uri
+        embed = create_now_playing_embed(self._queue[self._current], real_uri)
         view = NowPlayingView(self._bot, self._player)
         if isinstance(recipient, Interaction):
             if await self._bot.is_owner(recipient.user):
