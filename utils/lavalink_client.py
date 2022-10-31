@@ -54,32 +54,29 @@ async def get_tracks(player: 'DefaultPlayer', id_or_url: str) -> Tuple[Optional[
 async def get_youtube_matches(player: 'DefaultPlayer', query: str, desired_duration_ms: int = 0, automatic: bool = True) -> List[LavalinkResult]:
     results: List[LavalinkResult] = []
 
-    try:
-        search = await player.node.get_tracks(f'ytsearch:{query}')
-        if search['loadType'] != 'SEARCH_RESULT':
-            raise LavalinkSearchError(query, reason='Invalid search result')
-        elif len(search['tracks']) == 0:
-            raise LavalinkSearchError(query, reason='No results found')
-    except:
-        raise LavalinkSearchError(query)
-    else:
-        search_results = search['tracks']
-        for result in search_results:
-            if not result.duration:
-                # Can't play a track with no duration
-                continue
+    search = await player.node.get_tracks(f'ytsearch:{query}')
+    if len(search['tracks']) == 0 or search['loadType'] == 'NO_MATCHES':
+        raise LavalinkSearchError(query, reason='No results found')
+    elif search['loadType'] != 'SEARCH_RESULT':
+        raise LavalinkSearchError(query, reason='Invalid search result')
 
-            # Skip karaoke, live, instrumental etc versions
-            # if the original query did not ask for it
-            valid = True
-            if automatic:
-                for word in blacklist:
-                    if word in result.title.lower() and not word in query.lower():
-                        valid = False
-                        break
+    search_results = search['tracks']
+    for result in search_results:
+        if not result.duration:
+            # Can't play a track with no duration
+            continue
 
-            if valid:
-                results.append(parse_result(result))
+        # Skip karaoke, live, instrumental etc versions
+        # if the original query did not ask for it
+        valid = True
+        if automatic:
+            for word in blacklist:
+                if word in result.title.lower() and not word in query.lower():
+                    valid = False
+                    break
+
+        if valid:
+            results.append(parse_result(result))
 
     if desired_duration_ms > 0:
         if abs(results[0].duration_ms - desired_duration_ms) < 3500:
