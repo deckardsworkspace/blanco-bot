@@ -15,6 +15,7 @@ The bot stores settings in a local SQLite database. This database is populated a
 - [Requirements](#requirements)
 - [Deployment](#deployment)
   - [Lavalink in composition](#lavalink-in-composition)
+    - [IPv6 support](#ipv6-support)
   - [Debugging](#debugging)
 
 ## Before you proceed
@@ -25,15 +26,7 @@ You will need a working Lavalink server for your own bot instance to work; there
 
 # Requirements
 
-This bot is self-contained, in that you do not have to install anything aside from Docker. All of the dependencies are included in the Docker image.
-
-This bot has been tested on
-
-- Windows 11 + Docker Desktop on Ubuntu/WSL2,
-- Arch Linux + Docker 20.10.17 & Docker Compose 2.6.1,
-- Ubuntu Server 20.04.4 arm64 + Docker 20.10.17 & Docker Compose 2.6.0,
-- macOS 12 Monterey + Docker Desktop, and
-- macOS 13 Ventura Public Beta + Docker Desktop.
+This bot is self-contained, in that you do not have to install anything aside from Docker. All of the dependencies are included in the Docker image, which has been tested on Linux hosts using Docker CE, and on Windows and macOS hosts using Docker Desktop.
 
 The bot image is built with both `linux/amd64` and `linux/arm64` support, so you can, for instance, run the bot on Apple Silicon with reasonable performance.
 
@@ -57,7 +50,9 @@ lavalink:
     port: 2333
     password: youshallnotpass
     region: us-central
-    ssl: false                   # Set to true if node supports SSL (https://, wss://)
+
+    # Set to true if node supports SSL (https://, wss://)
+    ssl: false                   
 # You may add more than one node here
 # - id: backup
 #   ...
@@ -152,13 +147,48 @@ Then edit the Lavalink configuration in `config.yml` to match the following:
 ```yaml
 lavalink:
   - id: main
-    server: lavalink              # Must match the service name in docker-compose.yml
     port: 2333
-    password: youshallnotpass     # Must match the server password in lavalink.yml
+    ssl: false
+
+    # Should match the region of the bot server
     region: us-central
+
+    # Must match the service name in docker-compose.yml
+    server: lavalink
+
+    # Must match the server password in lavalink.yml
+    password: youshallnotpass
 ```
 
 Then run `docker compose up -d` as usual.
+
+### IPv6 support
+
+If you want to run the Lavalink container with support for IPv6 (i.e., for use with [Tunnelbroker](https://blog.arbjerg.dev/2020/3/tunnelbroker-with-lavalink)), make sure **both** the Lavalink container and the bot container are running in host networking mode. You can do this by adding the following to `docker-compose.yml`:
+
+```yaml
+# ...
+services:
+  lavalink:
+    # ...
+    network_mode: host
+  bot:
+    # ...
+    network_mode: host
+```
+
+You will also need to change the `server` value in `config.yml` to `localhost`:
+
+```yaml
+lavalink:
+  - id: main
+    server: localhost
+    # ...
+```
+
+Configure your Lavalink server to bind to your desired IPv6 address blocks by editing `lavalink.yml` accordingly, then run `docker compose up -d`.
+
+Note that this configuration is specific to Linux hosts - Docker does not support host networking on either Windows or macOS.
 
 ## Debugging
 
