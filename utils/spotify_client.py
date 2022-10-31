@@ -1,3 +1,4 @@
+from dataclass.spotify_track import SpotifyTrack
 from typing import Dict, List, Tuple
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 import spotipy
@@ -11,15 +12,31 @@ def get_chunks(lst):
         yield lst[i:i + 100]
 
 
-def extract_track_info(track_obj) -> Tuple[str, str, str, int]:
+def extract_track_info(track_obj) -> SpotifyTrack:
     if 'track' in track_obj.keys():
         # Nested track (playlist track object)
         track_obj = track_obj['track']
-    return (
-        track_obj['name'],
-        track_obj['artists'][0]['name'],
-        track_obj['id'],
-        int(track_obj['duration_ms'])
+    
+    # Extract ISRC if present
+    isrc = None
+    if 'external_ids' in track_obj.keys():
+        if 'isrc' in track_obj['external_ids'].keys():
+            isrc = track_obj['external_ids']['isrc']
+    
+    # Extract album artwork if present
+    artwork = None
+    if 'album' in track_obj.keys():
+        if 'images' in track_obj['album'].keys():
+            if len(track_obj['album']['images']) > 0:
+                artwork = track_obj['album']['images'][0]['url']
+
+    return SpotifyTrack(
+        title=track_obj['name'],
+        artist=track_obj['artists'][0]['name'],
+        spotify_id=track_obj['id'],
+        duration_ms=int(track_obj['duration_ms']),
+        artwork=artwork,
+        isrc=isrc
     )
 
 
@@ -53,10 +70,10 @@ class Spotify:
     def get_track_art(self, track_id: str) -> str:
         return self.__get_art(self._client.track(track_id)['album']['images'])
 
-    def get_track(self, track_id: str) -> Tuple[str, str]:
+    def get_track(self, track_id: str) -> SpotifyTrack:
         return extract_track_info(self._client.track(track_id))
 
-    def get_tracks(self, list_type: str, list_id: str) -> Tuple[str, str, List[Tuple[str, str, str, int]]]:
+    def get_tracks(self, list_type: str, list_id: str) -> Tuple[str, str, List[SpotifyTrack]]:
         offset = 0
         tracks = []
 
@@ -77,7 +94,14 @@ class Spotify:
             if list_type == 'album':
                 response = self._client.album_tracks(list_id, offset=offset)
             else:
-                fields = 'items.track.name,items.track.artists,items.track.id,items.track.duration_ms'
+                fields = ','.join([
+                    'items.track.name',
+                    'items.track.artists',
+                    'items.track.album.images',
+                    'items.track.id',
+                    'items.track.duration_ms',
+                    'items.track.external_ids.isrc'
+                ])
                 response = self._client.playlist_items(list_id, offset=offset,
                                                       fields=fields,
                                                       additional_types=['track'])

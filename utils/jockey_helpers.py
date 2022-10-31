@@ -1,16 +1,18 @@
-from venv import create
 from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
 from itertools import islice
 from lavalink.models import DefaultPlayer
 from nextcord import Color, Embed, Interaction
-from typing import Any, Coroutine, Optional
-from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
+from typing import Any, Coroutine, List, Optional, TYPE_CHECKING
+from .exceptions import SpotifyInvalidURLError
 from .lavalink_client import *
 from .spotify_client import Spotify
 from .string_util import human_readable_time
 from .url import *
 import asyncio
+if TYPE_CHECKING:
+    from dataclass.lavalink_result import LavalinkResult
+    from dataclass.spotify_track import SpotifyTrack
 
 
 def create_error_embed(message: str) -> Embed:
@@ -35,8 +37,9 @@ def create_success_embed(title: str = None, body: str = None) -> Embed:
     return embed.get()
 
 
-def create_now_playing_embed(track: QueueItem, uri: Optional[str] = '') -> Embed:
+def create_now_playing_embed(track: QueueItem, real_uri: Optional[str] = '') -> Embed:
     # Construct Spotify URL if it exists
+    uri = real_uri
     if track.spotify_id is not None:
         uri = f'https://open.spotify.com/track/{track.spotify_id}'
     
@@ -57,11 +60,13 @@ def create_now_playing_embed(track: QueueItem, uri: Optional[str] = '') -> Embed
     embed = CustomEmbed(
         title='Now streaming' if is_stream else 'Now playing',
         description=[
-            f'[**{track.title}**]({uri})',
-            f'{track.artist}',
-            duration if not is_stream else None
+            f'[**{track.title}**]({uri}) — {track.artist}',
+            duration if not is_stream else None,
+            f'requested by <@{track.requester}>',
+            f'\n:warning: Could not find a perfect match for this Spotify track.\nPlaying the closest match instead: {real_uri}' if track.is_imperfect else None
         ],
         color=Color.teal(),
+        thumbnail_url=track.artwork,
         timestamp_now=True
     )
     return embed.get()
@@ -104,7 +109,7 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
             # Play the first matching track on YouTube
             results = await get_youtube_matches(player, query, automatic=False)
         
-        result = results[0]
+        result: LavalinkResult = results[0]
     except IndexError:
         embed = create_error_embed(message=f'No results found for "`{query}`": `{e}`')
         await itx.followup.send(embed=embed)
@@ -170,7 +175,7 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
         await itx.followup.send(embed=embed.get())
         return []
     else:
-        # Get artwork for Spotify track/album/playlist
+        # Get artwork for Spotify album/playlist
         sp_art = ''
         if sp_type == 'album':
             sp_art = spotify.get_album_art(sp_id)
@@ -178,6 +183,7 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
             sp_art = spotify.get_playlist_cover(sp_id, default='')
 
     new_tracks = []
+    track_queue: List['SpotifyTrack']
     if sp_type == 'track':
         # Get track details from Spotify
         track_queue = [spotify.get_track(sp_id)]
@@ -194,26 +200,26 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
     if len(track_queue) > 1:
         embed = CustomEmbed(
             color=Color.green(),
-            header=f'Enqueueing Spotify {sp_type}',
+            header=f'Enqueued Spotify {sp_type}',
             title=list_name,
             description=[
                 f'by **{list_author}**',
                 f'{len(track_queue)} track(s)',
                 f'https://open.spotify.com/{sp_type}/{sp_id}'
             ],
-            footer='This might take a while, please wait...',
             thumbnail_url=sp_art
         )
         await itx.channel.send(embed=embed.get())
 
     for track in track_queue:
-        track_name, track_artist, track_id, track_duration = track
         new_tracks.append(QueueItem(
             requester=itx.user.id,
-            title=track_name,
-            artist=track_artist,
-            spotify_id=track_id,
-            duration=track_duration
+            title=track.title,
+            artist=track.artist,
+            spotify_id=track.spotify_id,
+            duration=track.duration_ms,
+            artwork=track.artwork,
+            isrc=track.isrc
         ))
     
     return new_tracks

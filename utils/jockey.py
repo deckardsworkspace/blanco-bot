@@ -89,16 +89,26 @@ class Jockey:
     def volume(self) -> int:
         return self._player.volume
     
-    async def _enqueue(self, query: QueueItem) -> bool:
+    async def _enqueue(self, query: QueueItem) -> Optional[str]:
         if query.lavalink_track is not None:
             # Track has already been processed by Lavalink so just play it directly
             self._player.add(requester=query.requester, track=query.lavalink_track)
         else:
-            # Get the results for the query from Lavalink
-            try:
-                results = await get_youtube_matches(self._player, f'{query.title} {query.artist}', desired_duration_ms=query.duration)
-            except:
-                return False
+            # Use ISRC if present
+            results = []
+            if query.isrc is not None:
+                try:
+                    results = await get_youtube_matches(self._player, f'"{query.isrc}"', desired_duration_ms=query.duration)
+                except LavalinkSearchError:
+                    query.is_imperfect = True
+                    pass
+            
+            # Fallback to metadata search
+            if not len(results):
+                try:
+                    results = await get_youtube_matches(self._player, f'{query.title} {query.artist}', desired_duration_ms=query.duration)
+                except Exception as e:
+                    return str(e)
 
             # Try to add first result directly to Lavalink queue
             self._player.add(requester=query.requester, track=results[0].lavalink_track)
@@ -108,7 +118,7 @@ class Jockey:
         if not self.is_playing:
             await self._player.play()
 
-        return True
+        return None
 
     async def _try_enqueue(self, itx: Optional[Interaction], index: int) -> bool:
         track_index = self._shuffle_indices[index] if self.is_shuffling else index
@@ -118,7 +128,7 @@ class Jockey:
             current = self._current
             self._current = track_index
 
-            if await self._enqueue(track):
+            if await self._enqueue(track) is None:
                 if itx is not None:
                     await self._player.skip()
                     await itx.followup.send(embed=create_success_embed(f'Skipped'), delete_after=5)
@@ -314,7 +324,8 @@ class Jockey:
                 # We are! Play the first track.
                 current = self._current
                 self._current = old_size
-                if not await self._enqueue(new_tracks[0]):
+                enqueue_result = await self._enqueue(new_tracks[0])
+                if enqueue_result is not None:
                     # Failed to enqueue, restore state
                     for _ in range(old_size, len(self._queue)):
                         del self._queue[-1]
@@ -322,7 +333,7 @@ class Jockey:
                     if self.is_shuffling:
                         self._shuffle_indices = self._shuffle_indices[:old_size]
 
-                    return await itx.followup.send(embed=create_error_embed(f'Failed to enqueue {first_name}'))
+                    return await itx.followup.send(embed=create_error_embed(f'Failed to enqueue "{first.title}"\n{enqueue_result}'))
 
             # Send embed
             item_name = first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
