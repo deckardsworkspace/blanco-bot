@@ -44,11 +44,11 @@ def create_now_playing_embed(track: QueueItem, uri: Optional[str] = '') -> Embed
     duration = None
     if track.duration != 0:
         h, m, s = human_readable_time(track.duration)
-        duration = f'{s}s'
+        duration = f'{s} sec'
         if m > 0:
-            duration = f'{m}m {duration}'
+            duration = f'{m} min {duration}'
         if h > 0:
-            duration = f'{h}h {duration}'
+            duration = f'{h} hr {duration}'
 
     try:
         is_stream = track.lavalink_track.stream
