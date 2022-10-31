@@ -1,6 +1,7 @@
 from dataclass.lavalink_result import LavalinkResult
 from typing import List, Optional, Tuple, TYPE_CHECKING
 from .exceptions import LavalinkInvalidIdentifierError, LavalinkInvalidIdentifierError, LavalinkSearchError
+import difflib
 if TYPE_CHECKING:
     from lavalink.models import AudioTrack, DefaultPlayer
 
@@ -31,6 +32,22 @@ def parse_result(result: 'AudioTrack') -> LavalinkResult:
         url=result.uri,
         lavalink_track=result
     )
+
+
+def check_similarity(actual: str, candidate: str) -> float:
+    actual_words = actual.lower().split(' ')
+    candidate_words = candidate.lower().split(' ')
+    intersection = set(actual_words).intersection(set(candidate_words))
+
+    # Get words not in intersection
+    unmatched_words = [word for word in actual_words if word not in intersection]
+    for word in unmatched_words:
+        # Look for close matches
+        close_matches = difflib.get_close_matches(word, candidate_words, cutoff=0.8)
+        if len(close_matches) > 0:
+            intersection.add(close_matches[0])
+
+    return len(intersection) / len(actual_words)
 
 
 async def get_tracks(player: 'DefaultPlayer', id_or_url: str) -> Tuple[Optional[str], List[LavalinkResult]]:
@@ -78,15 +95,10 @@ async def get_youtube_matches(player: 'DefaultPlayer', query: str, desired_durat
         if valid:
             results.append(parse_result(result))
 
+    # Sort by descending similarity
     if desired_duration_ms > 0:
-        if abs(results[0].duration_ms - desired_duration_ms) < 3500:
-            # First result is within acceptable range of desired duration,
-            # so we just need to sort the elements after the first one.
-            saved_result = results[0]
-            results = sorted(results[1:], key=lambda x: abs(x.duration_ms - desired_duration_ms))
-            results.insert(0, saved_result)
-        else:
-            # First result is outside acceptable range, so we sort everything
-            # results by distance to desired duration.
-            results.sort(key=lambda x: abs(x.duration_ms - desired_duration_ms))
+        results.sort(key=lambda x: (1 - check_similarity(query, x.title), abs(x.duration_ms - desired_duration_ms)))
+    else:
+        results.sort(key=lambda x: 1 - check_similarity(query, x.title))
+
     return results
