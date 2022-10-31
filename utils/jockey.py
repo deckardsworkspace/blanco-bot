@@ -89,6 +89,16 @@ class Jockey:
     def volume(self) -> int:
         return self._player.volume
     
+    async def _disconnect(self):
+        # Disconnect Lavalink
+        await self._player.stop()
+
+        # Disconnect from the voice channel
+        vc = self._bot.get_guild(self._guild).voice_client
+        if hasattr(vc, 'disconnect'):
+            await vc.disconnect(force=True)
+        await self._bot.lavalink.player_manager.destroy(self._guild)
+    
     async def _enqueue(self, query: QueueItem) -> Optional[str]:
         if query.lavalink_track is not None:
             # Track has already been processed by Lavalink so just play it directly
@@ -149,14 +159,8 @@ class Jockey:
             return True
 
     async def destroy(self) -> Messageable:
-        # Disconnect Lavalink
-        await self._player.stop()
-
-        # Disconnect from the voice channel
-        vc = self._bot.get_guild(self._guild).voice_client
-        if hasattr(vc, 'disconnect'):
-            await vc.disconnect(force=True)
-        await self._bot.lavalink.player_manager.destroy(self._guild)
+        # Disconnect from voice
+        await self._disconnect()
 
         # Remove view from now playing message
         last_msg_id = self._db.get_now_playing(self._guild)
@@ -296,51 +300,61 @@ class Jockey:
             await itx.followup.send(embed=create_error_embed('Nothing to pause'))
     
     async def play(self, itx: Interaction, query: str):
+        # Connect to voice
+        if not self.is_connected:
+            # Are we connected according to Discord?
+            for client in self._bot.voice_clients:
+                if client.guild.id == self._guild:
+                    # Remove old connection
+                    await client.disconnect()
+            
+            # Check if we have permission to connect to voice
+            vc = itx.user.voice.channel
+            if not vc:
+                return await itx.followup.send(embed=create_error_embed('You are not in a voice channel'))
+            elif not vc.permissions_for(itx.guild.me).connect:
+                return await itx.followup.send(embed=create_error_embed(f'I do not have permission to connect to <#{vc.id}>'))
+            await vc.connect(cls=LavalinkVoiceClient)
+
         # Get results for query
         new_tracks = await parse_query(itx, self._player, self._spotify, query)
-        if len(new_tracks):
-            # Connect to voice
-            if not self.is_connected:
-                # Are we connected according to Discord?
-                for client in self._bot.voice_clients:
-                    if client.guild.id == self._guild:
-                        # Remove old connection
-                        await client.disconnect()
-                await itx.user.voice.channel.connect(cls=LavalinkVoiceClient)
+        if not len(new_tracks):
+            # Disconnect from voice
+            await self._disconnect()
 
-            # Add new tracks to queue
-            old_size = len(self._queue)
-            self._queue.extend(new_tracks)
+        # Add new tracks to queue
+        old_size = len(self._queue)
+        self._queue.extend(new_tracks)
 
-            # Update shuffle indices if applicable
-            if self.is_shuffling:
-                new_indices = [old_size + i for i in range(len(new_tracks))]
-                self._shuffle_indices.extend(new_indices)
+        # Update shuffle indices if applicable
+        if self.is_shuffling:
+            new_indices = [old_size + i for i in range(len(new_tracks))]
+            self._shuffle_indices.extend(new_indices)
 
-            # Are we beginning a new queue?
-            first = new_tracks[0]
-            first_name = f'**{first.title}**\n{first.artist}' if first.title is not None else query
-            if not self.is_playing:
-                # We are! Play the first track.
-                current = self._current
-                self._current = old_size
-                enqueue_result = await self._enqueue(new_tracks[0])
-                if enqueue_result is not None:
-                    # Failed to enqueue, restore state
-                    for _ in range(old_size, len(self._queue)):
-                        del self._queue[-1]
-                    self._current = current
-                    if self.is_shuffling:
-                        self._shuffle_indices = self._shuffle_indices[:old_size]
+        # Are we beginning a new queue?
+        first = new_tracks[0]
+        first_name = f'**{first.title}**\n{first.artist}' if first.title is not None else query
+        if not self.is_playing:
+            # We are! Play the first track.
+            current = self._current
+            self._current = old_size
+            enqueue_result = await self._enqueue(new_tracks[0])
+            if enqueue_result is not None:
+                # Failed to enqueue, restore state
+                for _ in range(old_size, len(self._queue)):
+                    del self._queue[-1]
+                self._current = current
+                if self.is_shuffling:
+                    self._shuffle_indices = self._shuffle_indices[:old_size]
 
-                    return await itx.followup.send(embed=create_error_embed(f'Failed to enqueue "{first.title}"\n{enqueue_result}'))
+                return await itx.followup.send(embed=create_error_embed(f'Failed to enqueue "{first.title}"\n{enqueue_result}'))
 
-            # Send embed
-            item_name = first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
-            await itx.followup.send(embed=create_success_embed(
-                title='Added to queue',
-                body=item_name
-            ))
+        # Send embed
+        item_name = first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
+        await itx.followup.send(embed=create_success_embed(
+            title='Added to queue',
+            body=item_name
+        ))
     
     async def remove(self, itx: Interaction, index: int):
         # Translate index if shuffling
