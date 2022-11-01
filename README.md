@@ -117,18 +117,13 @@ If you want to host Lavalink alongside your bot, make sure you have enough resou
 
 Download the Lavalink configuration file from [here.](https://github.com/freyacodes/Lavalink/blob/master/LavalinkServer/application.yml.example) Save it as `lavalink.yml`, next to your `docker-compose.yml` file.
 
-Also download the Lavalink Dockerfile from [this repository](https://github.com/jareddantis/blanco-bot/raw/main/Dockerfile-lavalink) and save it as `Dockerfile-lavalink` in the same folder.
-
 Now edit `docker-compose.yml` such that it resembles the following, changing the paths as necessary:
 
 ```yaml
 version: '3.8'
 services:
   lavalink:
-    image: lavalink
-    build:
-      context: .
-      dockerfile: Dockerfile-lavalink
+    image: fredboat/lavalink:latest
     container_name: lavalink
     volumes:
       - ./lavalink.yml:/opt/Lavalink/application.yml
