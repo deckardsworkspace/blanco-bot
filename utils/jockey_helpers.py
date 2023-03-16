@@ -60,9 +60,10 @@ def create_now_playing_embed(track: QueueItem, real_uri: Optional[str] = '') -> 
     embed = CustomEmbed(
         title='Now streaming' if is_stream else 'Now playing',
         description=[
-            f'[**{track.title}**]({uri}) — {track.artist}',
+            f'[**{track.title}**]({uri})',
+            f'{track.artist}',
             duration if not is_stream else None,
-            f'requested by <@{track.requester}>',
+            f'\nrequested by <@{track.requester}>',
             f'\n:warning: Could not find a perfect match for this Spotify track.\nPlaying the closest match instead: {real_uri}' if track.is_imperfect else None
         ],
         color=Color.teal(),
