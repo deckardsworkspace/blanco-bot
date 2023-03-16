@@ -197,7 +197,12 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
 
     if len(track_queue) < 1:
         # No tracks.
-        return await itx.followup.send(embed=embed.get())
+        embed = CustomEmbed(
+            color=Color.red(),
+            title=':x:｜Playlist or album is empty.'
+        )
+        await itx.followup.send(embed=embed.get())
+        return []
 
     # At least one track.
     # Send embed if the list is longer than 1 track.
