@@ -223,10 +223,10 @@ class Jockey:
                 line = f'{line_prefix} {index} :: {title} - {artist}'
 
                 # Truncate line if necessary
-                if len(line) > 55:
-                    line = line[:55] + '...'
+                if len(line) > 50:
+                    line = line[:50] + '...'
                 else:
-                    line = f'{line:55.55}'
+                    line = f'{line:50.50}'
                 chunk_tracks.append(line)
                 count += 1
 
