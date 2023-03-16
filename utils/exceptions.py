@@ -2,6 +2,10 @@ class EndOfQueueError(Exception):
     pass
 
 
+class JockeyStartError(Exception):
+    pass
+
+
 class LavalinkInvalidIdentifierError(Exception):
     def __init__(self, url, reason=None):
         self.message = f'Error encountered while processing "{url}": `{reason}`'

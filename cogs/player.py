@@ -9,7 +9,7 @@ from typing import get_args, Optional
 from dataclass.custom_embed import CustomEmbed
 from utils.config import get_debug_guilds
 from utils.database import Database
-from utils.exceptions import EndOfQueueError
+from utils.exceptions import EndOfQueueError, JockeyStartError
 from utils.jockey import Jockey
 from utils.jockey_helpers import create_error_embed
 from utils.lavalink_voice import EventWithPlayer, init_lavalink
@@ -97,6 +97,12 @@ class PlayerCog(Cog):
         if guild in self._bot.jockeys:
             channel = await self._bot.jockeys[guild].destroy()
             del self._bot.jockeys[guild]
+        
+        # Also destroy player instance
+        try:
+            await self._bot.lavalink.player_manager.destroy(guild)
+        except:
+            pass
         
         return channel
 
@@ -205,7 +211,10 @@ class PlayerCog(Cog):
         # Dispatch to jockey
         await itx.response.defer()
         jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.play(itx, query)
+        try:
+            await jockey.play(itx, query)
+        except JockeyStartError:
+            await self._disconnect(itx.guild_id, reason='Failed to start playback.')
     
     @slash_command(guild_ids=get_debug_guilds(), name='previous')
     @application_checks.check(check_mutual_voice)
