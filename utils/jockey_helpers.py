@@ -60,9 +60,10 @@ def create_now_playing_embed(track: QueueItem, real_uri: Optional[str] = '') -> 
     embed = CustomEmbed(
         title='Now streaming' if is_stream else 'Now playing',
         description=[
-            f'[**{track.title}**]({uri}) — {track.artist}',
+            f'[**{track.title}**]({uri})',
+            f'{track.artist}',
             duration if not is_stream else None,
-            f'requested by <@{track.requester}>',
+            f'\nrequested by <@{track.requester}>',
             f'\n:warning: Could not find a perfect match for this Spotify track.\nPlaying the closest match instead: {real_uri}' if track.is_imperfect else None
         ],
         color=Color.teal(),
@@ -97,6 +98,9 @@ async def parse_query(itx: Interaction, player: DefaultPlayer, spotify: Spotify,
         elif check_youtube_url(query):
             # Query is a YouTube URL.
             return await parse_youtube_query(itx, player, query)
+        elif check_youtube_playlist_url(query):
+            # Query is a YouTube playlist URL.
+            return await parse_youtube_playlist(itx, player, query)
         elif check_sc_url(query):
             # Query is a SoundCloud URL.
             return await parse_sc_query(itx, player, query)
@@ -193,7 +197,12 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
 
     if len(track_queue) < 1:
         # No tracks.
-        return await itx.followup.send(embed=embed.get())
+        embed = CustomEmbed(
+            color=Color.red(),
+            title=':x:｜Playlist or album is empty.'
+        )
+        await itx.followup.send(embed=embed.get(), ephemeral=True)
+        return []
 
     # At least one track.
     # Send embed if the list is longer than 1 track.
@@ -225,9 +234,10 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
     return new_tracks
 
 
-async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, playlist_id: str) -> List[QueueItem]:
+async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, query: str) -> List[QueueItem]:
     try:
         # Get playlist tracks from YouTube
+        playlist_id = get_ytlistid_from_url(query)
         playlist_name, tracks = await get_tracks(player, playlist_id)
     except:
         # No tracks.
@@ -256,30 +266,25 @@ async def parse_youtube_playlist(itx: Interaction, player: DefaultPlayer, playli
 
 
 async def parse_youtube_query(itx: Interaction, player: DefaultPlayer, query: str) -> List[QueueItem]:
-    # Is it a playlist?
-    try:
-        playlist_id = get_ytlistid_from_url(query)
-
-        # It is a playlist!
-        # Let us get the playlist's tracks.
-        return await parse_youtube_playlist(itx, player, playlist_id)
-    except LavalinkInvalidIdentifierError as e:
-        # No tracks found
-        embed = CustomEmbed(
-            color=Color.red(),
-            title=':x:｜Error enqueueing YouTube playlist',
-            description=e.message
-        )
-        await itx.followup.send(embed=embed.get())
-        return []
-    except:
-        pass
-
     # Is it a video?
     try:
         video_id = get_ytid_from_url(query)
 
         # It is a video!
+        # Is it part of a playlist?
+        if check_contains_ytlistid(query):
+            # Extract the playlist ID from the URL
+            playlist_id = get_ytlistid_from_url(query, force_extract=True)
+            embed = CustomEmbed(
+                color=Color.yellow(),
+                title=':information_source:｜This YouTube video is part of a playlist',
+                description=[
+                    'To play the playlist, use the playlist URL instead:',
+                    f'`/play https://youtube.com/playlist?list={playlist_id}`'
+                ]
+            )
+            await itx.channel.send(embed=embed.get())
+
         # Let us get the video's details.
         _, video = await get_tracks(player, video_id)
         return [QueueItem(

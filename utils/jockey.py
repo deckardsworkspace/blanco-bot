@@ -9,7 +9,7 @@ from random import shuffle
 from typing import Deque, Optional, Union
 from views.now_playing import NowPlayingView
 from .database import Database
-from .exceptions import EndOfQueueError
+from .exceptions import EndOfQueueError, JockeyStartError
 from .jockey_helpers import *
 from .lavalink_voice import EventWithPlayer, LavalinkVoiceClient
 from .lavalink_bot import LavalinkBot
@@ -223,10 +223,10 @@ class Jockey:
                 line = f'{line_prefix} {index} :: {title} - {artist}'
 
                 # Truncate line if necessary
-                if len(line) > 55:
-                    line = line[:55] + '...'
+                if len(line) > 50:
+                    line = line[:50] + '...'
                 else:
-                    line = f'{line:55.55}'
+                    line = f'{line:50.50}'
                 chunk_tracks.append(line)
                 count += 1
 
@@ -322,8 +322,10 @@ class Jockey:
         # Get results for query
         new_tracks = await parse_query(itx, self._player, self._spotify, query)
         if not len(new_tracks):
-            # Disconnect from voice
-            await self._disconnect()
+            if not self.is_playing:
+                # Disconnect from voice
+                raise JockeyStartError('No results found')
+            return
 
         # Add new tracks to queue
         old_size = len(self._queue)

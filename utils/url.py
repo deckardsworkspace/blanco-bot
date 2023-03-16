@@ -4,6 +4,16 @@ import re
 import validators
 
 
+def check_contains_ytlistid(url: str) -> bool:
+    # Check if the URL is a YouTube URL with a 'list' query parameter
+    if not check_youtube_url(url):
+        return False
+    
+    parsed_url = urlparse(url)
+    query = parse_qs(parsed_url.query)
+    return 'list' in query and len(query['list']) > 0
+
+
 def check_url(url: str) -> bool:
     return validators.domain(url) or validators.url(url)
 
@@ -25,6 +35,11 @@ def check_twitch_url(url: str) -> bool:
 
 def check_youtube_url(url: str) -> bool:
     url_regex = r"(?:https?://)?(?:youtu\.be/|(?:www\.|m\.)?youtube\.com/(?:watch|v|embed)(?:\.php)?(?:\?.*v=|/))([a-zA-Z0-9_-]+)"
+    return re.match(url_regex, url) is not None
+
+
+def check_youtube_playlist_url(url: str) -> bool:
+    url_regex = r"(?:https?://)?(?:www\.)?youtube\.com/playlist\?list=([a-zA-Z0-9_-]+)"
     return re.match(url_regex, url) is not None
 
 
@@ -75,6 +90,9 @@ def get_ytid_from_url(url: str, id_type: str = 'v') -> str:
         url = 'http://' + url
 
     query = urlparse(url)
+    if query.hostname is None:
+        raise LavalinkInvalidIdentifierError(url, reason='Not a valid YouTube URL')
+    
     if 'youtube' in query.hostname:
         if re.match(r"^/watch", query.path):
             if len(query.query):
@@ -85,15 +103,22 @@ def get_ytid_from_url(url: str, id_type: str = 'v') -> str:
     elif 'youtu.be' in query.hostname:
         return query.path[1:]
     
-    raise LavalinkInvalidIdentifierError(url, reason='Could not get playlist ID from YouTube URL')
+    raise LavalinkInvalidIdentifierError(url, reason='Could not get video ID from YouTube URL')
 
 
-def get_ytlistid_from_url(url: str) -> str:
+def get_ytlistid_from_url(url: str, force_extract: bool = False) -> str:
     if url.startswith(('youtu', 'www')):
         url = 'http://' + url
 
     query = urlparse(url)
-    if 'youtube' in query.hostname and len(query.query):
-        return parse_qs(query.query)['list'][0]
+    if query.hostname is None:
+        raise LavalinkInvalidIdentifierError(url, reason='Not a valid YouTube URL')
     
-    raise LavalinkInvalidIdentifierError(url, reason='Not a valid YouTube URL')
+    if 'youtube' in query.hostname:
+        if re.match(r"^/playlist", query.path) or force_extract:
+            if len(query.query):
+                return parse_qs(query.query)['list'][0]
+        else:
+            raise ValueError('Not a YouTube playlist URL')
+    
+    raise LavalinkInvalidIdentifierError(url, reason='Could not get playlist ID from YouTube URL')
