@@ -201,7 +201,7 @@ async def parse_spotify_query(itx: Interaction, spotify: Spotify, query: str) ->
             color=Color.red(),
             title=':x:｜Playlist or album is empty.'
         )
-        await itx.followup.send(embed=embed.get())
+        await itx.followup.send(embed=embed.get(), ephemeral=True)
         return []
 
     # At least one track.
