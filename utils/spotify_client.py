@@ -1,5 +1,5 @@
 from dataclass.spotify_track import SpotifyTrack
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 import spotipy
 
@@ -12,7 +12,7 @@ def get_chunks(lst):
         yield lst[i:i + 100]
 
 
-def extract_track_info(track_obj) -> SpotifyTrack:
+def extract_track_info(track_obj: Dict[str, Any], artwork: Optional[str] = None) -> SpotifyTrack:
     if 'track' in track_obj.keys():
         # Nested track (playlist track object)
         track_obj = track_obj['track']
@@ -24,7 +24,6 @@ def extract_track_info(track_obj) -> SpotifyTrack:
             isrc = track_obj['external_ids']['isrc']
     
     # Extract album artwork if present
-    artwork = None
     if 'album' in track_obj.keys():
         if 'images' in track_obj['album'].keys():
             if len(track_obj['album']['images']) > 0:
@@ -78,8 +77,10 @@ class Spotify:
         tracks = []
 
         # Get list name and author
+        list_artwork = None
         if list_type == 'album':
             album_info = self._client.album(list_id)
+            list_artwork = album_info['images'][0]['url']
             list_name = album_info['name']
             list_author = album_info['artists'][0]['name']
         elif list_type == 'playlist':
@@ -115,7 +116,7 @@ class Spotify:
         if list_type == 'playlist':
             return list_name, list_author, [extract_track_info(x) for x in tracks if x['track'] is not None]
         else:
-            return list_name, list_author, [extract_track_info(x) for x in tracks]
+            return list_name, list_author, [extract_track_info(x, list_artwork) for x in tracks]
 
     def search(self, query) -> Tuple[str, str, str, int]:
         response = self._client.search(query, limit=1, type='track')
