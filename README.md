@@ -49,7 +49,9 @@ lavalink:
     server: localhost
     port: 2333
     password: youshallnotpass
-    region: us-central
+    regions: 
+      - us-central
+      - us-east
 
     # Set to true if node supports SSL (https://, wss://)
     ssl: false                   
@@ -144,9 +146,9 @@ lavalink:
   - id: main
     port: 2333
     ssl: false
-
-    # Should match the region of the bot server
-    region: us-central
+    regions: 
+      - us-central
+      - us-east
 
     # Must match the service name in docker-compose.yml
     server: lavalink
