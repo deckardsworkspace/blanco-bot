@@ -43,7 +43,7 @@ class LavalinkBot(Bot):
             return False
 
     @property
-    def jockeys(self) -> dict:
+    def jockeys(self) -> Dict[int, 'Jockey']:
         return self._jockeys
 
     @loop(seconds=3600)
