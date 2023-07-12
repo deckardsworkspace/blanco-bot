@@ -1,3 +1,4 @@
+from mafic import Player, TrackStartEvent, TrackEndEvent
 from nextcord import Activity, ActivityType, Intents, Interaction
 from utils.config import config
 from utils.jockey_helpers import create_error_embed
@@ -23,6 +24,23 @@ async def on_ready():
 @client.event
 async def on_application_command_error(itx: Interaction, error: Exception):
     await itx.channel.send(embed=create_error_embed(error))
+
+
+# Lavalink-specific event listeners
+async def on_lavalink_event(event: TrackStartEvent[Player[LavalinkBot]] | TrackEndEvent[Player[LavalinkBot]]):
+    guild_id = event.player.guild.id
+    if guild_id in client.jockeys.keys():
+        await client.jockeys[guild_id].handle_event(event)
+
+
+@client.event
+async def on_track_start(event: TrackStartEvent[Player[LavalinkBot]]):
+    await on_lavalink_event(event)
+
+
+@client.event
+async def on_track_end(event: TrackEndEvent[Player[LavalinkBot]]):
+    await on_lavalink_event(event)
 
 
 # Run client
