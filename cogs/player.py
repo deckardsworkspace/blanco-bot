@@ -94,8 +94,8 @@ class PlayerCog(Cog):
 
         # Try to send disconnection message
         try:
-            if jockey is None:
-                await itx.response.send_message(embed=embed) # type: ignore
+            if itx is not None:
+                await itx.followup.send(embed=embed)
             else:
                 guild_id = jockey.guild.id
                 channel = self._bot.get_status_channel(guild_id)
@@ -377,6 +377,7 @@ class PlayerCog(Cog):
         """
         if not isinstance(itx.user, Member):
             raise RuntimeError('[player::stop] itx.user is not a Member')
+        await itx.response.defer()
         await self._disconnect(itx=itx, reason=f'Stopped by <@{itx.user.id}>')
     
     @slash_command(guild_ids=get_debug_guilds(), name='unloop')
