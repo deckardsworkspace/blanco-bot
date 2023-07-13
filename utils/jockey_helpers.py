@@ -50,10 +50,10 @@ async def parse_query(node: 'Node', spotify: Spotify, query: str, requester: int
         if check_spotify_url(query):
             # Query is a Spotify URL.
             return await parse_spotify_query(spotify, query, requester)
-        elif check_youtube_url(query):
+        elif check_youtube_url(query) or check_ytmusic_url(query):
             # Query is a YouTube URL.
             return await parse_youtube_query(node, query, requester)
-        elif check_youtube_playlist_url(query):
+        elif check_youtube_playlist_url(query) or check_ytmusic_playlist_url(query):
             # Query is a YouTube playlist URL.
             return await parse_youtube_playlist(node, query, requester)
         elif check_sc_url(query):
@@ -139,10 +139,14 @@ async def parse_youtube_playlist(node: 'Node', query: str, requester: int) -> Li
     try:
         # Get playlist tracks from YouTube
         playlist_id = get_ytlistid_from_url(query)
-        _, tracks = await get_tracks(node, playlist_id, search_type=SearchType.YOUTUBE.value)
+        _, tracks = await get_tracks(
+            node,
+            f'https://youtube.com/playlist?list={playlist_id}',
+            search_type=SearchType.YOUTUBE.value
+        )
     except:
         # No tracks.
-        raise LavalinkInvalidIdentifierError(f'Playlist is empty, private, or nonexistent')
+        raise LavalinkInvalidIdentifierError(query, f'Playlist is empty, private, or nonexistent')
     else:
         return [QueueItem(
             requester=requester,
@@ -172,6 +176,6 @@ async def parse_youtube_query(node: 'Node', query: str, requester: int) -> List[
             lavalink_track=video[0].lavalink_track
         )]
     except LavalinkInvalidIdentifierError:
-        raise LavalinkInvalidIdentifierError('The video has either been deleted, made private, or never existed.')
+        raise
     except:
-        raise LavalinkInvalidIdentifierError('Only YouTube video and playlist URLs are supported.')
+        raise LavalinkInvalidIdentifierError(query, 'Only YouTube video and playlist URLs are supported.')
