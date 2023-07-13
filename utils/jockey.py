@@ -1,5 +1,5 @@
 from collections import deque
-from mafic import Player
+from mafic import Player, PlayerNotConnected
 from nextcord import Message, StageChannel, VoiceChannel
 from random import shuffle
 from typing import Deque, TYPE_CHECKING
@@ -132,6 +132,12 @@ class Jockey(Player['LavalinkBot']):
         self._queue_i = track_index
         try:
             result = await self._play(track)
+        except PlayerNotConnected:
+            if not auto:
+                await self.status_channel.send(embed=create_error_embed(
+                    f'Attempted to skip while disconnected'
+                ))
+            return False
         except Exception as e:
             if auto:
                 await self.status_channel.send(embed=create_error_embed(
