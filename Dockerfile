@@ -1,4 +1,4 @@
-FROM python:3.10-slim AS dependencies
+FROM python:3.11-slim AS dependencies
 
 # Install pip requirements under virtualenv
 RUN pip install --upgrade pip
@@ -8,7 +8,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 
-FROM python:3.10-slim AS main
+FROM python:3.11-slim AS main
 COPY --from=dependencies /opt/venv /opt/venv
 LABEL maintainer="Jared Dantis <jareddantis@gmail.com>"
 
