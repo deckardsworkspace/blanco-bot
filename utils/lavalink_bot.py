@@ -1,9 +1,10 @@
-from mafic import NodePool, VoiceRegion
-from nextcord import Activity, ActivityType
+from mafic import NodePool, TrackStartEvent, TrackEndEvent, VoiceRegion
+from nextcord import Activity, ActivityType, Interaction, PartialMessageable
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
 from typing import Any, Dict, Optional, TYPE_CHECKING
 from utils.database import Database
+from utils.jockey_helpers import create_error_embed
 from utils.spotify_client import Spotify
 from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
@@ -64,6 +65,34 @@ class LavalinkBot(Bot):
     @_bot_loop.before_loop
     async def _bot_loop_before(self):
         await self.wait_until_ready()
+    
+    ###################
+    # Event listeners #
+    ###################
+
+    async def on_ready(self):
+        print('Logged in as {0}!'.format(self.user))
+        self.load_extension('cogs')
+        if self.debug:
+            print('Debug mode enabled!')
+            await self.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening))
+    
+    async def on_application_command_error(self, itx: Interaction, error: Exception):
+        if isinstance(itx.channel, PartialMessageable):
+            await itx.channel.send(embed=create_error_embed(str(error)))
+    
+    async def on_track_start(self, event: TrackStartEvent['Jockey']):
+        # Send now playing embed
+        await self.send_now_playing(event)
+
+    async def on_track_end(self, event: TrackEndEvent['Jockey']):
+        # Play next track in queue
+        print('[main] Track ended')
+        if event.player.suppress_skip:
+            print('[main] Suppressing skip')
+            event.player.suppress_skip = False
+        else:
+            await event.player.skip()
     
     def set_status_channel(self, guild_id: int, channel: Optional['Messageable']):
         # If channel is None, remove the status channel
