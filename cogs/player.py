@@ -84,6 +84,7 @@ class PlayerCog(Cog):
                 raise ValueError('[player::_disconnect] Either jockey or itx must be specified')
             jockey = await self._get_jockey(itx)
         await jockey.stop()
+        await jockey.disconnect()
 
         # Send disconnection message
         embed = CustomEmbed(
