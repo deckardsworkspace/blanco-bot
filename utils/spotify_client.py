@@ -58,19 +58,34 @@ class Spotify:
         return art[0]['url']
     
     def get_album_art(self, album_id: str) -> str:
-        return self.__get_art(self._client.album(album_id)['images'])
+        result = self._client.album(album_id)
+        if result is None:
+            raise SpotifyInvalidURLError(f'spotify:album:{album_id}')
+        return self.__get_art(result['images'])
     
     def get_artist_image(self, artist_id: str) -> str:
-        return self.__get_art(self._client.artist(artist_id)['images'])
+        result = self._client.artist(artist_id)
+        if result is None:
+            raise SpotifyInvalidURLError(f'spotify:artist:{artist_id}')
+        return self.__get_art(result['images'])
 
     def get_playlist_cover(self, playlist_id: str, default: str) -> str:
-        return self.__get_art(self._client.playlist_cover_image(playlist_id), default=default)
+        images = self._client.playlist_cover_image(playlist_id)
+        if images is None:
+            images = []
+        return self.__get_art(images, default=default)
 
     def get_track_art(self, track_id: str) -> str:
-        return self.__get_art(self._client.track(track_id)['album']['images'])
+        result = self._client.track(track_id)
+        if result is None:
+            raise SpotifyInvalidURLError(f'spotify:track:{track_id}')
+        return self.__get_art(result['album']['images'])
 
     def get_track(self, track_id: str) -> SpotifyTrack:
-        return extract_track_info(self._client.track(track_id))
+        result = self._client.track(track_id)
+        if result is None:
+            raise SpotifyInvalidURLError(f'spotify:track:{track_id}')
+        return extract_track_info(result)
 
     def get_tracks(self, list_type: str, list_id: str) -> Tuple[str, str, List[SpotifyTrack]]:
         offset = 0
@@ -80,11 +95,17 @@ class Spotify:
         list_artwork = None
         if list_type == 'album':
             album_info = self._client.album(list_id)
+            if album_info is None:
+                raise SpotifyInvalidURLError(f'spotify:{list_type}:{list_id}')
+            
             list_artwork = album_info['images'][0]['url']
             list_name = album_info['name']
             list_author = album_info['artists'][0]['name']
         elif list_type == 'playlist':
             playlist_info = self._client.playlist(list_id, fields='name,owner.display_name')
+            if playlist_info is None:
+                raise SpotifyInvalidURLError(f'spotify:{list_type}:{list_id}')
+            
             list_name = playlist_info['name']
             list_author = playlist_info['owner']['display_name']
         else:
@@ -107,6 +128,8 @@ class Spotify:
                                                       fields=fields,
                                                       additional_types=['track'])
 
+            if response is None:
+                raise SpotifyInvalidURLError(f'spotify:{list_type}:{list_id}')
             if len(response['items']) == 0:
                 break
 
@@ -118,9 +141,9 @@ class Spotify:
         else:
             return list_name, list_author, [extract_track_info(x, list_artwork) for x in tracks]
 
-    def search(self, query) -> Tuple[str, str, str, int]:
+    def search(self, query) -> SpotifyTrack:
         response = self._client.search(query, limit=1, type='track')
-        if len(response['tracks']['items']) == 0:
+        if response is None or len(response['tracks']['items']) == 0:
             raise SpotifyNoResultsError()
 
         return extract_track_info(response['tracks']['items'][0])
