@@ -3,13 +3,11 @@ from dataclass.queue_item import QueueItem
 from itertools import islice
 from mafic import SearchType
 from nextcord import Color, Embed
-from typing import Any, Coroutine, Generator, List, Optional, TYPE_CHECKING
+from typing import Any, Generator, List, Optional, TYPE_CHECKING
 from .exceptions import *
 from .lavalink_client import *
 from .spotify_client import Spotify
-from .string_util import human_readable_time
 from .url import *
-import asyncio
 if TYPE_CHECKING:
     from dataclass.lavalink_result import LavalinkResult
     from dataclass.spotify_track import SpotifyTrack

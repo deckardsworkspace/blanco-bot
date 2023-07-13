@@ -6,6 +6,7 @@ from typing import Deque, TYPE_CHECKING
 from views.now_playing import NowPlayingView
 from .exceptions import *
 from .jockey_helpers import *
+from .string_util import human_readable_time
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
     from nextcord import Embed
