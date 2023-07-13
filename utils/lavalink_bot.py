@@ -14,7 +14,7 @@ class LavalinkBot(Bot):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._config = {}
+        self._config = kwargs['config']
         self._jockeys: Dict[int, 'Jockey'] = {}
         self._pool = mafic.NodePool(self)
         self._pool_initialized = False
