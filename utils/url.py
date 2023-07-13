@@ -15,7 +15,7 @@ def check_contains_ytlistid(url: str) -> bool:
 
 
 def check_url(url: str) -> bool:
-    return validators.domain(url) or validators.url(url)
+    return validators.domain(url) or validators.url(url) # type: ignore
 
 
 def check_sc_url(url: str) -> bool:

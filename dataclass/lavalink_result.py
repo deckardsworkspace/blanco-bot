@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
-    from lavalink.models import AudioTrack
+    from mafic import Track
 
 
 @dataclass
@@ -9,5 +9,6 @@ class LavalinkResult:
     title: str
     author: str
     duration_ms: int
-    url: str
-    lavalink_track: 'AudioTrack'
+    lavalink_track: 'Track'
+    artwork_url: Optional[str] = None
+    url: Optional[str] = None

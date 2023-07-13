@@ -1,28 +1,13 @@
-from nextcord import Activity, ActivityType, Intents, Interaction
+from nextcord import Intents
 from utils.config import config
-from utils.jockey_helpers import create_error_embed
 from utils.lavalink_bot import LavalinkBot
+
 
 # Create bot instance
 intents = Intents.default()
 intents.members = True
 client = LavalinkBot(intents=intents)
-client.config = config
-
-
-# Event listeners
-@client.event
-async def on_ready():
-    print('Logged in as {0}!'.format(client.user))
-    client.load_extension('cogs')
-    if client.debug:
-        print('Debug mode enabled!')
-        await client.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening))
-
-
-@client.event
-async def on_application_command_error(itx: Interaction, error: Exception):
-    await itx.channel.send(embed=create_error_embed(error))
+client.init_config(config)
 
 
 # Run client

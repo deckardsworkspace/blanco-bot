@@ -1,13 +1,18 @@
-from lavalink.models import DefaultPlayer
 from nextcord import ButtonStyle, Interaction
 from nextcord.ui import button, Button, View
-from utils.lavalink_bot import LavalinkBot
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from cogs.player import PlayerCog
+    from utils.jockey import Jockey
+    from utils.lavalink_bot import LavalinkBot
 
 
 class NowPlayingView(View):
-    def __init__(self, bot: LavalinkBot, player: DefaultPlayer):
+    def __init__(self, bot: 'LavalinkBot', player: 'Jockey'):
         super().__init__(timeout=None)
-        self._cog = bot.get_cog('PlayerCog')
+        self._cog: 'PlayerCog' = bot.get_cog('PlayerCog') # type: ignore
+        if self._cog is None:
+            raise ValueError('PlayerCog not found')
         self._player = player
     
     @button(label=' 📋 ', style=ButtonStyle.green)
