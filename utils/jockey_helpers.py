@@ -60,14 +60,12 @@ async def parse_query(node: 'Node', spotify: Spotify, query: str, requester: int
             # Query is a SoundCloud URL.
             return await parse_sc_query(node, query, requester)
     
-    if query_is_url:
         # Direct URL playback is deprecated
-        raise LavalinkInvalidIdentifierError('Direct URL playback is deprecated')
-    else:
-        # Play the first matching track on YouTube
-        results = await get_youtube_matches(node, query, automatic=False)
+        raise JockeyDeprecatedError('Direct playback from unsupported URLs is deprecated')
     
-    result: LavalinkResult = results[0]
+    # Play the first matching track on YouTube
+    results = await get_youtube_matches(node, query, automatic=False)
+    result = results[0]
     return [QueueItem(
         title=result.title,
         artist=result.author,

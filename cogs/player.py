@@ -6,7 +6,7 @@ from nextcord.ext.commands import Cog
 from typing import Optional, TYPE_CHECKING
 from dataclass.custom_embed import CustomEmbed
 from utils.config import get_debug_guilds
-from utils.exceptions import EndOfQueueError, JockeyStartError
+from utils.exceptions import EndOfQueueError, JockeyDeprecatedError, JockeyStartError
 from utils.jockey import Jockey
 from utils.jockey_helpers import create_error_embed, create_success_embed, list_chunks
 from utils.lavalink_bot import LavalinkBot
@@ -207,6 +207,8 @@ class PlayerCog(Cog):
             track_name = await jockey.play_impl(query, itx.user.id)
         except JockeyStartError as e:
             await self._disconnect(itx=itx, reason=str(e))
+        except JockeyDeprecatedError as e:
+            await itx.followup.send(embed=create_error_embed(str(e)))
         else:
             return await itx.followup.send(embed=create_success_embed(
                 title='Added to queue',
