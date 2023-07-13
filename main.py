@@ -40,7 +40,12 @@ async def on_track_start(event: TrackStartEvent['Jockey']):
 @client.event
 async def on_track_end(event: TrackEndEvent['Jockey']):
     # Play next track in queue
-    await event.player.skip()
+    print('[main] Track ended')
+    if event.player.suppress_skip:
+        print('[main] Suppressing skip')
+        event.player.suppress_skip = False
+    else:
+        await event.player.skip()
 
 
 # Run client

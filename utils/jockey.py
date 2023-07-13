@@ -40,6 +40,10 @@ class Jockey(Player['LavalinkBot']):
         self._loop = client.db.get_loop(channel.guild.id)
         self._loop_whole = False
 
+        # Suppress auto-skip on TrackEndEvents when the user skips using command
+        # This will be read by the event handler in main.py
+        self._suppress_skip = False
+
         # Shuffle indices
         self._shuffle_indices = []
 
@@ -91,6 +95,14 @@ class Jockey(Player['LavalinkBot']):
     @shuffle_indices.setter
     def shuffle_indices(self, value: List[int]):
         self._shuffle_indices = value
+    
+    @property
+    def suppress_skip(self) -> bool:
+        return self._suppress_skip
+
+    @suppress_skip.setter
+    def suppress_skip(self, value: bool):
+        self._suppress_skip = value
     
     @property
     def status_channel(self) -> 'Messageable':
@@ -333,6 +345,10 @@ class Jockey(Player['LavalinkBot']):
                     except:
                         pass
             return
+
+        # Suppress autoskip if invoked using command
+        if not auto:
+            self._suppress_skip = True
 
         # Queue up the next valid track, if any
         if isinstance(self._queue_i, int):
