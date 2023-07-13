@@ -249,6 +249,9 @@ class Jockey(Player['LavalinkBot']):
             raise JockeyStartError('Can only play tracks, albums, and playlists from Spotify')
         except SpotifyNoResultsError:
             raise JockeyStartError('No results found for query, or playlist or album is empty')
+        except JockeyDeprecatedError:
+            # Just bubble this up
+            raise
         except Exception as e:
             raise JockeyStartError(f'Error parsing query: {e}')
         

@@ -43,6 +43,16 @@ def check_youtube_playlist_url(url: str) -> bool:
     return re.match(url_regex, url) is not None
 
 
+def check_ytmusic_url(url: str) -> bool:
+    url_regex = r"(?:https?://)?music\.youtube\.com/(?:watch|v|embed)(?:\.php)?(?:\?.*v=|/)([a-zA-Z0-9_-]+)"
+    return re.match(url_regex, url) is not None
+
+
+def check_ytmusic_playlist_url(url: str) -> bool:
+    url_regex = r"(?:https?://)?music\.youtube\.com/playlist\?list=([a-zA-Z0-9_-]+)"
+    return re.match(url_regex, url) is not None
+
+
 def get_sctype_from_url(url: str) -> bool:
     """
     Determine SoundCloud entity type from URL.
