@@ -1,9 +1,10 @@
 from dataclass.lavalink_result import LavalinkResult
+from mafic import Playlist, SearchType
 from typing import List, Optional, Tuple, TYPE_CHECKING
-from .exceptions import LavalinkInvalidIdentifierError, LavalinkInvalidIdentifierError, LavalinkSearchError
+from .exceptions import LavalinkSearchError
 import difflib
 if TYPE_CHECKING:
-    from lavalink.models import AudioTrack, DefaultPlayer
+    from mafic import Node, Track
 
 
 blacklist = (
@@ -24,14 +25,17 @@ blacklist = (
 )
 
 
-def parse_result(result: 'AudioTrack') -> LavalinkResult:
-    return LavalinkResult(
+def parse_result(result: 'Track') -> LavalinkResult:
+    parsed = LavalinkResult(
         title=result.title,
         author=result.author,
-        duration_ms=result.duration,
-        url=result.uri,
+        duration_ms=result.length,
         lavalink_track=result
     )
+    if result.uri is not None:
+        parsed.url = result.uri
+    
+    return parsed
 
 
 def check_similarity(actual: str, candidate: str) -> float:
@@ -50,36 +54,38 @@ def check_similarity(actual: str, candidate: str) -> float:
     return len(intersection) / len(actual_words)
 
 
-async def get_tracks(player: 'DefaultPlayer', id_or_url: str) -> Tuple[Optional[str], List[LavalinkResult]]:
+async def get_tracks(node: 'Node', query: str, search_type: str = 'EMPTY') -> Tuple[Optional[str], List[LavalinkResult]]:
+    # Check if search type is valid
     try:
-        result = await player.node.get_tracks(id_or_url)
-        if result['loadType'] == 'LOAD_FAILED':
-            reason = result['exception']['message']
-            raise LavalinkInvalidIdentifierError(id_or_url, reason=reason)
-        elif result['loadType'] == 'NO_MATCHES':
-            raise LavalinkSearchError(id_or_url, reason=f'No matches found for "{id_or_url}"')
+        _ = SearchType(search_type)
+    except ValueError:
+        raise ValueError(f'Invalid search type "{search_type}"')
+    
+    try:
+        result = await node.fetch_tracks(query, search_type=search_type)
+        if result is None:
+            raise LavalinkSearchError(query, reason=f'No matches found for "{query}"')
     except Exception as e:
-        raise LavalinkSearchError(id_or_url, reason=f'Could not get tracks for "{id_or_url}" ({e})')
+        raise LavalinkSearchError(query, reason=f'Could not get tracks for "{query}" ({e})')
     else:
-        tracks = result['tracks']
-        if isinstance(result['playlistInfo'], dict) and 'name' in result['playlistInfo']:
-            return result['playlistInfo']['name'], [parse_result(track) for track in tracks]
+        if isinstance(result, Playlist):
+            return result.name, [parse_result(track) for track in result.tracks]
         else:
-            return None, [parse_result(track) for track in tracks]
+            return None, [parse_result(track) for track in result]
 
 
-async def get_youtube_matches(player: 'DefaultPlayer', query: str, desired_duration_ms: int = 0, automatic: bool = True) -> List[LavalinkResult]:
+async def get_youtube_matches(node: 'Node', query: str, desired_duration_ms: Optional[int] = 0, automatic: bool = True) -> List[LavalinkResult]:
     results: List[LavalinkResult] = []
 
-    search = await player.node.get_tracks(f'ytsearch:{query}')
-    if len(search['tracks']) == 0 or search['loadType'] == 'NO_MATCHES':
+    search = await node.fetch_tracks(query, search_type=SearchType.YOUTUBE.value)
+    if isinstance(search, Playlist) and len(search.tracks) == 0:
+        raise LavalinkSearchError(query, reason='Playlist is empty')
+    elif (isinstance(search, list) and len(search) == 0) or search is None:
         raise LavalinkSearchError(query, reason='No results found')
-    elif search['loadType'] != 'SEARCH_RESULT':
-        raise LavalinkSearchError(query, reason='Invalid search result')
 
-    search_results = search['tracks']
+    search_results = search if isinstance(search, list) else search.tracks
     for result in search_results:
-        if not result.duration:
+        if not result.length:
             # Can't play a track with no duration
             continue
 
@@ -96,7 +102,7 @@ async def get_youtube_matches(player: 'DefaultPlayer', query: str, desired_durat
             results.append(parse_result(result))
 
     # Sort by descending similarity
-    if desired_duration_ms > 0:
+    if desired_duration_ms is not None:
         results.sort(key=lambda x: (1 - check_similarity(query, x.title), abs(x.duration_ms - desired_duration_ms)))
     else:
         results.sort(key=lambda x: 1 - check_similarity(query, x.title))

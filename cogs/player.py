@@ -1,67 +1,45 @@
-from asyncio import sleep
-from lavalink import add_event_hook
-from lavalink.events import NodeConnectedEvent, NodeDisconnectedEvent, Event as LavalinkEvent
-from nextcord import Interaction, Member, slash_command, SlashOption, VoiceState
+from asyncio import sleep, TimeoutError
+from nextcord import ClientUser, Color, Guild, Interaction, Member, slash_command, SlashOption, VoiceState
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
-from typing import get_args, Optional
+from typing import Optional, TYPE_CHECKING
 from dataclass.custom_embed import CustomEmbed
 from utils.config import get_debug_guilds
-from utils.database import Database
 from utils.exceptions import EndOfQueueError, JockeyStartError
 from utils.jockey import Jockey
-from utils.jockey_helpers import create_error_embed
-from utils.lavalink_voice import EventWithPlayer, init_lavalink
+from utils.jockey_helpers import create_error_embed, create_success_embed, list_chunks
 from utils.lavalink_bot import LavalinkBot
+from utils.paginator import Paginator
 from utils.player_checks import *
-from utils.spotify_client import Spotify
 from utils.string_util import human_readable_time
+if TYPE_CHECKING:
+    from dataclass.queue_item import QueueItem
 
 
 class PlayerCog(Cog):
-    def __init__(self, bot: LavalinkBot, db: Database):
+    def __init__(self, bot: LavalinkBot):
         self._bot = bot
-        self._db = db
-        
-        # Spotify client
-        self.spotify_client = Spotify(
-            client_id=bot.config['spotify']['client_id'],
-            client_secret=bot.config['spotify']['client_secret']
-        )
 
-        # Create Lavalink client instance
-        if bot.lavalink == None:
-            bot.lavalink = init_lavalink(bot.user.id, bot.config['lavalink'], bot.config['bot']['inactivity_timeout'])
-
-        # Listen to Lavalink events
-        add_event_hook(self.on_lavalink_event)
+        # Initialize Lavalink client instance
+        if not bot.pool_initialized:
+            bot.loop.create_task(bot.init_pool())
 
         print(f'Loaded cog: {self.__class__.__name__}')
     
-    def cog_unload(self):
-        """
-        Cog unload handler.
-        This removes any event hooks that were registered.
-        """
-        self._bot.lavalink._event_hooks.clear()
-    
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+        # Get the player for this guild from cache
+        jockey: Jockey = member.guild.voice_client # type: ignore
+
         # Stop playing if we're left alone
-        voice_client = member.guild.voice_client
-        if voice_client is not None and len(voice_client.channel.members) == 1 and after.channel is None:
-            # Get the player for this guild from cache
-            guild_id = voice_client.guild.id
-            player = self._bot.lavalink.player_manager.get(guild_id)
-            return await self._disconnect(guild_id, reason='You left me alone :(')
+        if jockey is not None and len(jockey.channel.members) == 1 and after.channel is None: # type: ignore
+            return await self._disconnect(jockey=jockey, reason='You left me alone :(')
 
         # Only handle join events by this bot
+        if not isinstance(self._bot.user, ClientUser):
+            return
         if before.channel is None and after.channel is not None and member.id == self._bot.user.id:
-            # Get the player for this guild from cache
-            guild_id = after.channel.guild.id
-            player = self._bot.lavalink.player_manager.get(guild_id)
-
             # Inactivity check
             time = 0
             inactive_sec = int(self._bot.config['bot']['inactivity_timeout'])
@@ -69,64 +47,43 @@ class PlayerCog(Cog):
             inactive_h = f'{inactive_h}h ' if inactive_h else ''
             inactive_m = f'{inactive_m}m ' if inactive_m else ''
             inactive_s = f'{inactive_s}s' if inactive_s else ''
+            inactive_time = f'{inactive_h}{inactive_m}{inactive_s}'
             while True:
                 await sleep(1)
                 time = time + 1
 
-                if player is not None:
-                    if player.is_playing and not player.paused:
+                if jockey is not None:
+                    if jockey.playing and not jockey.paused:
                         time = 0
                     if time == inactive_sec:
-                        await self._disconnect(guild_id, reason=f'Inactive for {inactive_h}{inactive_m}{inactive_s}')
-                    if not player.is_connected:
+                        await self._disconnect(jockey=jockey, reason=f'Inactive for {inactive_time}')
+                    if not jockey.connected:
                         break
     
-    async def on_lavalink_event(self, event: LavalinkEvent):
-        if isinstance(event, NodeConnectedEvent):
-            print('Connected to Lavalink node.')
-        elif isinstance(event, NodeDisconnectedEvent):
-            print('Disconnected from Lavalink node.')
-        elif isinstance(event, get_args(EventWithPlayer)):
-            # Dispatch event to appropriate jockey
-            guild_id = int(event.player.guild_id)
-            if guild_id in self._bot.jockeys.keys():
-                await self._bot.jockeys[guild_id].handle_event(event)
-    
-    async def delete_jockey(self, guild: int) -> Optional[Messageable]:
-        channel = None
-        if guild in self._bot.jockeys:
-            channel = await self._bot.jockeys[guild].destroy()
-            del self._bot.jockeys[guild]
+    async def _get_jockey(self, itx: Interaction) -> Jockey:
+        """
+        Gets the Jockey instance for the specified guild.
+        """
+        jockey: Jockey = itx.guild.voice_client # type: ignore
+        if jockey is None:
+            if not itx.response.is_done():
+                await itx.followup.send(embed=create_error_embed('Not connected to voice'))
+            raise RuntimeError('[player] Attempted to access Jockey for a guild that is not connected to voice')
         
-        # Also destroy player instance
-        try:
-            await self._bot.lavalink.player_manager.destroy(guild)
-        except:
-            pass
-        
-        return channel
-
-    def get_jockey(self, guild: int, channel: Optional[Messageable] = None) -> Jockey:
-        # Create jockey for guild if it doesn't exist yet
-        if guild not in self._bot.jockeys:
-            # Ensure that we have a valid channel
-            if channel is None:
-                raise RuntimeError('No channel provided for jockey creation.')
-
-            self._bot.jockeys[guild] = Jockey(
-                guild=guild,
-                db=self._db,
-                bot=self._bot,
-                player=self._bot.lavalink.player_manager.create(guild),
-                spotify=self.spotify_client,
-                channel=channel
-            )
-
-        return self._bot.jockeys[guild]
+        return jockey
     
-    async def _disconnect(self, guild_id: int, reason: Optional[str] = None, itx: Optional[Interaction] = None):
-        # Destroy jockey and player instances
-        channel = await self.delete_jockey(guild_id)
+    async def _disconnect(
+        self,
+        jockey: Optional[Jockey] = None,
+        itx: Optional[Interaction] = None,
+        reason: Optional[str] = None
+    ):
+        # Destroy jockey instance
+        if jockey is None:
+            if itx is None:
+                raise ValueError('[player::_disconnect] Either jockey or itx must be specified')
+            jockey = await self._get_jockey(itx)
+        await jockey.stop()
 
         # Send disconnection message
         embed = CustomEmbed(
@@ -136,10 +93,13 @@ class PlayerCog(Cog):
 
         # Try to send disconnection message
         try:
-            if itx is not None:
-                await itx.response.send_message(embed=embed)
-            elif channel is not None:
-                await channel.send(embed=embed)
+            if jockey is None:
+                await itx.response.send_message(embed=embed) # type: ignore
+            else:
+                guild_id = jockey.guild.id
+                channel = self._bot.get_status_channel(guild_id)
+                if channel is not None:
+                    await channel.send(embed=embed)
         except:
             pass
     
@@ -149,15 +109,16 @@ class PlayerCog(Cog):
         """
         Jumps to the specified position in the queue.
         """
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        jockey = await self._get_jockey(itx)
 
         # First check if the value is within range
-        if position < 1 or position > jockey.queue_size:
-            return await itx.response.send_message(f'Specify a number from 1 to {str(jockey.queue_size)}.', ephemeral=True)
+        if position < 1 or position > len(jockey.queue):
+            await itx.response.send_message(f'Specify a number from 1 to {str(len(jockey.queue))}.', ephemeral=True)
+            return
         
         # Dispatch to jockey
         await itx.response.defer()
-        await jockey.skip(itx, index=position - 1)
+        await jockey.skip(index=position - 1)
     
     @slash_command(guild_ids=get_debug_guilds(), name='loop')
     @application_checks.check(check_mutual_voice)
@@ -165,9 +126,11 @@ class PlayerCog(Cog):
         """
         Loops the current track.
         """
-        # Dispatch to jockey
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.loop(itx)
+        jockey = await self._get_jockey(itx)
+        if not jockey.is_looping:
+            jockey.is_looping = True
+            return await itx.response.send_message(embed=create_success_embed('Looping current track'))
+        return await itx.response.send_message(embed=create_success_embed('Already looping current track'))
     
     @slash_command(guild_ids=get_debug_guilds(), name='loopall')
     @application_checks.check(check_mutual_voice)
@@ -175,9 +138,11 @@ class PlayerCog(Cog):
         """
         Loops the whole queue.
         """
-        # Dispatch to jockey
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.loop(itx, whole_queue=True)
+        jockey = await self._get_jockey(itx)
+        if not jockey.is_looping_all:
+            jockey.is_looping_all = True
+            return await itx.response.send_message(embed=create_success_embed('Looping entire queue'))
+        return await itx.response.send_message(embed=create_success_embed('Already looping entire queue'))
     
     @slash_command(guild_ids=get_debug_guilds(), name='nowplaying')
     @application_checks.check(check_mutual_voice)
@@ -185,10 +150,10 @@ class PlayerCog(Cog):
         """
         Displays the currently playing track.
         """
-        # Dispatch to jockey
-        await itx.response.defer()
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.now_playing(itx)
+        await itx.response.defer(ephemeral=True)
+        jockey = await self._get_jockey(itx)
+        embed = jockey.now_playing()
+        await itx.followup.send(embed=embed)
 
     @slash_command(guild_ids=get_debug_guilds(), name='pause')
     @application_checks.check(check_mutual_voice)
@@ -198,23 +163,52 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         await itx.response.defer(ephemeral=True)
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.pause(itx)
+        jockey = await self._get_jockey(itx)
+        await jockey.pause()
+        await itx.followup.send(embed=create_success_embed('Paused'))
 
     @slash_command(guild_ids=get_debug_guilds(), name='play')
     @application_checks.check(check_mutual_voice)
-    async def play(self, itx: Interaction, query: Optional[str] = SlashOption(description='Query string or URL', required=True)):
+    async def play(self, itx: Interaction, query: str = SlashOption(description='Query string or URL', required=True)):
         """
         Play a song from a search query or a URL.
         If you want to unpause a paused player, use /unpause instead.
         """
-        # Dispatch to jockey
+        if (not isinstance(itx.user, Member) or not itx.user.voice or
+            not itx.user.voice.channel or not isinstance(itx.guild, Guild)):
+            return await itx.response.send_message(embed=create_error_embed(
+                message='Connect to a server voice channel to use this command.'
+            ), ephemeral=True)
+        
+        # Set status channel
+        guild_id = itx.guild.id
+        channel = itx.channel
+        if not isinstance(channel, Messageable):
+            raise RuntimeError('[player::play] itx.channel is not Messageable')
+        self._bot.set_status_channel(guild_id, channel)
+        
+        # Connect to voice
         await itx.response.defer()
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        vc = itx.user.voice.channel
         try:
-            await jockey.play(itx, query)
-        except JockeyStartError:
-            await self._disconnect(itx.guild_id, reason='Failed to start playback.')
+            await vc.connect(cls=Jockey) # type: ignore
+            jockey = await self._get_jockey(itx)
+            await jockey.guild.change_voice_state(channel=vc, self_deaf=True)
+        except TimeoutError:
+            return await itx.followup.send(embed=create_error_embed(
+                message='Timed out while connecting to voice. Try again later.'
+            ))
+
+        # Dispatch to jockey
+        try:
+            track_name = await jockey.play_impl(query, itx.user.id)
+        except JockeyStartError as e:
+            await self._disconnect(itx=itx, reason=str(e))
+        else:
+            return await itx.followup.send(embed=create_success_embed(
+                title='Added to queue',
+                body=track_name
+            ))
     
     @slash_command(guild_ids=get_debug_guilds(), name='previous')
     @application_checks.check(check_mutual_voice)
@@ -224,8 +218,8 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         await itx.response.defer()
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.skip(itx, forward=False)
+        jockey = await self._get_jockey(itx)
+        await jockey.skip(forward=False)
     
     @slash_command(guild_ids=get_debug_guilds(), name='queue')
     @application_checks.check(check_mutual_voice)
@@ -233,10 +227,80 @@ class PlayerCog(Cog):
         """
         Displays the current queue.
         """
-        # Dispatch to jockey
+        if itx.guild is None:
+            raise RuntimeError('[player::queue] itx.guild is None')
         await itx.response.defer()
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.display_queue(itx)
+
+        # Get jockey
+        jockey = await self._get_jockey(itx)
+        if len(jockey.queue) == 0:
+            await itx.followup.send(embed=create_error_embed('Queue is empty'))
+            return
+        
+        # Show loop status
+        embed_header = [f'{len(jockey.queue)} total']
+        if jockey.is_looping_all:
+            embed_header.append(':repeat: Looping entire queue (`/unloopall` to disable)')
+        
+        # Show shuffle status
+        queue = list(jockey.queue)
+        current = jockey.current_index
+        if jockey.is_shuffling:
+            embed_header.append(':twisted_rightwards_arrows: Shuffling queue  (`/unshuffle` to disable)')
+            current = jockey.shuffle_indices.index(current)
+
+            # Get shuffled version of queue
+            queue = [jockey.queue[i] for i in jockey.shuffle_indices]
+
+        # Show queue in chunks of 10 per page
+        pages = []
+        homepage = 0
+        count = 1
+        prefix_len = len(str(len(jockey.queue)))
+        for i, chunk in enumerate(list_chunks(queue)):
+            chunk_tracks = []
+
+            # Create page content
+            track: 'QueueItem'
+            for track in chunk:
+                title, artist = track.get_details()
+
+                # Pad index with spaces if necessary
+                index = str(count)
+                while len(index) < prefix_len:
+                    index = ' ' + index
+                
+                # Is this the current track?
+                line_prefix = '  '
+                if count - 1 == current:
+                    line_prefix = '> '
+                    homepage = i
+                
+                # Create item line
+                line_prefix = '> ' if count - 1 == current else '  '
+                line = f'{line_prefix} {index} :: {title} - {artist}'
+
+                # Truncate line if necessary
+                if len(line) > 50:
+                    line = line[:50] + '...'
+                else:
+                    line = f'{line:50.50}'
+                chunk_tracks.append(line)
+                count += 1
+
+            # Create page
+            tracks = '\n'.join(chunk_tracks)
+            embed_body = embed_header + [f'```asciidoc\n{tracks}```']
+            embed = CustomEmbed(
+                title=f'Queue for {itx.guild.name}',
+                description='\n'.join(embed_body),
+                color=Color.lighter_gray()
+            )
+            pages.append(embed.get())
+    
+        # Run paginator
+        paginator = Paginator(itx)
+        return await paginator.run(pages, start=homepage)
     
     @slash_command(guild_ids=get_debug_guilds(), name='remove')
     @application_checks.check(check_mutual_voice)
@@ -251,21 +315,23 @@ class PlayerCog(Cog):
         """
         Remove a track from queue.
         """
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        jockey = await self._get_jockey(itx)
         if position < 1 or position > jockey.queue_size:
             return await itx.response.send_message(embed=create_error_embed(
-                message=f'Specify a number from 1 to {str(jockey.queue_size)}.',
-                ephemeral=True
-            ))
+                message=f'Specify a number from 1 to {str(jockey.queue_size)}.'
+            ), ephemeral=True)
         elif position - 1 == jockey.current_index:
             return await itx.response.send_message(embed=create_error_embed(
-                message='You cannot remove the currently playing track.',
-                ephemeral=True
-            ))
+                message='You cannot remove the currently playing track.'
+            ), ephemeral=True)
         
         # Dispatch to jockey
         await itx.response.defer()
-        await jockey.remove(itx, index=position - 1)
+        title, artist = await jockey.remove(index=position - 1)
+        await itx.followup.send(embed=create_success_embed(
+            title='Removed from queue',
+            body=f'**{title}**\n{artist}'
+        ))
 
     @slash_command(guild_ids=get_debug_guilds(), name='shuffle')
     @application_checks.check(check_mutual_voice)
@@ -276,8 +342,13 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         await itx.response.defer()
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.shuffle(itx)
+        jockey = await self._get_jockey(itx)
+        try:
+            await jockey.shuffle()
+        except EndOfQueueError as e:
+            await itx.followup.send(embed=create_error_embed(str(e)))
+        else:
+            await itx.followup.send(embed=create_success_embed(f'{len(jockey.queue)} tracks shuffled'))
     
     @slash_command(guild_ids=get_debug_guilds(), name='skip')
     @application_checks.check(check_mutual_voice)
@@ -287,12 +358,15 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         await itx.response.defer(ephemeral=True)
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        jockey = await self._get_jockey(itx)
         try:
-            await jockey.skip(itx)
-        except EndOfQueueError:
+            await jockey.skip(auto=False)
+        except EndOfQueueError as e:
             # Disconnect from voice
-            await self._disconnect(itx.guild_id, reason='Reached the end of the queue')
+            await self._disconnect(itx=itx, reason=str(e))
+        except Exception as e:
+            embed = create_error_embed(f'Unable to skip. Reason: {e}')
+            await itx.followup.send(embed=embed)
     
     @slash_command(guild_ids=get_debug_guilds(), name='stop')
     @application_checks.check(check_mutual_voice)
@@ -300,7 +374,9 @@ class PlayerCog(Cog):
         """
         Stops the current song and disconnects from voice.
         """
-        await self._disconnect(itx.guild_id, reason=f'Stopped by <@{itx.user.id}>', itx=itx)
+        if not isinstance(itx.user, Member):
+            raise RuntimeError('[player::stop] itx.user is not a Member')
+        await self._disconnect(itx=itx, reason=f'Stopped by <@{itx.user.id}>')
     
     @slash_command(guild_ids=get_debug_guilds(), name='unloop')
     @application_checks.check(check_mutual_voice)
@@ -309,8 +385,11 @@ class PlayerCog(Cog):
         Stops looping the current track.
         """
         # Dispatch to jockey
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.unloop(itx)
+        jockey = await self._get_jockey(itx)
+        if jockey.is_looping:
+            jockey.is_looping = False
+            return await itx.response.send_message(embed=create_success_embed('Stopped looping current track'))
+        return await itx.response.send_message(embed=create_success_embed('Not currently looping current track'))
     
     @slash_command(guild_ids=get_debug_guilds(), name='unloopall')
     @application_checks.check(check_mutual_voice)
@@ -319,8 +398,11 @@ class PlayerCog(Cog):
         Stops looping the whole queue.
         """
         # Dispatch to jockey
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.unloop(itx, whole_queue=True)
+        jockey = await self._get_jockey(itx)
+        if jockey.is_looping_all:
+            jockey.is_looping_all = False
+            return await itx.response.send_message(embed=create_success_embed('Stopped looping entire queue'))
+        return await itx.response.send_message(embed=create_success_embed('Not currently looping entire queue'))
     
     @slash_command(guild_ids=get_debug_guilds(), name='unpause')
     @application_checks.check(check_mutual_voice)
@@ -330,8 +412,8 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         await itx.response.defer(ephemeral=True)
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.unpause(itx)
+        jockey = await self._get_jockey(itx)
+        await jockey.resume()
 
     @slash_command(guild_ids=get_debug_guilds(), name='unshuffle')
     @application_checks.check(check_mutual_voice)
@@ -341,8 +423,11 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         await itx.response.defer()
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
-        await jockey.unshuffle(itx)
+        jockey = await self._get_jockey(itx)
+        if jockey.is_shuffling:
+            jockey.shuffle_indices = []
+            return await itx.followup.send(embed=create_success_embed('Unshuffled'))
+        await itx.followup.send(embed=create_error_embed('Current queue is not shuffled'))
     
     @slash_command(guild_ids=get_debug_guilds(), name='volume')
     @application_checks.check(check_mutual_voice)
@@ -359,7 +444,7 @@ class PlayerCog(Cog):
         """
         Sets the volume level.
         """
-        jockey = self.get_jockey(itx.guild_id, itx.channel)
+        jockey = await self._get_jockey(itx)
 
         # Is the volume argument empty?
         if not volume:
@@ -368,4 +453,4 @@ class PlayerCog(Cog):
 
         # Dispatch to jockey
         await itx.response.defer()
-        await jockey.set_volume(itx, volume)
+        await jockey.set_volume(volume)

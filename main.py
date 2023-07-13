@@ -1,14 +1,17 @@
-from mafic import Player, TrackStartEvent, TrackEndEvent
+from mafic import TrackStartEvent, TrackEndEvent
 from nextcord import Activity, ActivityType, Intents, Interaction, PartialMessageable
 from typing import TYPE_CHECKING
 from utils.config import config
 from utils.jockey_helpers import create_error_embed
 from utils.lavalink_bot import LavalinkBot
+if TYPE_CHECKING:
+    from utils.jockey import Jockey
 
 # Create bot instance
 intents = Intents.default()
 intents.members = True
-client = LavalinkBot(intents=intents, config=config)
+client = LavalinkBot(intents=intents)
+client.init_config(config)
 
 
 # Event listeners
@@ -28,20 +31,16 @@ async def on_application_command_error(itx: Interaction, error: Exception):
 
 
 # Lavalink-specific event listeners
-async def on_lavalink_event(event: TrackStartEvent[Player[LavalinkBot]] | TrackEndEvent[Player[LavalinkBot]]):
-    guild_id = event.player.guild.id
-    if guild_id in client.jockeys.keys():
-        await client.jockeys[guild_id].handle_event(event)
+@client.event
+async def on_track_start(event: TrackStartEvent['Jockey']):
+    # Send now playing embed
+    await client.send_now_playing(event)
 
 
 @client.event
-async def on_track_start(event: TrackStartEvent[Player[LavalinkBot]]):
-    await on_lavalink_event(event)
-
-
-@client.event
-async def on_track_end(event: TrackEndEvent[Player[LavalinkBot]]):
-    await on_lavalink_event(event)
+async def on_track_end(event: TrackEndEvent['Jockey']):
+    # Play next track in queue
+    await event.player.skip()
 
 
 # Run client

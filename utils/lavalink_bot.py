@@ -1,10 +1,15 @@
-import mafic
+from mafic import NodePool, VoiceRegion
 from nextcord import Activity, ActivityType
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
-from typing import Dict, List, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
+from utils.database import Database
+from utils.spotify_client import Spotify
+from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
-    from .jockey import Jockey
+    from mafic import TrackStartEvent
+    from nextcord.abc import Messageable
+    from utils.jockey import Jockey
 
 
 class LavalinkBot(Bot):
@@ -14,13 +19,33 @@ class LavalinkBot(Bot):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._config = kwargs['config']
-        self._jockeys: Dict[int, 'Jockey'] = {}
-        self._pool = mafic.NodePool(self)
+        self._config = {}
+
+        # Status channels
+        self._status_channels: Dict[int, 'Messageable'] = {}
+
+        # Lavalink
+        self._pool = NodePool(self)
         self._pool_initialized = False
+    
+    @property
+    def config(self) -> dict:
+        return self._config
+    
+    @property
+    def debug(self) -> bool:
+        try:
+            debug_guilds = self._config['bot']['debug']['guild_ids']
+            return self._config['bot']['debug']['enabled'] and len(debug_guilds) > 0
+        except KeyError:
+            return False
 
     @property
-    def pool(self) -> mafic.NodePool:
+    def db(self) -> Database:
+        return self._db
+
+    @property
+    def pool(self) -> NodePool:
         return self._pool
 
     @property
@@ -28,23 +53,8 @@ class LavalinkBot(Bot):
         return self._pool_initialized
     
     @property
-    def config(self) -> dict:
-        return self._config
-    
-    @config.setter
-    def config(self, value: dict):
-        self._config = value
-    
-    @property
-    def debug(self) -> bool:
-        try:
-            return self.config['bot']['debug']['enabled'] and self.config['bot']['debug']['guild_id']
-        except KeyError:
-            return False
-
-    @property
-    def jockeys(self) -> Dict[int, 'Jockey']:
-        return self._jockeys
+    def spotify(self) -> Spotify:
+        return self._spotify_client
 
     @loop(seconds=3600)
     async def _bot_loop(self):
@@ -55,12 +65,37 @@ class LavalinkBot(Bot):
     async def _bot_loop_before(self):
         await self.wait_until_ready()
     
+    def set_status_channel(self, guild_id: int, channel: Optional['Messageable']):
+        # If channel is None, remove the status channel
+        if channel is None:
+            del self._status_channels[guild_id]
+            return
+        
+        self._status_channels[guild_id] = channel
+    
+    def get_status_channel(self, guild_id: int) -> Optional['Messageable']:
+        try:
+            return self._status_channels[guild_id]
+        except KeyError:
+            return None
+    
+    def init_config(self, config: Dict[str, Any]):
+        """
+        Initialize the bot with a config.
+        """
+        self._config = config
+        self._db = Database(self._config['bot']['database'])
+        self._spotify_client = Spotify(
+            client_id=self._config['spotify']['client_id'],
+            client_secret=self._config['spotify']['client_secret']
+        )
+    
     async def init_pool(self):
         """
         Initialize the Lavalink node pool.
         """
-        nodes = self.config['lavalink']
-        timeout = self.config['bot']['inactivity_timeout']
+        nodes = self._config['lavalink']
+        timeout = self._config['bot']['inactivity_timeout']
 
         # Check that our inactivity timeout is valid
         if not isinstance(timeout, int) or timeout < 1:
@@ -87,12 +122,12 @@ class LavalinkBot(Bot):
                 
                 # Check if region is a list
                 regions = []
-                if not isinstance(node['region'], list):
-                    raise TypeError('region must be a list')
+                if not isinstance(node['regions'], list):
+                    raise TypeError('regions must be a list')
                 else:
                     # Try to match regions against enum
-                    for region in node['region']:
-                        regions.append(mafic.VoiceRegion(region))
+                    for region in node['regions']:
+                        regions.append(VoiceRegion(region))
 
                 await self._pool.create_node(
                     host=node['server'],
@@ -112,3 +147,26 @@ class LavalinkBot(Bot):
                 raise RuntimeError(f'Invalid value in config for Lavalink node {i}: {e.args[0]}')
 
         self._pool_initialized = True
+    
+    async def send_now_playing(self, event: 'TrackStartEvent[Jockey]'):
+        guild_id = event.player.guild.id
+        channel = self.get_status_channel(guild_id)
+        if channel is None:
+            raise ValueError(f'Status channel has not been set for guild {guild_id}')
+
+        # Delete last now playing message, if it exists
+        last_msg_id = self._db.get_now_playing(guild_id)
+        if last_msg_id != -1:
+            try:
+                last_msg = await channel.fetch_message(last_msg_id)
+                await last_msg.delete()
+            except:
+                pass
+        
+        # Send now playing embed
+        embed = event.player.now_playing()
+        view = NowPlayingView(self, event.player)
+        msg = await channel.send(embed=embed, view=view)
+
+        # Save now playing message ID
+        self._db.set_now_playing(guild_id, msg.id)

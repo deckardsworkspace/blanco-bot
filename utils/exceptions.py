@@ -1,5 +1,7 @@
 class EndOfQueueError(Exception):
-    pass
+    def __init__(self, reason):
+        self.message = reason
+        super().__init__(self.message)
 
 
 class JockeyStartError(Exception):

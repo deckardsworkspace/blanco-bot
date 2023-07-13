@@ -1,18 +1,24 @@
-from nextcord import Interaction
+from nextcord import Interaction, Member
+from typing import TYPE_CHECKING
 from .exceptions import VoiceCommandError
+if TYPE_CHECKING:
+    from .jockey import Jockey
 
 
 def check_mutual_voice(itx: Interaction) -> bool:
     """ This check ensures that the bot and command author are in the same voice channel. """
     # Check that the user is in a voice channel in the first place.
-    if itx.guild is not None:
+    if itx.guild is not None and isinstance(itx.user, Member):
         if not itx.user.voice or not itx.user.voice.channel:
             raise VoiceCommandError('Join a voice channel first.')
     else:
         # Not allowed in DMs
         raise VoiceCommandError('You can only use this command in a server.')
 
-    player = itx.client.lavalink.player_manager.get(itx.guild.id)
+    if itx.application_command is None:
+        raise VoiceCommandError('Abnormal invocation of command. Please try again.')
+
+    player: 'Jockey' = itx.guild.voice_client # type: ignore
     if player is None:
         if itx.application_command.name == 'play':
             # The /play command causes the bot to connect to voice,
@@ -21,7 +27,7 @@ def check_mutual_voice(itx: Interaction) -> bool:
         raise VoiceCommandError('Please `/play` something first before using this command.')
 
     vc = itx.user.voice.channel
-    if not player.is_connected:
+    if not player.is_connected():
         # Bot needs to already be in voice channel to pause, unpause, skip etc.
         if itx.application_command.name != 'play':
             raise VoiceCommandError('I\'m not connected to voice.')
@@ -35,7 +41,7 @@ def check_mutual_voice(itx: Interaction) -> bool:
         if vc.user_limit and vc.user_limit <= len(vc.members):
             raise VoiceCommandError('Your voice channel is full.')
     else:
-        if int(player.channel_id) != vc.id:
+        if int(player.channel.id) != vc.id: # type: ignore
             raise VoiceCommandError('You need to be in my voice channel.')
     
     return True

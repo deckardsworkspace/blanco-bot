@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Tuple, TYPE_CHECKING
 if TYPE_CHECKING:
-    from lavalink.models import AudioTrack
+    from mafic import Track
 
 
 @dataclass
@@ -26,7 +26,7 @@ class QueueItem:
     title: Optional[str] = None
     artist: Optional[str] = None
     duration: Optional[int] = 0   # milliseconds
-    lavalink_track: Optional['AudioTrack'] = None
+    lavalink_track: Optional['Track'] = None
 
     # Imperfect match - True when ISRC is present but no match found on YouTube
     is_imperfect: Optional[bool] = False
