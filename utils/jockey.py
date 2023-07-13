@@ -118,9 +118,7 @@ class Jockey(Player['LavalinkBot']):
         current = self._queue_i
         self._queue_i = track_index
         try:
-            if await self._play(track):
-                if not auto:
-                    await self.skip()
+            result = await self._play(track)
         except Exception as e:
             if auto:
                 await self.status_channel.send(embed=create_error_embed(
@@ -131,7 +129,7 @@ class Jockey(Player['LavalinkBot']):
             self._queue_i = current
             return False
         else:
-            return True
+            return result
     
     async def _play(self, item: QueueItem) -> bool:
         if item.lavalink_track is not None:
@@ -338,11 +336,10 @@ class Jockey(Player['LavalinkBot']):
         # Queue up the next valid track, if any
         if isinstance(self._queue_i, int):
             # Set initial index
-            queue_size = len(self._queue)
             next_i = self._shuffle_indices.index(self._queue_i) if self.is_shuffling else self._queue_i
-            while next_i < queue_size:
+            while next_i < self.queue_size:
                 # Have we reached the end of the queue?
-                if next_i == queue_size - 1 and forward:
+                if next_i == self.queue_size - 1 and forward:
                     # Reached the end of the queue, are we looping?
                     if self.is_looping_all:
                         next_i = 0
