@@ -1,4 +1,7 @@
-FROM python:3.11-slim AS dependencies
+FROM python:3.11 AS dependencies
+
+# Install build-essential for building Python packages
+RUN apt-get update && apt-get install -y build-essential
 
 # Install pip requirements under virtualenv
 RUN pip install --upgrade pip
