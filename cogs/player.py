@@ -191,16 +191,17 @@ class PlayerCog(Cog):
         # Connect to voice
         await itx.response.defer()
         vc = itx.user.voice.channel
-        try:
-            await vc.connect(cls=Jockey) # type: ignore
-            jockey = await self._get_jockey(itx)
-            await jockey.guild.change_voice_state(channel=vc, self_deaf=True)
-        except TimeoutError:
-            return await itx.followup.send(embed=create_error_embed(
-                message='Timed out while connecting to voice. Try again later.'
-            ))
+        if itx.guild.voice_client is None:
+            try:
+                await vc.connect(cls=Jockey) # type: ignore
+                await vc.guild.change_voice_state(channel=vc, self_deaf=True)
+            except TimeoutError:
+                return await itx.followup.send(embed=create_error_embed(
+                    message='Timed out while connecting to voice. Try again later.'
+                ))
 
         # Dispatch to jockey
+        jockey = await self._get_jockey(itx)
         try:
             track_name = await jockey.play_impl(query, itx.user.id)
         except JockeyStartError as e:
