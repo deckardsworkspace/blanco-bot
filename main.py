@@ -1,5 +1,6 @@
 from mafic import Player, TrackStartEvent, TrackEndEvent
-from nextcord import Activity, ActivityType, Intents, Interaction
+from nextcord import Activity, ActivityType, Intents, Interaction, PartialMessageable
+from typing import TYPE_CHECKING
 from utils.config import config
 from utils.jockey_helpers import create_error_embed
 from utils.lavalink_bot import LavalinkBot
@@ -23,7 +24,8 @@ async def on_ready():
 
 @client.event
 async def on_application_command_error(itx: Interaction, error: Exception):
-    await itx.channel.send(embed=create_error_embed(error))
+    if isinstance(itx.channel, PartialMessageable):
+        await itx.channel.send(embed=create_error_embed(str(error)))
 
 
 # Lavalink-specific event listeners
