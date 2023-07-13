@@ -119,7 +119,7 @@ class PlayerCog(Cog):
         
         # Dispatch to jockey
         await itx.response.defer()
-        await jockey.skip(index=position - 1)
+        await jockey.skip(index=position - 1, auto=False)
     
     @slash_command(guild_ids=get_debug_guilds(), name='loop')
     @application_checks.check(check_mutual_voice)
@@ -221,7 +221,14 @@ class PlayerCog(Cog):
         # Dispatch to jockey
         await itx.response.defer()
         jockey = await self._get_jockey(itx)
-        await jockey.skip(forward=False)
+        try:
+            await jockey.skip(forward=False, auto=False)
+        except EndOfQueueError as e:
+            # Disconnect from voice
+            await self._disconnect(itx=itx, reason=str(e))
+        except Exception as e:
+            embed = create_error_embed(f'Unable to rewind. Reason: {e}')
+            await itx.followup.send(embed=embed)
     
     @slash_command(guild_ids=get_debug_guilds(), name='queue')
     @application_checks.check(check_mutual_voice)
