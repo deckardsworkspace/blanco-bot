@@ -10,4 +10,5 @@ class LavalinkResult:
     author: str
     duration_ms: int
     lavalink_track: 'Track'
+    artwork_url: Optional[str] = None
     url: Optional[str] = None

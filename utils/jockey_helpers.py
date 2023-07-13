@@ -71,6 +71,7 @@ async def parse_query(node: 'Node', spotify: Spotify, query: str, requester: int
     return [QueueItem(
         title=result.title,
         artist=result.author,
+        artwork=result.artwork_url,
         duration=result.duration_ms,
         requester=requester,
         url=result.url,
@@ -92,6 +93,7 @@ async def parse_sc_query(node: 'Node', query: str, requester: int) -> List[Queue
             requester=requester,
             title=track.title,
             artist=track.author,
+            artwork=track.artwork_url,
             duration=track.duration_ms,
             url=track.url,
             lavalink_track=track.lavalink_track
@@ -148,6 +150,7 @@ async def parse_youtube_playlist(node: 'Node', query: str, requester: int) -> Li
             requester=requester,
             title=track.title,
             artist=track.author,
+            artwork=track.artwork_url,
             duration=track.duration_ms,
             url=track.url,
             lavalink_track=track.lavalink_track
@@ -164,6 +167,7 @@ async def parse_youtube_query(node: 'Node', query: str, requester: int) -> List[
         return [QueueItem(
             title=video[0].title,
             artist=video[0].author,
+            artwork=video[0].artwork_url,
             requester=requester,
             duration=video[0].duration_ms,
             url=video[0].url,

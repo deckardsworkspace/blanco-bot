@@ -30,6 +30,7 @@ def parse_result(result: 'Track') -> LavalinkResult:
         title=result.title,
         author=result.author,
         duration_ms=result.length,
+        artwork_url=result.artwork_url,
         lavalink_track=result
     )
     if result.uri is not None:
