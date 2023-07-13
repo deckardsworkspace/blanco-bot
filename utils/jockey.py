@@ -346,8 +346,15 @@ class Jockey(Player['LavalinkBot']):
                         pass
             return
 
-        # Suppress autoskip if invoked using command
-        if not auto:
+        # Is this autoskipping?
+        if auto:
+            # Check if we're looping the current track
+            if self.is_looping:
+                # Re-enqueue the current track
+                await self._enqueue(self._queue_i, auto=auto)
+                return
+        else:
+            # Suppress next autoskip
             self._suppress_skip = True
 
         # Queue up the next valid track, if any
