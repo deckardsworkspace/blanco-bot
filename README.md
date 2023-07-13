@@ -6,7 +6,7 @@ blanco-bot
 
 This is a self-contained Discord music bot that supports pulling music metadata from Spotify, made with [Nextcord v2](https://nextcord.dev).
 
-Music playback is handled by the [Lavalink.py](https://github.com/Devoxin/Lavalink.py) client for the [Lavalink](https://github.com/freyacodes/Lavalink) server.
+Music playback is handled by the [Mafic](https://github.com/ooliver1/mafic) client for the [Lavalink](https://github.com/lavalink-devs/Lavalink) server.
 
 The bot stores settings in a local SQLite database. This database is populated automatically on first run, and the settings it will contain include the set volume level and queue repeat preferences per guild.
 
@@ -22,7 +22,7 @@ The bot stores settings in a local SQLite database. This database is populated a
 
 **Do not monetize, or attempt to submit for verification, any instance of this bot.** The Lavalink audio server pulls audio data from YouTube, which goes against the [YouTube Terms of Service.](https://www.youtube.com/t/terms) At best, Discord will reject your application for verification, and at worst, your developer account will get banned.
 
-You will need a working Lavalink server for your own bot instance to work; there is a list of free servers [here.](https://lavalink.darrennathanael.com/) You could also choose to run Lavalink along with your bot in a separate container. Follow everything in [Deployment](#deployment), then edit `docker-compose.yml` and create `Dockerfile-lavalink` according to the instructions in [Lavalink in composition](#lavalink-in-composition).
+You will need a working Lavalink server for your own bot instance to work; there is a list of free servers [here.](https://lavalink.darrennathanael.com/) You could also choose to run Lavalink along with your bot in a separate container. Follow everything in [Deployment](#deployment), then edit `docker-compose.yml` according to the instructions in [Lavalink in composition](#lavalink-in-composition).
 
 # Requirements
 
@@ -125,8 +125,10 @@ Now edit `docker-compose.yml` such that it resembles the following, changing the
 version: '3.8'
 services:
   lavalink:
-    image: fredboat/lavalink:latest
+    image: ghcr.io/lavalink-devs/lavalink:v4
     container_name: lavalink
+    environment:
+      - _JAVA_OPTIONS=-Xmx1G # Set higher for larger bots
     volumes:
       - ./lavalink.yml:/opt/Lavalink/application.yml
     restart: unless-stopped
