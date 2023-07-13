@@ -1,7 +1,9 @@
 from asyncio import sleep
-from nextcord import Embed, Interaction, Message
-from typing import Callable, List, Optional
+from nextcord import Embed, Interaction
+from typing import Callable, List, Optional, TYPE_CHECKING
 from views.paginator import PaginatorView
+if TYPE_CHECKING:
+    from nextcord import Message
 
 
 class Paginator:
@@ -10,14 +12,20 @@ class Paginator:
         self.embeds = []
         self.home = 0
         self.itx = itx
-        self.msg: Optional[Message] = None
+        self.msg: Optional['Message'] = None
         self.original_timeout = 0
         self.timeout = 0
     
-    async def run(self, embeds: List[Embed], start: int = 0, timeout: int = 0, callback: Callable[[int], None] = None):
+    async def run(
+        self,
+        embeds: List[Embed],
+        start: int = 0,
+        timeout: int = 0,
+        callback: Optional[Callable[[int], None]] = None
+    ):
         # If there's only one page, just send it as is
         if len(embeds) == 1:
-            await self.itx.followup.send(embed=embeds[0])
+            msg = await self.itx.followup.send(embed=embeds[0], wait=True)
             if callback is not None:
                 callback(msg.id)
             return
@@ -37,8 +45,12 @@ class Paginator:
         self.home = start
         self.current = start
         self.embeds = embeds
-        msg = await self.itx.followup.send(embed=self.embeds[start], view=PaginatorView(self))
-        self.msg: Message = await msg.channel.fetch_message(msg.id)
+        msg = await self.itx.followup.send(
+            embed=self.embeds[start],
+            view=PaginatorView(self),
+            wait=True
+        )
+        self.msg = await msg.channel.fetch_message(msg.id)
         if callback is not None:
             callback(msg.id)
         
@@ -49,7 +61,7 @@ class Paginator:
             if self.timeout <= 0:
                 return await self.msg.edit(view=None)
 
-    async def _switch_page(self, new_page: int) -> Optional[Message]:
+    async def _switch_page(self, new_page: int) -> Optional['Message']:
         self.current = new_page
         if self.msg is not None:
             try:
