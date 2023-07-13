@@ -342,6 +342,9 @@ class Jockey(Player['LavalinkBot']):
         
         # If index is specified, use that instead
         if index != -1:
+            # Suppress next autoskip
+            self._suppress_skip = True
+            
             if not await self._enqueue(index, auto=auto):
                 # Restore now playing message controls
                 view = NowPlayingView(self._bot, self)

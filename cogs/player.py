@@ -120,6 +120,7 @@ class PlayerCog(Cog):
         # Dispatch to jockey
         await itx.response.defer()
         await jockey.skip(index=position - 1, auto=False)
+        await itx.followup.send(embed=create_success_embed(f'Jumped to track {str(position)}'))
     
     @slash_command(guild_ids=get_debug_guilds(), name='loop')
     @application_checks.check(check_mutual_voice)
@@ -424,6 +425,7 @@ class PlayerCog(Cog):
         await itx.response.defer(ephemeral=True)
         jockey = await self._get_jockey(itx)
         await jockey.resume()
+        await itx.followup.send(embed=create_success_embed('Unpaused'))
 
     @slash_command(guild_ids=get_debug_guilds(), name='unshuffle')
     @application_checks.check(check_mutual_voice)
@@ -464,3 +466,4 @@ class PlayerCog(Cog):
         # Dispatch to jockey
         await itx.response.defer()
         await jockey.set_volume(volume)
+        await itx.followup.send(embed=create_success_embed(f'Volume set to {volume}'))
