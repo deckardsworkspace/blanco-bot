@@ -47,6 +47,7 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=semver,pattern={{major}}
           type=sha,prefix=
+          latest
     - name: Checkout repository
       uses: actions/checkout@v3
     - name: Build and push
