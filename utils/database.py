@@ -1,3 +1,4 @@
+from .logger import create_logger
 import sqlite3 as sql
 
 
@@ -21,7 +22,8 @@ class Database:
         ''')
         self._con.commit()
 
-        print(f'Connected to database: {db_filename}')
+        self._logger = create_logger(self.__class__.__name__)
+        self._logger.info(f'Connected to database: {db_filename}')
     
     def init_guild(self, guild_id: int):
         """

@@ -5,6 +5,7 @@ from nextcord.ext.tasks import loop
 from typing import Any, Dict, Optional, TYPE_CHECKING
 from utils.database import Database
 from utils.jockey_helpers import create_error_embed
+from utils.logger import create_logger
 from utils.spotify_client import Spotify
 from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
@@ -28,6 +29,9 @@ class LavalinkBot(Bot):
         # Lavalink
         self._pool = NodePool(self)
         self._pool_initialized = False
+
+        # Logger
+        self._logger = create_logger(self.__class__.__name__)
     
     @property
     def config(self) -> dict:
@@ -71,11 +75,13 @@ class LavalinkBot(Bot):
     ###################
 
     async def on_ready(self):
-        print('Logged in as {0}!'.format(self.user))
+        self._logger.info(f'Logged in as {self.user}')
         self.load_extension('cogs')
         if self.debug:
-            print('Debug mode enabled!')
-            await self.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening))
+            self._logger.info('Debug mode enabled')
+            await self.change_presence(
+                activity=Activity(name='/play (debug)', type=ActivityType.listening)
+            )
     
     async def on_application_command_error(self, itx: Interaction, error: Exception):
         embed = create_error_embed(str(error))
@@ -93,9 +99,9 @@ class LavalinkBot(Bot):
 
     async def on_track_end(self, event: TrackEndEvent['Jockey']):
         # Play next track in queue
-        print('[main] Track ended')
+        self._logger.debug(f'Finished playing {event.track.title} in {event.player.guild.name}')
         if event.player.suppress_skip:
-            print('[main] Suppressing skip')
+            self._logger.debug('Suppressing autoskip due to previous /skip command')
             event.player.suppress_skip = False
         else:
             await event.player.skip()

@@ -10,6 +10,7 @@ from utils.exceptions import EndOfQueueError, JockeyDeprecatedError, JockeyStart
 from utils.jockey import Jockey
 from utils.jockey_helpers import create_error_embed, create_success_embed, list_chunks
 from utils.lavalink_bot import LavalinkBot
+from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import *
 from utils.string_util import human_readable_time
@@ -20,12 +21,13 @@ if TYPE_CHECKING:
 class PlayerCog(Cog):
     def __init__(self, bot: LavalinkBot):
         self._bot = bot
+        self._logger = create_logger(self.__class__.__name__)
 
         # Initialize Lavalink client instance
         if not bot.pool_initialized:
             bot.loop.create_task(bot.init_pool())
-
-        print(f'Loaded cog: {self.__class__.__name__}')
+        
+        self._logger.info(f'Loaded cog')
     
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
