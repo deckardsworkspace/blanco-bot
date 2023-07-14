@@ -1,4 +1,5 @@
 from .logger import create_logger
+from .migrations import run_migrations
 import sqlite3 as sql
 
 
@@ -10,20 +11,11 @@ class Database:
     def __init__(self, db_filename: str):
         self._con = sql.connect(db_filename)
         self._cur = self._con.cursor()
-
-        # Create table if it doesn't exist yet
-        self._cur.execute('''
-            CREATE TABLE IF NOT EXISTS player_settings (
-                guild_id INTEGER PRIMARY KEY NOT NULL,
-                volume INTEGER NOT NULL DEFAULT 100,
-                loop INTEGER NOT NULL DEFAULT 0,
-                last_np_msg INTEGER NOT NULL DEFAULT -1
-            )
-        ''')
-        self._con.commit()
-
         self._logger = create_logger(self.__class__.__name__)
         self._logger.info(f'Connected to database: {db_filename}')
+
+        # Run migrations
+        run_migrations(self._logger, self._con)
     
     def init_guild(self, guild_id: int):
         """
