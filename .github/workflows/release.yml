@@ -3,7 +3,8 @@ name: Create GitHub Release from tag
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+-[a-zA-Z]*'
+      - 'v[0-9]+.[0-9]+.[0-9]'
 
 
 jobs:
