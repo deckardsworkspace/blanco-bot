@@ -4,35 +4,29 @@ blanco-bot
 [![Docker Image CI](https://github.com/jareddantis/blanco-bot/actions/workflows/build.yml/badge.svg)](https://github.com/jareddantis/blanco-bot/actions/workflows/build.yml)
 ![Docker Pulls](https://img.shields.io/docker/pulls/jareddantis/blanco-bot)
 
-This is a self-contained Discord music bot that supports pulling music metadata from Spotify, made with [Nextcord v2](https://nextcord.dev).
+Blanco is a Discord music bot made with [Nextcord](https://nextcord.dev) that supports pulling music metadata from Spotify.
 
 Music playback is handled by the [Mafic](https://github.com/ooliver1/mafic) client for the [Lavalink](https://github.com/lavalink-devs/Lavalink) server.
 
-The bot stores settings in a local SQLite database. This database is populated automatically on first run, and the settings it will contain include the set volume level and queue repeat preferences per guild.
+The bot stores data in a local SQLite database. This database is populated automatically on first run, and the data it will contain include Lavalink session IDs, volume levels, and queue repeat preferences per guild.
 
-- [blanco-bot](#blanco-bot)
-  - [Before you proceed](#before-you-proceed)
-- [Requirements](#requirements)
 - [Deployment](#deployment)
-  - [Lavalink in composition](#lavalink-in-composition)
-    - [IPv6 support](#ipv6-support)
-  - [Debugging](#debugging)
-
-## Before you proceed
-
-**Do not monetize, or attempt to submit for verification, any instance of this bot.** The Lavalink audio server pulls audio data from YouTube, which goes against the [YouTube Terms of Service.](https://www.youtube.com/t/terms) At best, Discord will reject your application for verification, and at worst, your developer account will get banned.
-
-You will need a working Lavalink server for your own bot instance to work; there is a list of free servers [here.](https://lavalink.darrennathanael.com/) You could also choose to run Lavalink along with your bot in a separate container. Follow everything in [Deployment](#deployment), then edit `docker-compose.yml` according to the instructions in [Lavalink in composition](#lavalink-in-composition).
-
-# Requirements
-
-This bot is self-contained, in that you do not have to install anything aside from Docker. All of the dependencies are included in the Docker image, which has been tested on Linux hosts using Docker CE, and on Windows and macOS hosts using Docker Desktop.
-
-The bot image is built with both `linux/amd64` and `linux/arm64` support, so you can, for instance, run the bot on Apple Silicon with reasonable performance.
+  - [Prerequisites](#prerequisites)
+  - [With Docker](#with-docker)
+  - [Without Docker](#without-docker)
+- [Debugging](#debugging)
 
 # Deployment
 
-Make sure you have Docker installed and up-to-date. Also make sure that you have a bot token from [Discord,](https://discord.com/developers/applications) and that you have a client ID & secret pair from [Spotify.](https://developer.spotify.com/dashboard)
+**Do not monetize, or attempt to submit for verification, any instance of this bot.** The Lavalink audio server pulls audio data from YouTube, which goes against the [YouTube Terms of Service.](https://www.youtube.com/t/terms) At best, Discord will reject your application for verification, and at worst, your developer account will get banned.
+
+## Prerequisites
+
+You will need a working Lavalink server for your own bot instance to work; there is a list of free servers [here.](https://lavalink.darrennathanael.com/)
+
+You could also choose to run Lavalink along with your bot, but make sure you have enough resources to run both Lavalink and the bot. The absolute minimum is 1GB of RAM, which will be enough for a few guilds, but you will need more as your bot grows.
+
+Before proceeding, make sure that you have a bot token from [Discord,](https://discord.com/developers/applications) and that you have a client ID & secret pair from [Spotify.](https://developer.spotify.com/dashboard)
 
 Create an empty directory and create a file named `config.yml` in it, with the following contents:
 
@@ -62,11 +56,21 @@ lavalink:
 
 Edit the values with your Discord and Spotify tokens, along with the details of your chosen Lavalink server(s).
 
-We also need to create an empty database file in the same folder, which will be used by the bot to store settings. Open a terminal, change your working directory to the repository root and run the following command:
+We also need to create an empty database file in the same folder, which will be used by the bot to store settings. Open a terminal in the same folder as `config.yml` and run the following command:
 
-```bash
+```
+# Windows cmd
+type nul > blanco.db
+
+# Linux, macOS, etc.
 touch blanco.db
 ```
+
+## With Docker
+
+Blanco comes in a Docker image, so you do not have to install anything aside from Docker. All of the dependencies are included in the Docker image, which has been tested on Linux hosts using Docker CE, and on Windows and macOS hosts using Docker Desktop.
+
+Aside from `linux/amd64`, the bot image is built with both `linux/arm/v7` and `linux/arm64` support, so you can, for instance, run the bot on a Raspberry Pi or a Mac with Apple silicon with reasonable performance.
 
 Then create a `docker-compose.yml` file in the same folder with the following contents:
 
@@ -111,85 +115,36 @@ and start the container again using
 docker compose up -d
 ```
 
-## Lavalink in composition
+## Without Docker
 
-If you want to host Lavalink alongside your bot, make sure you have enough resources to run both Lavalink and the bot. The absolute minimum is 1GB of RAM, which will be enough for a few guilds, but you will need more as your bot grows.
+If you want to deploy Blanco without Docker, make sure you have Python 3.11+ installed. Then:
 
-Download the Lavalink configuration file from [here.](https://github.com/freyacodes/Lavalink/blob/master/LavalinkServer/application.yml.example) Save it as `lavalink.yml`, next to your `docker-compose.yml` file.
+1. Download the source code ZIP from the latest [release.](https://github.com/jareddantis-bots/blanco-bot/releases/latest)
+2. Unpack it into an empty directory.
+3. Open a terminal inside that directory and create a virtual environment:
+    ```bash
+    # Change python3 to whatever your Python 3 binary is called
+    python3 -m venv .venv
+    ```
+4. Activate the virtual environment:
+    ```
+    # Windows cmd
+    .\.venv\Scripts\Activate.bat
+    
+    # Linux, macOS, etc.
+    source .venv/bin/activate
+    ```
+5. Install Blanco's requirements using `python3 -m pip install -r requirements.txt`.
+6. Create `config.yml` and `blanco.db` according to the instructions in [Prerequisites](#prerequisites).
+7. Run Blanco using `python3 main.py`.
 
-Now edit `docker-compose.yml` such that it resembles the following, changing the paths as necessary:
+# Debugging
 
-```yaml
-version: '3.8'
-services:
-  lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:v4
-    container_name: lavalink
-    environment:
-      - _JAVA_OPTIONS=-Xmx1G # Set higher for larger bots
-    volumes:
-      - ./lavalink.yml:/opt/Lavalink/application.yml
-    restart: unless-stopped
-  bot:
-    image: jareddantis/blanco-bot:latest
-    container_name: blanco-bot
-    volumes:
-      - /YOUR/PATH/HERE/config.yml:/opt/app/config.yml
-      - /YOUR/PATH/HERE/blanco.db:/opt/app/blanco.db
-    restart: unless-stopped
-```
+Blanco has the ability to switch to a debug mode, which is used to
+- register slash commands in a specified guild instead of globally like normal, and
+- print additional messages to the console, such as the songs played in every guild.
 
-Then edit the Lavalink configuration in `config.yml` to match the following:
-
-```yaml
-lavalink:
-  - id: main
-    port: 2333
-    ssl: false
-    regions: 
-      - us-central
-      - us-east
-
-    # Must match the service name in docker-compose.yml
-    server: lavalink
-
-    # Must match the server password in lavalink.yml
-    password: youshallnotpass
-```
-
-Then run `docker compose up -d` as usual.
-
-### IPv6 support
-
-If you want to run the Lavalink container with support for IPv6 (i.e., for use with [Tunnelbroker](https://blog.arbjerg.dev/2020/3/tunnelbroker-with-lavalink)), make sure **both** the Lavalink container and the bot container are running in host networking mode. You can do this by adding the following to `docker-compose.yml`:
-
-```yaml
-# ...
-services:
-  lavalink:
-    # ...
-    network_mode: host
-  bot:
-    # ...
-    network_mode: host
-```
-
-You will also need to change the `server` value in `config.yml` to `localhost`:
-
-```yaml
-lavalink:
-  - id: main
-    server: localhost
-    # ...
-```
-
-Configure your Lavalink server to bind to your desired IPv6 address blocks by editing `lavalink.yml` accordingly, then run `docker compose up -d`.
-
-Note that this configuration is specific to Linux hosts - Docker does not support host networking on either Windows or macOS.
-
-## Debugging
-
-Blanco has the ability to switch to a debug mode, which at the moment is only used to register slash commands in a specified guild instead of globally like normal.
+It is not recommended to enable debugging mode outside of testing.
 
 If you would like to enable debugging mode in your own instance, edit the `bot` section in `config.yml` as such, then (re)start your instance:
 
