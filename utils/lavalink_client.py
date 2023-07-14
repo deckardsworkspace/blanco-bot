@@ -40,6 +40,14 @@ def parse_result(result: 'Track') -> LavalinkResult:
 
 
 def check_similarity(actual: str, candidate: str) -> float:
+    """
+    Checks the similarity between two strings. Meant for comparing
+    song titles and artists with search results.
+
+    :param actual: The actual string.
+    :param candidate: The candidate string, i.e. from a search result.
+    :return: A float between 0 and 1, where 1 is a perfect match.
+    """
     actual_words = actual.lower().split(' ')
     candidate_words = candidate.lower().split(' ')
     intersection = set(actual_words).intersection(set(candidate_words))

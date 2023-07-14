@@ -111,8 +111,6 @@ and start the container again using
 docker compose up -d
 ```
 
-In some cases, such as when there is a change to the bot database schema, you may need to delete the database file and rebuild the containers as above, but I try my best to make future updates handle migrations smoothly.
-
 ## Lavalink in composition
 
 If you want to host Lavalink alongside your bot, make sure you have enough resources to run both Lavalink and the bot. The absolute minimum is 1GB of RAM, which will be enough for a few guilds, but you will need more as your bot grows.

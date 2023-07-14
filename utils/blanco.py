@@ -1,19 +1,20 @@
-from mafic import NodePool, TrackStartEvent, TrackEndEvent, VoiceRegion
+from mafic import NodePool, VoiceRegion
 from nextcord import Activity, ActivityType, Interaction, PartialMessageable
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
 from typing import Any, Dict, Optional, TYPE_CHECKING
-from utils.database import Database
+from database.database import Database
 from utils.jockey_helpers import create_error_embed
+from utils.logger import create_logger
 from utils.spotify_client import Spotify
 from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
-    from mafic import TrackStartEvent
+    from mafic import Node, TrackStartEvent, TrackEndEvent
     from nextcord.abc import Messageable
     from utils.jockey import Jockey
 
 
-class LavalinkBot(Bot):
+class BlancoBot(Bot):
     """
     Nextcord Bot class, with an integrated Lavalink client.
     """
@@ -28,6 +29,9 @@ class LavalinkBot(Bot):
         # Lavalink
         self._pool = NodePool(self)
         self._pool_initialized = False
+
+        # Logger
+        self._logger = create_logger(self.__class__.__name__)
     
     @property
     def config(self) -> dict:
@@ -71,25 +75,41 @@ class LavalinkBot(Bot):
     ###################
 
     async def on_ready(self):
-        print('Logged in as {0}!'.format(self.user))
+        self._logger.info(f'Logged in as {self.user}')
         self.load_extension('cogs')
         if self.debug:
-            print('Debug mode enabled!')
-            await self.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening))
+            self._logger.info('Debug mode enabled')
+            await self.change_presence(
+                activity=Activity(name='/play (debug)', type=ActivityType.listening)
+            )
     
     async def on_application_command_error(self, itx: Interaction, error: Exception):
-        if isinstance(itx.channel, PartialMessageable):
-            await itx.channel.send(embed=create_error_embed(str(error)))
+        embed = create_error_embed(str(error))
+        
+        # Check if we can reply to this interaction
+        if itx.response.is_done():
+            if isinstance(itx.channel, PartialMessageable):
+                await itx.channel.send(embed=embed)
+        else:
+            await itx.response.send_message(embed=embed)
     
-    async def on_track_start(self, event: TrackStartEvent['Jockey']):
+    async def on_node_ready(self, node: 'Node'):
+        self._logger.info(f'Connected to Lavalink node `{node.label}\'')
+
+        # Store session ID in database
+        if node.session_id is not None:
+            self._logger.debug(f'Storing new session ID `{node.session_id}\' for node `{node.label}\'')
+            self._db.set_session_id(node.label, node.session_id)
+    
+    async def on_track_start(self, event: 'TrackStartEvent[Jockey]'):
         # Send now playing embed
         await self.send_now_playing(event)
 
-    async def on_track_end(self, event: TrackEndEvent['Jockey']):
+    async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
         # Play next track in queue
-        print('[main] Track ended')
+        self._logger.debug(f'Finished playing {event.track.title} in {event.player.guild.name}')
         if event.player.suppress_skip:
-            print('[main] Suppressing skip')
+            self._logger.debug('Suppressing autoskip due to previous /skip command')
             event.player.suppress_skip = False
         else:
             await event.player.skip()
@@ -130,6 +150,11 @@ class LavalinkBot(Bot):
         if not isinstance(timeout, int) or timeout < 1:
             raise ValueError('bot.inactivity_timeout must be an integer greater than 0')
 
+        # Check if the node IDs are unique
+        node_ids = [node['id'] for node in nodes]
+        if len(node_ids) != len(set(node_ids)):
+            raise ValueError('Lavalink node IDs must be unique')
+
         # Add local node
         for i, node in enumerate(nodes):
             try:
@@ -157,13 +182,22 @@ class LavalinkBot(Bot):
                     # Try to match regions against enum
                     for region in node['regions']:
                         regions.append(VoiceRegion(region))
+                
+                # Get session ID from database
+                try:
+                    session_id = self._db.get_session_id(node['id'])
+                except:
+                    session_id = None
+                    self._logger.debug(f'No session ID `{session_id}\' for node `{node["id"]}\'')
+                else:
+                    self._logger.debug(f'Using session ID `{session_id}\' for node `{node["id"]}\'')
 
                 await self._pool.create_node(
                     host=node['server'],
                     port=int(node['port']),
                     password=node['password'],
                     regions=regions,
-                    resuming_session_id=node['id'],
+                    resuming_session_id=session_id,
                     timeout=timeout,
                     label=node['id'],
                     secure=node['ssl']

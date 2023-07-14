@@ -6,22 +6,23 @@ from typing import Deque, TYPE_CHECKING
 from views.now_playing import NowPlayingView
 from .exceptions import *
 from .jockey_helpers import *
+from .logger import create_logger
 from .string_util import human_readable_time
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
     from nextcord import Embed
     from nextcord.abc import Connectable, Messageable
-    from .lavalink_bot import LavalinkBot
+    from .blanco import BlancoBot
 
 
-class Jockey(Player['LavalinkBot']):
+class Jockey(Player['BlancoBot']):
     """
     Class that handles music playback for a single guild.
     Contains all the methods for music playback, along with a
     local instance of an in-memory database for fast queueing.
     """
 
-    def __init__(self, client: 'LavalinkBot', channel: 'Connectable'):
+    def __init__(self, client: 'BlancoBot', channel: 'Connectable'):
         super().__init__(client, channel)
         self._bot = client
 
@@ -50,7 +51,9 @@ class Jockey(Player['LavalinkBot']):
         # Volume
         self._volume = client.db.get_volume(channel.guild.id)
 
-        print(f'[jockey] Init done for {channel.guild.name}')
+        # Logger
+        self._logger = create_logger(self.__class__.__name__)
+        self._logger.info(f'Initialized for {channel.guild.name}')
 
     @property
     def current_index(self) -> int:
@@ -169,7 +172,7 @@ class Jockey(Player['LavalinkBot']):
                 try:
                     results = await get_youtube_matches(self.node, f'{item.title} {item.artist}', desired_duration_ms=item.duration)
                 except LavalinkSearchError as e:
-                    print(f'[jockey::_play] Failed to play: {e}')
+                    self._logger.error(f'Failed to play: {e}')
                     return False
 
             # Try to add first result directly to Lavalink queue
@@ -188,11 +191,12 @@ class Jockey(Player['LavalinkBot']):
 
         :return: An instance of nextcord.Embed
         """
+        if self.current is None:
+            raise EndOfQueueError('No track is currently playing')
+        
         # Construct Spotify URL if it exists
         track = self._queue[self._queue_i]
-        uri = ''
-        if self.current is not None:
-            uri = self.current.uri
+        uri = self.current.uri
         if track.spotify_id is not None:
             uri = f'https://open.spotify.com/track/{track.spotify_id}'
         
@@ -217,8 +221,10 @@ class Jockey(Player['LavalinkBot']):
                 f'{track.artist}',
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
-                f'\n:warning: Could not find a perfect match for this Spotify track.\nPlaying the closest match instead: {uri}' if track.is_imperfect else ''
+                ':warning: Could not find a perfect match for this track.' if track.is_imperfect else '',
+                f'Playing the [closest match]({self.current.uri}) instead.' if track.is_imperfect else ''
             ],
+            footer=f'Track {self.current_index + 1} of {len(self._queue)}',
             color=Color.teal(),
             thumbnail_url=track.artwork,
             timestamp_now=True

@@ -1,3 +1,5 @@
+from utils.logger import create_logger
+from .migrations import run_migrations
 import sqlite3 as sql
 
 
@@ -9,19 +11,11 @@ class Database:
     def __init__(self, db_filename: str):
         self._con = sql.connect(db_filename)
         self._cur = self._con.cursor()
+        self._logger = create_logger(self.__class__.__name__)
+        self._logger.info(f'Connected to database: {db_filename}')
 
-        # Create table if it doesn't exist yet
-        self._cur.execute('''
-            CREATE TABLE IF NOT EXISTS player_settings (
-                guild_id INTEGER PRIMARY KEY NOT NULL,
-                volume INTEGER NOT NULL DEFAULT 100,
-                loop INTEGER NOT NULL DEFAULT 0,
-                last_np_msg INTEGER NOT NULL DEFAULT -1
-            )
-        ''')
-        self._con.commit()
-
-        print(f'Connected to database: {db_filename}')
+        # Run migrations
+        run_migrations(self._logger, self._con)
     
     def init_guild(self, guild_id: int):
         """
@@ -70,4 +64,18 @@ class Database:
         Set the last now playing message ID for a guild.
         """
         self._cur.execute(f'UPDATE player_settings SET last_np_msg = {msg_id} WHERE guild_id = {guild_id}')
+        self._con.commit()
+    
+    def get_session_id(self, node_id: str) -> str:
+        """
+        Get the session ID for a Lavalink node.
+        """
+        self._cur.execute(f'SELECT session_id FROM lavalink WHERE node_id = "{node_id}"')
+        return self._cur.fetchone()[0]
+    
+    def set_session_id(self, node_id: str, session_id: str):
+        """
+        Set the session ID for a Lavalink node.
+        """
+        self._cur.execute(f'INSERT OR REPLACE INTO lavalink (node_id, session_id) VALUES ("{node_id}", "{session_id}")')
         self._con.commit()
