@@ -220,6 +220,7 @@ class Jockey(Player['LavalinkBot']):
                 ':warning: Could not find a perfect match for this track.' if track.is_imperfect else '',
                 f'Playing the [closest match]({self.current.uri}) instead.' if self.current is not None else ''
             ],
+            footer=f'Track {self.current_index + 1} of {len(self._queue)}',
             color=Color.teal(),
             thumbnail_url=track.artwork,
             timestamp_now=True
