@@ -1,7 +1,7 @@
 blanco-bot
 ===
 
-[![Docker Image CI](https://github.com/jareddantis/blanco-bot/actions/workflows/build-and-push.yml/badge.svg)](https://github.com/jareddantis/blanco-bot/actions/workflows/build-and-push.yml)
+[![Docker Image CI](https://github.com/jareddantis/blanco-bot/actions/workflows/build.yml/badge.svg)](https://github.com/jareddantis/blanco-bot/actions/workflows/build.yml)
 ![Docker Pulls](https://img.shields.io/docker/pulls/jareddantis/blanco-bot)
 
 This is a self-contained Discord music bot that supports pulling music metadata from Spotify, made with [Nextcord v2](https://nextcord.dev).
