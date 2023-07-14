@@ -217,7 +217,8 @@ class Jockey(Player['LavalinkBot']):
                 f'{track.artist}',
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
-                f'\n:warning: Could not find a perfect match for this Spotify track.\nPlaying the closest match instead: {uri}' if track.is_imperfect else ''
+                ':warning: Could not find a perfect match for this track.' if track.is_imperfect else '',
+                f'Playing the [closest match]({self.current.uri}) instead.' if self.current is not None else ''
             ],
             color=Color.teal(),
             thumbnail_url=track.artwork,
