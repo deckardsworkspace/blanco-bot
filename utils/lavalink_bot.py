@@ -78,8 +78,14 @@ class LavalinkBot(Bot):
             await self.change_presence(activity=Activity(name='/play (debug)', type=ActivityType.listening))
     
     async def on_application_command_error(self, itx: Interaction, error: Exception):
-        if isinstance(itx.channel, PartialMessageable):
-            await itx.channel.send(embed=create_error_embed(str(error)))
+        embed = create_error_embed(str(error))
+        
+        # Check if we can reply to this interaction
+        if itx.response.is_done():
+            if isinstance(itx.channel, PartialMessageable):
+                await itx.channel.send(embed=embed)
+        else:
+            await itx.response.send_message(embed=embed)
     
     async def on_track_start(self, event: TrackStartEvent['Jockey']):
         # Send now playing embed
