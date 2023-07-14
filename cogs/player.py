@@ -9,7 +9,7 @@ from utils.config import get_debug_guilds
 from utils.exceptions import EndOfQueueError, JockeyDeprecatedError, JockeyStartError
 from utils.jockey import Jockey
 from utils.jockey_helpers import create_error_embed, create_success_embed, list_chunks
-from utils.lavalink_bot import LavalinkBot
+from utils.blanco import BlancoBot
 from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import *
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class PlayerCog(Cog):
-    def __init__(self, bot: LavalinkBot):
+    def __init__(self, bot: BlancoBot):
         self._bot = bot
         self._logger = create_logger(self.__class__.__name__)
 

@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from cogs.player import PlayerCog
     from utils.jockey import Jockey
-    from utils.lavalink_bot import LavalinkBot
+    from utils.blanco import BlancoBot
 
 
 class NowPlayingView(View):
-    def __init__(self, bot: 'LavalinkBot', player: 'Jockey'):
+    def __init__(self, bot: 'BlancoBot', player: 'Jockey'):
         super().__init__(timeout=None)
         self._cog: 'PlayerCog' = bot.get_cog('PlayerCog') # type: ignore
         if self._cog is None:

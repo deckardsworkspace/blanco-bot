@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from utils.jockey import Jockey
 
 
-class LavalinkBot(Bot):
+class BlancoBot(Bot):
     """
     Nextcord Bot class, with an integrated Lavalink client.
     """

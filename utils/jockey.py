@@ -11,17 +11,17 @@ if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
     from nextcord import Embed
     from nextcord.abc import Connectable, Messageable
-    from .lavalink_bot import LavalinkBot
+    from .blanco import BlancoBot
 
 
-class Jockey(Player['LavalinkBot']):
+class Jockey(Player['BlancoBot']):
     """
     Class that handles music playback for a single guild.
     Contains all the methods for music playback, along with a
     local instance of an in-memory database for fast queueing.
     """
 
-    def __init__(self, client: 'LavalinkBot', channel: 'Connectable'):
+    def __init__(self, client: 'BlancoBot', channel: 'Connectable'):
         super().__init__(client, channel)
         self._bot = client
 

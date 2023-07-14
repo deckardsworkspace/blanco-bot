@@ -3,7 +3,7 @@ from nextcord import Color, Interaction, slash_command
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
 from utils.jockey_helpers import create_success_embed
-from utils.lavalink_bot import LavalinkBot
+from utils.blanco import BlancoBot
 from utils.logger import create_logger
 from utils.paginator import Paginator
 
@@ -21,7 +21,7 @@ Memory  :: {used:.0f} MiB used
 """
 
 class DebugCog(Cog):
-    def __init__(self, bot: LavalinkBot):
+    def __init__(self, bot: BlancoBot):
         self._bot = bot
         self._logger = create_logger(self.__class__.__name__)
         self._logger.info(f'Loaded cog')
