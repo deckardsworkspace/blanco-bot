@@ -14,6 +14,8 @@ on:
         required: false
       DOCKERHUB_REPOSITORY:
         required: false
+      PUSH_IMAGE:
+        required: true
 
 jobs:
   build:
@@ -23,6 +25,7 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+      PUSH_IMAGE: ${{ secrets.PUSH_IMAGE }}
     
     steps:
       - name: Set up QEMU
@@ -33,7 +36,7 @@ jobs:
       
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
-        if: env.DOCKERHUB_USERNAME && env.DOCKERHUB_TOKEN && env.DOCKERHUB_REPOSITORY
+        if: env.DOCKERHUB_USERNAME && env.DOCKERHUB_TOKEN
         with:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
@@ -70,7 +73,7 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
-          push: ${{ env.DOCKERHUB_USERNAME && env.DOCKERHUB_TOKEN && env.DOCKERHUB_REPOSITORY }}
+          push: ${{ env.PUSH_IMAGE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
