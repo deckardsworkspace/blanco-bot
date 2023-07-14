@@ -188,11 +188,12 @@ class Jockey(Player['LavalinkBot']):
 
         :return: An instance of nextcord.Embed
         """
+        if self.current is None:
+            raise EndOfQueueError('No track is currently playing')
+        
         # Construct Spotify URL if it exists
         track = self._queue[self._queue_i]
-        uri = ''
-        if self.current is not None:
-            uri = self.current.uri
+        uri = self.current.uri
         if track.spotify_id is not None:
             uri = f'https://open.spotify.com/track/{track.spotify_id}'
         
@@ -218,7 +219,7 @@ class Jockey(Player['LavalinkBot']):
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
                 ':warning: Could not find a perfect match for this track.' if track.is_imperfect else '',
-                f'Playing the [closest match]({self.current.uri}) instead.' if self.current is not None else ''
+                f'Playing the [closest match]({self.current.uri}) instead.' if track.is_imperfect else ''
             ],
             footer=f'Track {self.current_index + 1} of {len(self._queue)}',
             color=Color.teal(),
