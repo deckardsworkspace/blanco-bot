@@ -1,4 +1,4 @@
-from .logger import create_logger
+from utils.logger import create_logger
 from .migrations import run_migrations
 import sqlite3 as sql
 
