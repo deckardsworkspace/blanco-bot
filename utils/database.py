@@ -65,3 +65,17 @@ class Database:
         """
         self._cur.execute(f'UPDATE player_settings SET last_np_msg = {msg_id} WHERE guild_id = {guild_id}')
         self._con.commit()
+    
+    def get_session_id(self, node_id: str) -> str:
+        """
+        Get the session ID for a Lavalink node.
+        """
+        self._cur.execute(f'SELECT session_id FROM lavalink WHERE node_id = "{node_id}"')
+        return self._cur.fetchone()[0]
+    
+    def set_session_id(self, node_id: str, session_id: str):
+        """
+        Set the session ID for a Lavalink node.
+        """
+        self._cur.execute(f'INSERT OR REPLACE INTO lavalink (node_id, session_id) VALUES ("{node_id}", "{session_id}")')
+        self._con.commit()

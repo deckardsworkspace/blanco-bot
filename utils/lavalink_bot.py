@@ -1,4 +1,4 @@
-from mafic import NodePool, TrackStartEvent, TrackEndEvent, VoiceRegion
+from mafic import NodePool, VoiceRegion
 from nextcord import Activity, ActivityType, Interaction, PartialMessageable
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
@@ -9,7 +9,7 @@ from utils.logger import create_logger
 from utils.spotify_client import Spotify
 from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
-    from mafic import TrackStartEvent
+    from mafic import Node, TrackStartEvent, TrackEndEvent
     from nextcord.abc import Messageable
     from utils.jockey import Jockey
 
@@ -93,11 +93,19 @@ class LavalinkBot(Bot):
         else:
             await itx.response.send_message(embed=embed)
     
-    async def on_track_start(self, event: TrackStartEvent['Jockey']):
+    async def on_node_ready(self, node: 'Node'):
+        self._logger.info(f'Connected to Lavalink node `{node.label}\'')
+
+        # Store session ID in database
+        if node.session_id is not None:
+            self._logger.debug(f'Storing new session ID `{node.session_id}\' for node `{node.label}\'')
+            self._db.set_session_id(node.label, node.session_id)
+    
+    async def on_track_start(self, event: 'TrackStartEvent[Jockey]'):
         # Send now playing embed
         await self.send_now_playing(event)
 
-    async def on_track_end(self, event: TrackEndEvent['Jockey']):
+    async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
         # Play next track in queue
         self._logger.debug(f'Finished playing {event.track.title} in {event.player.guild.name}')
         if event.player.suppress_skip:
@@ -169,13 +177,22 @@ class LavalinkBot(Bot):
                     # Try to match regions against enum
                     for region in node['regions']:
                         regions.append(VoiceRegion(region))
+                
+                # Get session ID from database
+                try:
+                    session_id = self._db.get_session_id(node['id'])
+                except:
+                    session_id = None
+                    self._logger.debug(f'No session ID `{session_id}\' for node `{node["id"]}\'')
+                else:
+                    self._logger.debug(f'Using session ID `{session_id}\' for node `{node["id"]}\'')
 
                 await self._pool.create_node(
                     host=node['server'],
                     port=int(node['port']),
                     password=node['password'],
                     regions=regions,
-                    resuming_session_id=node['id'],
+                    resuming_session_id=session_id,
                     timeout=timeout,
                     label=node['id'],
                     secure=node['ssl']
