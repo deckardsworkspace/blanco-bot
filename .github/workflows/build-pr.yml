@@ -8,5 +8,3 @@ on:
 jobs:
   build:
     uses: ./.github/workflows/build.yml
-    secrets:
-      PUSH_IMAGE: 'false'
