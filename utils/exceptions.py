@@ -4,11 +4,17 @@ class EndOfQueueError(Exception):
         super().__init__(self.message)
 
 
-class JockeyStartError(Exception):
+class JockeyError(Exception):
+    """
+    Raised when an error warrants disconnection from the voice channel.
+    """
     pass
 
 
-class JockeyDeprecatedError(Exception):
+class JockeyException(Exception):
+    """
+    Raised when an error does not warrant disconnection from the voice channel.
+    """
     pass
 
 
