@@ -4,11 +4,11 @@ class EndOfQueueError(Exception):
         super().__init__(self.message)
 
 
-class JockeyStartError(Exception):
+class JockeyError(Exception):
     pass
 
 
-class JockeyDeprecatedError(Exception):
+class JockeyException(Exception):
     pass
 
 

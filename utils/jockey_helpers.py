@@ -60,7 +60,7 @@ async def parse_query(node: 'Node', spotify: Spotify, query: str, requester: int
             return await parse_sc_query(node, query, requester)
     
         # Direct URL playback is deprecated
-        raise JockeyDeprecatedError('Direct playback from unsupported URLs is deprecated')
+        raise JockeyException('Direct playback from unsupported URLs is deprecated')
     
     # Attempt to look for a matching track on Spotify
     yt_query = query

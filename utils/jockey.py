@@ -248,18 +248,18 @@ class Jockey(Player['BlancoBot']):
                 requester
             )
         except IndexError:
-            raise JockeyStartError('No results found for query')
+            raise JockeyError('No results found for query')
         except LavalinkInvalidIdentifierError as e:
-            raise JockeyStartError(f'Invalid identifier: {e}')
+            raise JockeyError(f'Invalid identifier: {e}')
         except SpotifyInvalidURLError:
-            raise JockeyStartError('Can only play tracks, albums, and playlists from Spotify')
+            raise JockeyError('Can only play tracks, albums, and playlists from Spotify')
         except SpotifyNoResultsError:
-            raise JockeyStartError('No results found for query, or playlist or album is empty')
-        except JockeyDeprecatedError:
+            raise JockeyError('No results found for query, or playlist or album is empty')
+        except JockeyException:
             # Just bubble this up
             raise
         except Exception as e:
-            raise JockeyStartError(f'Error parsing query: {e}')
+            raise JockeyError(f'Error parsing query: {e}')
         
         # Add new tracks to queue
         old_size = len(self._queue)
@@ -286,7 +286,7 @@ class Jockey(Player['BlancoBot']):
                 if self.is_shuffling:
                     self._shuffle_indices = self._shuffle_indices[:old_size]
 
-                raise JockeyStartError(f'Failed to enqueue "{first.title}"\n{enqueue_result}')
+                raise JockeyError(f'Failed to enqueue "{first.title}"\n{enqueue_result}')
 
         # Send embed
         return first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
