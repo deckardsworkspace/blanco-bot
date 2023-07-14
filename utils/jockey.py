@@ -6,6 +6,7 @@ from typing import Deque, TYPE_CHECKING
 from views.now_playing import NowPlayingView
 from .exceptions import *
 from .jockey_helpers import *
+from .logger import create_logger
 from .string_util import human_readable_time
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
@@ -50,7 +51,9 @@ class Jockey(Player['BlancoBot']):
         # Volume
         self._volume = client.db.get_volume(channel.guild.id)
 
-        print(f'[jockey] Init done for {channel.guild.name}')
+        # Logger
+        self._logger = create_logger(self.__class__.__name__)
+        self._logger.info(f'Initialized for {channel.guild.name}')
 
     @property
     def current_index(self) -> int:
@@ -169,7 +172,7 @@ class Jockey(Player['BlancoBot']):
                 try:
                     results = await get_youtube_matches(self.node, f'{item.title} {item.artist}', desired_duration_ms=item.duration)
                 except LavalinkSearchError as e:
-                    print(f'[jockey::_play] Failed to play: {e}')
+                    self._logger.error(f'Failed to play: {e}')
                     return False
 
             # Try to add first result directly to Lavalink queue
