@@ -9,7 +9,6 @@ from .lavalink_client import *
 from .spotify_client import Spotify
 from .url import *
 if TYPE_CHECKING:
-    from dataclass.lavalink_result import LavalinkResult
     from dataclass.spotify_track import SpotifyTrack
     from mafic import Node
 
@@ -63,8 +62,36 @@ async def parse_query(node: 'Node', spotify: Spotify, query: str, requester: int
         # Direct URL playback is deprecated
         raise JockeyDeprecatedError('Direct playback from unsupported URLs is deprecated')
     
+    # Attempt to look for a matching track on Spotify
+    yt_query = query
+    try:
+        results = spotify.search(query, limit=10)
+    except SpotifyNoResultsError:
+        pass
+    else:
+        # Rank results by similarity to query
+        similarities = [
+            check_similarity(query, f'{result.title} {result.artist}')
+            for result in results
+        ]
+
+        # Check if the top result is similar enough
+        top_similarity = max(similarities)
+        if top_similarity > 0.6:
+            # Return
+            track = results[similarities.index(top_similarity)]
+            return [QueueItem(
+                requester=requester,
+                title=track.title,
+                artist=track.artist,
+                spotify_id=track.spotify_id,
+                duration=track.duration_ms,
+                artwork=track.artwork,
+                isrc=track.isrc
+            )]
+
     # Play the first matching track on YouTube
-    results = await get_youtube_matches(node, query, automatic=False)
+    results = await get_youtube_matches(node, yt_query, automatic=False)
     result = results[0]
     return [QueueItem(
         title=result.title,
@@ -101,11 +128,6 @@ async def parse_sc_query(node: 'Node', query: str, requester: int) -> List[Queue
 async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> List[QueueItem]:
     # Get artwork for Spotify album/playlist
     sp_type, sp_id = get_spinfo_from_url(query, valid_types=['track', 'album', 'playlist'])
-    sp_art = ''
-    if sp_type == 'album':
-        sp_art = spotify.get_album_art(sp_id)
-    elif sp_type == 'playlist':
-        sp_art = spotify.get_playlist_cover(sp_id, default='')
 
     new_tracks = []
     track_queue: List['SpotifyTrack']
@@ -114,11 +136,11 @@ async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> L
         track_queue = [spotify.get_track(sp_id)]
     else:
         # Get playlist or album tracks from Spotify
-        list_name, list_author, track_queue = spotify.get_tracks(sp_type, sp_id)
+        track_queue = spotify.get_tracks(sp_type, sp_id)[2]
 
     if len(track_queue) < 1:
         # No tracks.
-        raise SpotifyNoResultsError()
+        raise SpotifyNoResultsError
 
     # At least one track.
     for track in track_queue:

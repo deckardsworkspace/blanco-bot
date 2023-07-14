@@ -141,9 +141,9 @@ class Spotify:
         else:
             return list_name, list_author, [extract_track_info(x, list_artwork) for x in tracks]
 
-    def search(self, query) -> SpotifyTrack:
-        response = self._client.search(query, limit=1, type='track')
+    def search(self, query, limit: int = 1) -> List[SpotifyTrack]:
+        response = self._client.search(query, limit=limit, type='track')
         if response is None or len(response['tracks']['items']) == 0:
-            raise SpotifyNoResultsError()
+            raise SpotifyNoResultsError
 
-        return extract_track_info(response['tracks']['items'][0])
+        return [extract_track_info(track) for track in response['tracks']['items']]
