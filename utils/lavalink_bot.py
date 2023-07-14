@@ -150,6 +150,11 @@ class LavalinkBot(Bot):
         if not isinstance(timeout, int) or timeout < 1:
             raise ValueError('bot.inactivity_timeout must be an integer greater than 0')
 
+        # Check if the node IDs are unique
+        node_ids = [node['id'] for node in nodes]
+        if len(node_ids) != len(set(node_ids)):
+            raise ValueError('Lavalink node IDs must be unique')
+
         # Add local node
         for i, node in enumerate(nodes):
             try:
