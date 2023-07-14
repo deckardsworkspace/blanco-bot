@@ -1,0 +1,37 @@
+name: Create GitHub Release from tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      DOCKERHUB_REPOSITORY: 'jareddantis/blanco-bots'
+      PUSH_IMAGE: 'true'
+  
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Changes in this Release
+            - First Change
+            - Second Change
+          draft: true
+          prerelease: false

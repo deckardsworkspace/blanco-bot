@@ -1,0 +1,12 @@
+name: Test build Docker Image for PRs
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets:
+      PUSH_IMAGE: 'false'
