@@ -5,10 +5,16 @@ class EndOfQueueError(Exception):
 
 
 class JockeyError(Exception):
+    """
+    Raised when an error warrants disconnection from the voice channel.
+    """
     pass
 
 
 class JockeyException(Exception):
+    """
+    Raised when an error does not warrant disconnection from the voice channel.
+    """
     pass
 
 

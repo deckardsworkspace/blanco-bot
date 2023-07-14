@@ -247,19 +247,12 @@ class Jockey(Player['BlancoBot']):
                 query,
                 requester
             )
-        except IndexError:
-            raise JockeyError('No results found for query')
-        except LavalinkInvalidIdentifierError as e:
-            raise JockeyError(f'Invalid identifier: {e}')
-        except SpotifyInvalidURLError:
-            raise JockeyError('Can only play tracks, albums, and playlists from Spotify')
-        except SpotifyNoResultsError:
-            raise JockeyError('No results found for query, or playlist or album is empty')
         except JockeyException:
-            # Just bubble this up
             raise
         except Exception as e:
-            raise JockeyError(f'Error parsing query: {e}')
+            if self.playing:
+                raise JockeyException(str(e))
+            raise JockeyError(str(e))
         
         # Add new tracks to queue
         old_size = len(self._queue)
