@@ -1,12 +1,11 @@
 blanco-bot
 ===
 
+[![GitHub Releases](https://img.shields.io/github/v/release/jareddantis-bots/blanco-bot)](https://github.com/jareddantis-bots/blanco-bot/releases/latest)
 [![Docker Image CI](https://github.com/jareddantis/blanco-bot/actions/workflows/build.yml/badge.svg)](https://github.com/jareddantis/blanco-bot/actions/workflows/build.yml)
 ![Docker Pulls](https://img.shields.io/docker/pulls/jareddantis/blanco-bot)
 
-Blanco is a Discord music bot made with [Nextcord](https://nextcord.dev) that supports pulling music metadata from Spotify.
-
-Music playback is handled by the [Mafic](https://github.com/ooliver1/mafic) client for the [Lavalink](https://github.com/lavalink-devs/Lavalink) server.
+Blanco is a Discord music bot made with [Nextcord](https://nextcord.dev) that supports pulling music metadata from Spotify. Music playback is handled by the [Mafic](https://github.com/ooliver1/mafic) client for the [Lavalink](https://github.com/lavalink-devs/Lavalink) server.
 
 The bot stores data in a local SQLite database. This database is populated automatically on first run, and the data it will contain include Lavalink session IDs, volume levels, and queue repeat preferences per guild.
 
@@ -72,13 +71,16 @@ Blanco comes in a Docker image, so you do not have to install anything aside fro
 
 Aside from `linux/amd64`, the bot image is built with both `linux/arm/v7` and `linux/arm64` support, so you can, for instance, run the bot on a Raspberry Pi or a Mac with Apple silicon with reasonable performance.
 
-Then create a `docker-compose.yml` file in the same folder with the following contents:
+Make sure you followed [Prerequisites](#prerequisites), then create a `docker-compose.yml` file in the same folder with the following contents:
 
 ```yaml
 version: '3.8'
 services:
   blanco-bot:
-    image: jareddantis/blanco-bot:latest
+    image: jareddantis/blanco-bot
+    # OR
+    # image: ghcr.io/jareddantis-bots/blanco-bot
+
     container_name: blanco-bot
     volumes:
       - /YOUR/PATH/HERE/config.yml:/opt/app/config.yml
