@@ -31,8 +31,30 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            Changes in this Release
-            - First Change
-            - Second Change
+            <RELEASE SUMMARY>
+
+            ```bash
+            # Docker Hub
+            $ docker pull jareddantis/blanco-bot:CHANGE_ME
+
+            # GHCR
+            $ docker pull ghcr.io/jareddantis-bots/blanco-bot:CHANGE_ME
+            ```
+
+            <hr>
+
+            ## For users
+
+            - Change one
+
+            ## For admins and developers
+            ### Breaking changes
+            - Change two
+
+            ### Other changes
+            - Change three
+
+            ## Known bugs
+            - Bug one
           draft: true
           prerelease: false
