@@ -1,4 +1,5 @@
 from dataclass.custom_embed import CustomEmbed
+from datetime import timedelta
 from nextcord import Color, Interaction, slash_command
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
@@ -48,24 +49,38 @@ class DebugCog(Cog):
         nodes = self._bot.pool.nodes
         for node in nodes:
             stats = node.stats
-            
-            # Adapted from @ooliver1/mafic test bot
-            pages.append(CustomEmbed(
-                color=Color.purple(),
-                title=f':bar_chart:｜Stats for node `{node.label}`',
-                description='No statistics available' if stats is None else STATS_FORMAT.format(
-                    uptime=stats.uptime,
-                    used=stats.memory.used / 1024 / 1024,
-                    free=stats.memory.free / 1024 / 1024,
-                    allocated=stats.memory.allocated / 1024 / 1024,
-                    reservable=stats.memory.reservable / 1024 / 1024,
-                    system_load=stats.cpu.system_load * 100,
-                    lavalink_load=stats.cpu.lavalink_load * 100,
-                    player_count=stats.player_count,
-                    playing_player_count=stats.playing_player_count
-                ),
-                footer=f'{len(nodes)} total node(s)'
-            ).get())
+
+            if stats is not None:
+                # Properly convert uptime to timedelta
+                # Lavalink emits uptime in milliseconds,
+                # but Mafic passes it as seconds to timedelta.
+                # Here we correct it ourselves.
+                uptime = timedelta(milliseconds=stats.uptime.total_seconds())
+                
+                # Adapted from @ooliver1/mafic test bot
+                pages.append(CustomEmbed(
+                    color=Color.purple(),
+                    title=f':bar_chart:｜Stats for node `{node.label}`',
+                    description='No statistics available' if stats is None else STATS_FORMAT.format(
+                        uptime=uptime,
+                        used=stats.memory.used / 1024 / 1024,
+                        free=stats.memory.free / 1024 / 1024,
+                        allocated=stats.memory.allocated / 1024 / 1024,
+                        reservable=stats.memory.reservable / 1024 / 1024,
+                        system_load=stats.cpu.system_load * 100,
+                        lavalink_load=stats.cpu.lavalink_load * 100,
+                        player_count=stats.player_count,
+                        playing_player_count=stats.playing_player_count
+                    ),
+                    footer=f'{len(nodes)} total node(s)'
+                ).get())
+            else:
+                pages.append(CustomEmbed(
+                    color=Color.red(),
+                    title=f':bar_chart:｜Stats for node `{node.label}`',
+                    description='No statistics available',
+                    footer=f'{len(nodes)} total node(s)'
+                ).get())
 
         # Run paginator
         paginator = Paginator(itx)

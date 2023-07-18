@@ -1,9 +1,9 @@
+from database import Database
 from mafic import NodePool, VoiceRegion
 from nextcord import Activity, ActivityType, Interaction, PartialMessageable
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
 from typing import Any, Dict, Optional, TYPE_CHECKING
-from database.database import Database
 from utils.jockey_helpers import create_error_embed
 from utils.logger import create_logger
 from utils.spotify_client import Spotify
@@ -78,7 +78,7 @@ class BlancoBot(Bot):
         self._logger.info(f'Logged in as {self.user}')
         self.load_extension('cogs')
         if self.debug:
-            self._logger.info('Debug mode enabled')
+            self._logger.warn('Debug mode enabled')
             await self.change_presence(
                 activity=Activity(name='/play (debug)', type=ActivityType.listening)
             )
@@ -102,8 +102,11 @@ class BlancoBot(Bot):
             self._db.set_session_id(node.label, node.session_id)
     
     async def on_track_start(self, event: 'TrackStartEvent[Jockey]'):
-        # Send now playing embed
-        await self.send_now_playing(event)
+        if event.player.playing:
+            # Send now playing embed
+            await self.send_now_playing(event)
+        else:
+            self._logger.warn(f'Got track_start event for idle player in {event.player.guild.name}')
 
     async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
         # Play next track in queue

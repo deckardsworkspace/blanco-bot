@@ -7,13 +7,14 @@ if TYPE_CHECKING:
     from mafic import Node, Track
 
 
-blacklist = (
+BLACKLIST = (
     '3d'
     '8d',
     'cover',
     'instrumental',
     'karaoke',
     'live',
+    'loop',
     'mashup',
     'minus one',
     'performance',
@@ -102,7 +103,7 @@ async def get_youtube_matches(node: 'Node', query: str, desired_duration_ms: Opt
         # if the original query did not ask for it
         valid = True
         if automatic:
-            for word in blacklist:
+            for word in BLACKLIST:
                 if word in result.title.lower() and not word in query.lower():
                     valid = False
                     break
