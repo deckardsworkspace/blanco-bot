@@ -51,12 +51,18 @@ class DebugCog(Cog):
             stats = node.stats
 
             if stats is not None:
+                # Properly convert uptime to timedelta
+                # Lavalink emits uptime in milliseconds,
+                # but Mafic passes it as seconds to timedelta.
+                # Here we correct it ourselves.
+                uptime = timedelta(milliseconds=stats.uptime.total_seconds())
+                
                 # Adapted from @ooliver1/mafic test bot
                 pages.append(CustomEmbed(
                     color=Color.purple(),
                     title=f':bar_chart:｜Stats for node `{node.label}`',
                     description='No statistics available' if stats is None else STATS_FORMAT.format(
-                        uptime=stats.uptime,
+                        uptime=uptime,
                         used=stats.memory.used / 1024 / 1024,
                         free=stats.memory.free / 1024 / 1024,
                         allocated=stats.memory.allocated / 1024 / 1024,
