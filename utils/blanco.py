@@ -78,7 +78,7 @@ class BlancoBot(Bot):
         self._logger.info(f'Logged in as {self.user}')
         self.load_extension('cogs')
         if self.debug:
-            self._logger.info('Debug mode enabled')
+            self._logger.warn('Debug mode enabled')
             await self.change_presence(
                 activity=Activity(name='/play (debug)', type=ActivityType.listening)
             )
