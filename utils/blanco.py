@@ -4,6 +4,7 @@ from nextcord import Activity, ActivityType, Interaction, PartialMessageable
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
 from typing import Any, Dict, Optional, TYPE_CHECKING
+from utils.exceptions import EndOfQueueError
 from utils.jockey_helpers import create_error_embed
 from utils.logger import create_logger
 from utils.spotify_client import Spotify
@@ -102,10 +103,10 @@ class BlancoBot(Bot):
             self._db.set_session_id(node.label, node.session_id)
     
     async def on_track_start(self, event: 'TrackStartEvent[Jockey]'):
-        if event.player.playing:
+        try:
             # Send now playing embed
             await self.send_now_playing(event)
-        else:
+        except EndOfQueueError:
             self._logger.warn(f'Got track_start event for idle player in {event.player.guild.name}')
 
     async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
