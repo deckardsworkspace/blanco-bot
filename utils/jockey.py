@@ -53,7 +53,7 @@ class Jockey(Player['BlancoBot']):
 
         # Logger
         self._logger = create_logger(self.__class__.__name__)
-        self._logger.info(f'Initialized for {channel.guild.name}')
+        self._logger.info(f'Using node `{self.node.label}\' for {channel.guild.name}')
 
     @property
     def current_index(self) -> int:
