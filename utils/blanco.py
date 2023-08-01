@@ -148,11 +148,6 @@ class BlancoBot(Bot):
         Initialize the Lavalink node pool.
         """
         nodes = self._config['lavalink']
-        timeout = self._config['bot']['inactivity_timeout']
-
-        # Check that our inactivity timeout is valid
-        if not isinstance(timeout, int) or timeout < 1:
-            raise ValueError('bot.inactivity_timeout must be an integer greater than 0')
 
         # Check if the node IDs are unique
         node_ids = [node['id'] for node in nodes]
@@ -202,7 +197,6 @@ class BlancoBot(Bot):
                     password=node['password'],
                     regions=regions,
                     resuming_session_id=session_id,
-                    timeout=timeout,
                     label=node['id'],
                     secure=node['ssl']
                 )

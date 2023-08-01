@@ -9,6 +9,7 @@ Blanco is a Discord music bot made with [Nextcord](https://nextcord.dev) that su
 
 The bot stores data in a local SQLite database. This database is populated automatically on first run, and the data it will contain include Lavalink session IDs, volume levels, and queue repeat preferences per guild.
 
+- [blanco-bot](#blanco-bot)
 - [Deployment](#deployment)
   - [Prerequisites](#prerequisites)
   - [With Docker](#with-docker)
@@ -33,7 +34,6 @@ Create an empty directory and create a file named `config.yml` in it, with the f
 bot:
   database: blanco.db
   discord_token: <your Discord bot token>
-  inactivity_timeout: 120
 spotify:
   client_id: <your client id>
   client_secret: <your client secret>

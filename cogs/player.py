@@ -37,30 +37,6 @@ class PlayerCog(Cog):
         # Stop playing if we're left alone
         if jockey is not None and len(jockey.channel.members) == 1 and after.channel is None: # type: ignore
             return await self._disconnect(jockey=jockey, reason='You left me alone :(')
-
-        # Only handle join events by this bot
-        if not isinstance(self._bot.user, ClientUser):
-            return
-        if before.channel is None and after.channel is not None and member.id == self._bot.user.id:
-            # Inactivity check
-            time = 0
-            inactive_sec = int(self._bot.config['bot']['inactivity_timeout'])
-            inactive_h, inactive_m, inactive_s = human_readable_time(inactive_sec * 1000)
-            inactive_h = f'{inactive_h}h ' if inactive_h else ''
-            inactive_m = f'{inactive_m}m ' if inactive_m else ''
-            inactive_s = f'{inactive_s}s' if inactive_s else ''
-            inactive_time = f'{inactive_h}{inactive_m}{inactive_s}'
-            while True:
-                await sleep(1)
-                time = time + 1
-
-                if jockey is not None:
-                    if jockey.playing and not jockey.paused:
-                        time = 0
-                    if time == inactive_sec:
-                        await self._disconnect(jockey=jockey, reason=f'Inactive for {inactive_time}')
-                    if not jockey.connected:
-                        break
     
     async def _get_jockey(self, itx: Interaction) -> Jockey:
         """
