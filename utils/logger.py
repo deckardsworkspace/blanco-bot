@@ -46,6 +46,8 @@ def create_logger(name: str) -> logging.Logger:
     :return: Logger object
     """
     logger = logging.getLogger(name)
+    if (logger.hasHandlers()):
+        logger.handlers.clear()
 
     # Set level
     level = logging.DEBUG if get_debug_status() else logging.INFO
