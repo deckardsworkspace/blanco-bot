@@ -1,6 +1,6 @@
 from dataclass.custom_embed import CustomEmbed
 from datetime import timedelta
-from nextcord import Color, Interaction, slash_command
+from nextcord import Color, Interaction, slash_command, SlashOption, PartialMessageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
 from utils.jockey_helpers import create_success_embed
@@ -26,6 +26,45 @@ class DebugCog(Cog):
         self._bot = bot
         self._logger = create_logger(self.__class__.__name__)
         self._logger.info(f'Loaded cog')
+    
+    @slash_command(name='announce')
+    @application_checks.is_owner()
+    async def announce(self, itx: Interaction, message: str = SlashOption(description='The message to announce.', required=True)):
+        """
+        Posts an announcement to the system channel in all guilds.
+        If there is no system channel, attempt to send to the last channel
+        used by the bot for now playing embeds.
+        """
+        await itx.response.defer()
+        
+        # Create announcement embed
+        embed = CustomEmbed(
+            color=Color.yellow(),
+            title=':warning: Announcement',
+            description=message,
+            footer='From the bot owner',
+            timestamp_now=True
+        ).get()
+
+        # Send announcement to all guilds
+        for guild in self._bot.guilds:
+            # Get system channel
+            system_channel = guild.system_channel
+            if system_channel is None:
+                # Attempt to get status channel
+                system_channel = self._bot.get_status_channel(guild.id)
+            
+            if system_channel is None or (
+                not isinstance(system_channel, PartialMessageable) and
+                not system_channel.permissions_for(guild.me).send_messages
+            ):
+                self._logger.error(f'No suitable announcement channel saved for {guild.name}')
+            else:
+                # Send message
+                await system_channel.send(embed=embed)
+                self._logger.info(f'Sent announcement to {guild.name}')
+
+        await itx.followup.send(embed=create_success_embed('Announced!'), ephemeral=True)
     
     @slash_command(name='reload')
     @application_checks.is_owner()
