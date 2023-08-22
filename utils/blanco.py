@@ -1,9 +1,9 @@
 from database import Database
 from mafic import NodePool, VoiceRegion
-from nextcord import Activity, ActivityType, Interaction, PartialMessageable
+from nextcord import Activity, ActivityType, Interaction, PartialMessageable, TextChannel, Thread, VoiceChannel
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING, Union
 from utils.exceptions import EndOfQueueError
 from utils.jockey_helpers import create_error_embed
 from utils.logger import create_logger
@@ -12,21 +12,19 @@ from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
     from logging import Logger
     from mafic import Node, TrackStartEvent, TrackEndEvent
-    from nextcord.abc import Messageable
     from utils.jockey import Jockey
 
 
-class BlancoBot(Bot):
-    """
-    Nextcord Bot class, with an integrated Lavalink client.
-    """
+StatusChannel = Union[PartialMessageable, VoiceChannel, TextChannel, Thread]
 
+
+class BlancoBot(Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._config = {}
 
         # Status channels
-        self._status_channels: Dict[int, 'Messageable'] = {}
+        self._status_channels: Dict[int, 'StatusChannel'] = {}
 
         # Lavalink
         self._pool = NodePool(self)
@@ -124,20 +122,42 @@ class BlancoBot(Bot):
         else:
             await event.player.skip()
     
-    def set_status_channel(self, guild_id: int, channel: Optional['Messageable']):
+    def set_status_channel(self, guild_id: int, channel: 'StatusChannel'):
         # If channel is None, remove the status channel
         if channel is None:
             del self._status_channels[guild_id]
-            return
         
         self._status_channels[guild_id] = channel
-    
-    def get_status_channel(self, guild_id: int) -> Optional['Messageable']:
         try:
+            self._db.set_status_channel(guild_id, -1 if channel is None else channel.id)
+        except:
+            self._logger.warn(f'Failed to save status channel for guild {guild_id} in DB')
+        
+    def get_status_channel(self, guild_id: int) -> Optional['StatusChannel']:
+        # Check if status channel is cached
+        if guild_id in self._status_channels:
             return self._status_channels[guild_id]
-        except KeyError:
-            return None
-    
+        
+        # Get status channel ID from database
+        channel_id = -1
+        try:
+            channel_id = self._db.get_status_channel(guild_id)
+        except:
+            self._logger.warn(f'Failed to get status channel ID for guild {guild_id} from DB')
+
+        # Get status channel from ID
+        if channel_id != -1:
+            channel = self.get_channel(channel_id)
+            if channel is None:
+                self._logger.error(f'Failed to get status channel for guild {guild_id}')
+            elif not isinstance(channel, StatusChannel):
+                self._logger.error(f'Status channel for guild {guild_id} is not Messageable')
+            else:
+                self._status_channels[guild_id] = channel
+                return channel
+        
+        return None
+        
     def init_config(self, config: Dict[str, Any]):
         """
         Initialize the bot with a config.
@@ -193,7 +213,7 @@ class BlancoBot(Bot):
                     session_id = self._db.get_session_id(node['id'])
                 except:
                     session_id = None
-                    self._logger.debug(f'No session ID `{session_id}\' for node `{node["id"]}\'')
+                    self._logger.debug(f'No session ID for node `{node["id"]}\'')
                 else:
                     self._logger.debug(f'Using session ID `{session_id}\' for node `{node["id"]}\'')
 
