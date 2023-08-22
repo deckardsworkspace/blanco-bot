@@ -66,6 +66,20 @@ class Database:
         self._cur.execute(f'UPDATE player_settings SET last_np_msg = {msg_id} WHERE guild_id = {guild_id}')
         self._con.commit()
     
+    def get_status_channel(self, guild_id: int) -> int:
+        """
+        Get the status channel for a guild.
+        """
+        self._cur.execute(f'SELECT status_channel FROM player_settings WHERE guild_id = {guild_id}')
+        return self._cur.fetchone()[0]
+    
+    def set_status_channel(self, guild_id: int, channel_id: int):
+        """
+        Set the status channel for a guild.
+        """
+        self._cur.execute(f'UPDATE player_settings SET status_channel = {channel_id} WHERE guild_id = {guild_id}')
+        self._con.commit()
+    
     def get_session_id(self, node_id: str) -> str:
         """
         Get the session ID for a Lavalink node.
