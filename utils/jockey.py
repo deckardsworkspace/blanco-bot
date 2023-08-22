@@ -6,7 +6,6 @@ from typing import Deque, TYPE_CHECKING
 from views.now_playing import NowPlayingView
 from .exceptions import *
 from .jockey_helpers import *
-from .logger import create_logger
 from .string_util import human_readable_time
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
@@ -52,7 +51,7 @@ class Jockey(Player['BlancoBot']):
         self._volume = client.db.get_volume(channel.guild.id)
 
         # Logger
-        self._logger = create_logger(self.__class__.__name__)
+        self._logger = client.jockey_logger
         self._logger.info(f'Using node `{self.node.label}\' for {channel.guild.name}')
 
     @property

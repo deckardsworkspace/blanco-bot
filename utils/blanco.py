@@ -10,6 +10,7 @@ from utils.logger import create_logger
 from utils.spotify_client import Spotify
 from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
+    from logging import Logger
     from mafic import Node, TrackStartEvent, TrackEndEvent
     from nextcord.abc import Messageable
     from utils.jockey import Jockey
@@ -31,8 +32,9 @@ class BlancoBot(Bot):
         self._pool = NodePool(self)
         self._pool_initialized = False
 
-        # Logger
+        # Loggers
         self._logger = create_logger(self.__class__.__name__)
+        self._jockey_logger = create_logger('jockey')
     
     @property
     def config(self) -> dict:
@@ -49,6 +51,10 @@ class BlancoBot(Bot):
     @property
     def db(self) -> Database:
         return self._db
+    
+    @property
+    def jockey_logger(self) -> 'Logger':
+        return self._jockey_logger
 
     @property
     def pool(self) -> NodePool:
