@@ -14,7 +14,7 @@ on:
         required: false
       DOCKERHUB_REPOSITORY:
         required: false
-      PUSH_IMAGE:
+      IMAGES:
         required: true
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
-      PUSH_IMAGE: ${{ secrets.PUSH_IMAGE }}
+      IMAGES: ${{ secrets.IMAGES }}
     
     steps:
       - name: Set up QEMU
@@ -55,8 +55,7 @@ jobs:
           flavor: |
             latest=true
           images: |
-            ghcr.io/${{ github.repository }}
-            ${{ env.DOCKERHUB_REPOSITORY }}
+            ${{ env.IMAGES }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -73,7 +72,7 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
-          push: ${{ env.PUSH_IMAGE == 'true' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
