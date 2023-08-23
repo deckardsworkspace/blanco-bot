@@ -4,13 +4,14 @@ from mafic import NodePool, VoiceRegion
 from nextcord import Activity, ActivityType, Interaction, PartialMessageable, TextChannel, Thread, VoiceChannel
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
-from typing import Any, Dict, Optional, TYPE_CHECKING, Union
+from typing import Dict, Optional, TYPE_CHECKING, Union
 from utils.exceptions import EndOfQueueError
 from utils.jockey_helpers import create_error_embed
 from utils.logger import create_logger
 from utils.spotify_client import Spotify
 from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
+    from dataclass.config import Config
     from logging import Logger
     from mafic import Node, TrackStartEvent, TrackEndEvent
     from utils.jockey import Jockey
@@ -22,7 +23,7 @@ StatusChannel = Union[PartialMessageable, VoiceChannel, TextChannel, Thread]
 class BlancoBot(Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._config = {}
+        self._config = None
 
         # Status channels
         self._status_channels: Dict[int, 'StatusChannel'] = {}
@@ -36,14 +37,17 @@ class BlancoBot(Bot):
         self._jockey_logger = create_logger('jockey', debug=True)
     
     @property
-    def config(self) -> dict:
+    def config(self) -> Optional['Config']:
         return self._config
     
     @property
     def debug(self) -> bool:
+        if self._config is None:
+            return False
+
         try:
-            debug_guilds = self._config['bot']['debug']['guild_ids']
-            return self._config['bot']['debug']['enabled'] and len(debug_guilds) > 0
+            debug_guilds = self._config.debug_guild_ids
+            return self._config.debug_enabled and len(debug_guilds) > 0
         except KeyError:
             return False
 
@@ -159,7 +163,7 @@ class BlancoBot(Bot):
         
         return None
         
-    def init_config(self, config: Dict[str, Any]):
+    def init_config(self, config: 'Config'):
         """
         Initialize the bot with a config.
         """
@@ -172,73 +176,48 @@ class BlancoBot(Bot):
 
         self._db = Database(config.db_file)
         self._spotify_client = Spotify(
-            client_id=self._config['spotify']['client_id'],
-            client_secret=self._config['spotify']['client_secret']
+            client_id=config.spotify_client_id,
+            client_secret=config.spotify_client_secret
         )
     
     async def init_pool(self):
         """
         Initialize the Lavalink node pool.
         """
-        nodes = self._config['lavalink']
+        if self._config is None:
+            raise RuntimeError('Cannot initialize Lavalink without a config')
+        nodes = self._config.lavalink_nodes
 
         # Check if the node IDs are unique
-        node_ids = [node['id'] for node in nodes]
+        node_ids = [node.id for node in nodes]
         if len(node_ids) != len(set(node_ids)):
             raise ValueError('Lavalink node IDs must be unique')
 
         # Add local node
-        for i, node in enumerate(nodes):
+        for node in nodes:
+            # Try to match regions against enum
+            regions = []
+            for region in node.regions:
+                regions.append(VoiceRegion(region))
+            
+            # Get session ID from database
             try:
-                # Check if host, password, and label are strings
-                if not isinstance(node['server'], str):
-                    raise TypeError('server must be a string')
-                if not isinstance(node['password'], str):
-                    raise TypeError('password must be a string')
-                if not isinstance(node['id'], str):
-                    raise TypeError('id must be a string')
-                
-                # Check if port is an int
-                if not isinstance(node['port'], int):
-                    raise TypeError('port must be an int')
-                
-                # Check if ssl is a bool
-                if not isinstance(node['ssl'], bool):
-                    raise TypeError('ssl must be a bool')
-                
-                # Check if region is a list
-                regions = []
-                if not isinstance(node['regions'], list):
-                    raise TypeError('regions must be a list')
-                else:
-                    # Try to match regions against enum
-                    for region in node['regions']:
-                        regions.append(VoiceRegion(region))
-                
-                # Get session ID from database
-                try:
-                    session_id = self._db.get_session_id(node['id'])
-                except:
-                    session_id = None
-                    self._logger.debug(f'No session ID for node `{node["id"]}\'')
-                else:
-                    self._logger.debug(f'Using session ID `{session_id}\' for node `{node["id"]}\'')
+                session_id = self._db.get_session_id(node.id)
+            except:
+                session_id = None
+                self._logger.debug(f'No session ID for node `{node.id}\'')
+            else:
+                self._logger.debug(f'Using session ID `{session_id}\' for node `{node.id}\'')
 
-                await self._pool.create_node(
-                    host=node['server'],
-                    port=int(node['port']),
-                    password=node['password'],
-                    regions=regions,
-                    resuming_session_id=session_id,
-                    label=node['id'],
-                    secure=node['ssl']
-                )
-            except KeyError as e:
-                raise RuntimeError(f'Missing key in config for Lavalink node {i}: {e.args[0]}')
-            except TypeError as e:
-                raise RuntimeError(f'Wrong value type in config for Lavalink node {i}: {e.args[0]}')
-            except ValueError as e:
-                raise RuntimeError(f'Invalid value in config for Lavalink node {i}: {e.args[0]}')
+            await self._pool.create_node(
+                host=node.host,
+                port=node.port,
+                password=node.password,
+                regions=regions,
+                resuming_session_id=session_id,
+                label=node.id,
+                secure=node.secure
+            )
 
         self._pool_initialized = True
     

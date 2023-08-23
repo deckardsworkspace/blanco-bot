@@ -3,7 +3,7 @@ import logging
 
 
 # Log line format
-LOG_FMT_STR = '%(asctime)s [%(levelname)s] %(funcName)s: %(message)s (%(filename)s:%(lineno)d)'
+LOG_FMT_STR = '%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)d)'
 
 # ANSI terminal colors (for logging)
 ANSI_BLUE = '\x1b[36;20m'

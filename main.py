@@ -13,9 +13,9 @@ client.init_config(config)
 
 # Run client
 if __name__ == '__main__':
-    logger = create_logger('main')
+    logger = create_logger('main', config.debug_enabled)
     logger.info('Starting bot...')
     
     if not client.debug:
         client._bot_loop.start()
-    client.run(config['bot']['discord_token'])
+    client.run(config.discord_token)
