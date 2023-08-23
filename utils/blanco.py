@@ -237,7 +237,7 @@ class BlancoBot(Bot):
                 pass
         
         # Send now playing embed
-        embed = event.player.now_playing(event.player.current)
+        embed = event.player.now_playing(event.track)
         view = NowPlayingView(self, event.player)
         msg = await channel.send(embed=embed, view=view)
 
