@@ -1,5 +1,4 @@
 from dataclass.config import Config, LavalinkNode
-from logging import INFO
 from os import environ
 from os.path import isfile
 from typing import List, Optional
@@ -63,15 +62,6 @@ if 'BLANCO_DEBUG' in environ:
     debug_enabled = environ['BLANCO_DEBUG'].lower() == 'true'
     debug_guild_ids = [int(id) for id in environ['BLANCO_DEBUG_GUILDS'].split(',')]
 
-# Print parsed config
-if not debug_enabled:
-    logger.setLevel(INFO)
-logger.debug(f'Debug enabled. Printing parsed config:')
-logger.debug(f'  Database file: {db_file}')
-logger.debug(f'  Discord token: {discord_token}')
-logger.debug(f'  Spotify client ID: {spotify_client_id}')
-logger.debug(f'  Spotify client secret: {spotify_client_secret}')
-
 # Parse Lavalink nodes from environment variables
 i = 1
 while True:
@@ -105,13 +95,6 @@ while True:
         i += 1
 
 
-# Print list of Lavalink nodes
-logger.debug(f'  Lavalink nodes:')
-for node in lavalink_nodes:
-    logger.debug(f'    - {node.id} ({node.host}:{node.port})')
-    logger.debug(f'      Secure: {node.secure}')
-    logger.debug(f'      Regions: {node.regions}')
-
 # Final checks
 if db_file is None:
     raise ValueError('No database file specified')
@@ -121,6 +104,19 @@ if spotify_client_id is None:
     raise ValueError('No Spotify client ID specified')
 if spotify_client_secret is None:
     raise ValueError('No Spotify client secret specified')
+
+# Print parsed config
+if debug_enabled:
+    logger.debug(f'Parsed configuration:')
+    logger.debug(f'  Database file: {db_file}')
+    logger.debug(f'  Discord token: {discord_token[:3]}...{discord_token[-3:]}')
+    logger.debug(f'  Spotify client ID: {spotify_client_id[:3]}...{spotify_client_id[-3:]}')
+    logger.debug(f'  Spotify client secret: {spotify_client_secret[:3]}...{spotify_client_secret[-3:]}')
+    logger.debug(f'  Lavalink nodes:')
+    for node in lavalink_nodes:
+        logger.debug(f'    - {node.id} ({node.host}:{node.port})')
+        logger.debug(f'      Secure: {node.secure}')
+        logger.debug(f'      Regions: {node.regions}')
 
 # Create config object
 config = Config(
