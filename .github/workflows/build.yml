@@ -1,11 +1,6 @@
 name: Docker Image CI
 
 on:
-  push:
-    branches:
-      - 'main'
-    paths-ignore:
-      - '**.md'
   workflow_call:
     secrets:
       DOCKERHUB_USERNAME:
@@ -23,7 +18,7 @@ on:
 
 jobs:
   build:
-    name: Build and push image to Docker Hub
+    name: Build and push image
     runs-on: ubuntu-latest
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}

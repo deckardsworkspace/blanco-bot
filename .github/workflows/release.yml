@@ -8,24 +8,6 @@ on:
 
 
 jobs:
-  build:
-    uses: ./.github/workflows/build.yml
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-      DOCKERHUB_REPOSITORY: 'jareddantis/blanco-bot'
-      IMAGES: |
-        ghcr.io/${{ github.repository }}
-        'jareddantis/blanco-bot'
-      IMAGE_FLAVOR: |
-        latest=true
-      IMAGE_TAGS: |
-        type=ref,event=branch
-        type=semver,pattern={{version}}
-        type=semver,pattern={{major}}.{{minor}}
-        type=semver,pattern={{major}}
-        type=sha,prefix=
-  
   release:
     name: Create Release
     runs-on: ubuntu-latest
@@ -45,10 +27,10 @@ jobs:
 
             ```bash
             # Docker Hub
-            $ docker pull jareddantis/blanco-bot:CHANGE_ME
+            $ docker pull jareddantis/blanco-bot:${{ github.ref }}
 
             # GHCR
-            $ docker pull ghcr.io/jareddantis-bots/blanco-bot:CHANGE_ME
+            $ docker pull ghcr.io/jareddantis-bots/blanco-bot:${{ github.ref }}
             ```
 
             <hr>
