@@ -127,13 +127,14 @@ class BlancoBot(Bot):
             self._logger.warn(f'Got track_start event for idle player in {event.player.guild.name}')
 
     async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
-        # Play next track in queue
-        self._logger.debug(f'Finished playing {event.track.title} in {event.player.guild.name}')
-        if event.player.suppress_skip:
-            self._logger.debug('Suppressing autoskip due to previous /skip command')
-            event.player.suppress_skip = False
-        else:
+        if event.reason == 'REPLACED':
+            self._logger.debug(f'Skipped `{event.track.title}\' in {event.player.guild.name}')
+        elif event.reason == 'FINISHED':
+            # Play next track in queue
+            self._logger.debug(f'Finished playing `{event.track.title}\' in {event.player.guild.name}')
             await event.player.skip()
+        else:
+            self._logger.error(f'Unhandled {event.reason} in {event.player.guild.name} for `{event.track.title}\'')
     
     def set_status_channel(self, guild_id: int, channel: 'StatusChannel'):
         # If channel is None, remove the status channel
