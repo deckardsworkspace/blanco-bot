@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from nextcord import Color, Embed, Message
+from nextcord import Colour, Embed, Message
 from nextcord.ext.commands import Context
 from typing import List, Optional, Union
 
@@ -9,7 +9,7 @@ from typing import List, Optional, Union
 class CustomEmbed:
     # All optional
     title: Optional[str] = None
-    color: Color = Color.og_blurple()
+    color: Colour = Colour.og_blurple()
     description: Optional[Union[str, List[str]]] = None
     fields: List[List[str]] = field(default_factory=list)
     inline_fields: bool = False

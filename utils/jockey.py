@@ -2,14 +2,14 @@ from collections import deque
 from mafic import Player, PlayerNotConnected
 from nextcord import Message, StageChannel, VoiceChannel
 from random import shuffle
-from typing import Deque, TYPE_CHECKING
+from typing import Deque, Optional, TYPE_CHECKING
 from views.now_playing import NowPlayingView
 from .exceptions import *
 from .jockey_helpers import *
-from .logger import create_logger
 from .string_util import human_readable_time
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
+    from mafic import Track
     from nextcord import Embed
     from nextcord.abc import Connectable, Messageable
     from .blanco import BlancoBot
@@ -52,8 +52,8 @@ class Jockey(Player['BlancoBot']):
         self._volume = client.db.get_volume(channel.guild.id)
 
         # Logger
-        self._logger = create_logger(self.__class__.__name__)
-        self._logger.info(f'Initialized for {channel.guild.name}')
+        self._logger = client.jockey_logger
+        self._logger.info(f'Using node `{self.node.label}\' for {channel.guild.name}')
 
     @property
     def current_index(self) -> int:
@@ -185,18 +185,20 @@ class Jockey(Player['BlancoBot']):
 
         return True
 
-    def now_playing(self) -> 'Embed':
+    def now_playing(self, current: Optional['Track'] = None) -> 'Embed':
         """
         Returns information about the currently playing track.
 
         :return: An instance of nextcord.Embed
         """
-        if self.current is None:
-            raise EndOfQueueError('No track is currently playing')
+        if current is None:
+            if self.current is None:
+                raise EndOfQueueError('No track is currently playing')
+            current = self.current
         
         # Construct Spotify URL if it exists
         track = self._queue[self._queue_i]
-        uri = self.current.uri
+        uri = current.uri
         if track.spotify_id is not None:
             uri = f'https://open.spotify.com/track/{track.spotify_id}'
         
@@ -222,7 +224,7 @@ class Jockey(Player['BlancoBot']):
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
                 ':warning: Could not find a perfect match for this track.' if track.is_imperfect else '',
-                f'Playing the [closest match]({self.current.uri}) instead.' if track.is_imperfect else ''
+                f'Playing the [closest match]({current.uri}) instead.' if track.is_imperfect else ''
             ],
             footer=f'Track {self.current_index + 1} of {len(self._queue)}',
             color=Color.teal(),

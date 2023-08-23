@@ -7,15 +7,15 @@ from utils.logger import create_logger
 # Create bot instance
 intents = Intents.default()
 intents.members = True
-client = BlancoBot(intents=intents)
+client = BlancoBot(intents=intents, default_guild_ids=config.debug_guild_ids)
 client.init_config(config)
 
 
 # Run client
 if __name__ == '__main__':
-    logger = create_logger('main')
+    logger = create_logger('main', config.debug_enabled)
     logger.info('Starting bot...')
     
     if not client.debug:
         client._bot_loop.start()
-    client.run(config['bot']['discord_token'])
+    client.run(config.discord_token)

@@ -9,4 +9,12 @@ jobs:
   build:
     uses: ./.github/workflows/build.yml
     secrets:
-      PUSH_IMAGE: 'false'
+      IMAGES: |
+        ghcr.io/${{ github.repository }}
+      IMAGE_FLAVOR: |
+        latest=false
+      IMAGE_TAGS: |
+        type=ref,event=branch
+        type=ref,event=pr
+        type=raw,staging
+        type=sha,prefix=

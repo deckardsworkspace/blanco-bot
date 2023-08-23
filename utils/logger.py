@@ -1,10 +1,9 @@
 from typing import Optional
-from .config import get_debug_status
 import logging
 
 
 # Log line format
-LOG_FMT_STR = '%(asctime)s [%(levelname)s] %(funcName)s: %(message)s (%(filename)s:%(lineno)d)'
+LOG_FMT_STR = '%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)d)'
 
 # ANSI terminal colors (for logging)
 ANSI_BLUE = '\x1b[36;20m'
@@ -38,7 +37,7 @@ class ColorFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def create_logger(name: str) -> logging.Logger:
+def create_logger(name: str, debug: bool = False) -> logging.Logger:
     """
     Creates a logger with the given name and returns it.
 
@@ -46,9 +45,11 @@ def create_logger(name: str) -> logging.Logger:
     :return: Logger object
     """
     logger = logging.getLogger(name)
+    if (logger.hasHandlers()):
+        logger.handlers.clear()
 
     # Set level
-    level = logging.DEBUG if get_debug_status() else logging.INFO
+    level = logging.DEBUG if debug else logging.INFO
     logger.setLevel(level)
 
     # Add color formatter

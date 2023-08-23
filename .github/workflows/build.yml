@@ -14,7 +14,11 @@ on:
         required: false
       DOCKERHUB_REPOSITORY:
         required: false
-      PUSH_IMAGE:
+      IMAGES:
+        required: true
+      IMAGE_FLAVOR:
+        required: true
+      IMAGE_TAGS:
         required: true
 
 jobs:
@@ -25,7 +29,9 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
-      PUSH_IMAGE: ${{ secrets.PUSH_IMAGE }}
+      IMAGES: ${{ secrets.IMAGES }}
+      IMAGE_FLAVOR: ${{ secrets.IMAGE_FLAVOR }}
+      IMAGE_TAGS: ${{ secrets.IMAGE_TAGS }}
     
     steps:
       - name: Set up QEMU
@@ -53,17 +59,11 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           flavor: |
-            latest=true
+            ${{ env.IMAGE_FLAVOR }}
           images: |
-            ghcr.io/${{ github.repository }}
-            ${{ env.DOCKERHUB_REPOSITORY }}
+            ${{ env.IMAGES }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha,prefix=
+            ${{ env.IMAGE_TAGS }}
       
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -73,7 +73,7 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
-          push: ${{ env.PUSH_IMAGE == 'true' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
