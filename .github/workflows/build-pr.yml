@@ -11,3 +11,5 @@ jobs:
     secrets:
       IMAGES: |
         ghcr.io/${{ github.repository }}
+      IMAGE_FLAVOR: |
+        latest=false

@@ -17,6 +17,8 @@ jobs:
       IMAGES: |
         ghcr.io/${{ github.repository }}
         'jareddantis/blanco-bot'
+      IMAGE_FLAVOR: |
+        latest=true
   
   release:
     name: Create Release

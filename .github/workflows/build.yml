@@ -16,6 +16,8 @@ on:
         required: false
       IMAGES:
         required: true
+      IMAGE_FLAVOR:
+        required: true
 
 jobs:
   build:
@@ -26,6 +28,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
       IMAGES: ${{ secrets.IMAGES }}
+      IMAGE_FLAVOR: ${{ secrets.IMAGE_FLAVOR }}
     
     steps:
       - name: Set up QEMU
@@ -53,7 +56,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           flavor: |
-            latest=true
+            ${{ env.IMAGE_FLAVOR }}
           images: |
             ${{ env.IMAGES }}
           tags: |
