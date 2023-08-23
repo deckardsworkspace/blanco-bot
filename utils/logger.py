@@ -3,22 +3,22 @@ import logging
 
 
 # Log line format
-LOG_FMT_STR = '%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)d)'
+LOG_FMT_STR = '{0}%(asctime)s {1}[%(levelname)s]{2} %(message)s (%(filename)s:%(lineno)d)'
 
 # ANSI terminal colors (for logging)
 ANSI_BLUE = '\x1b[36;20m'
 ANSI_GREEN = '\x1b[32;20m'
-ANSI_GREY = '\x1b[38;20m'
+ANSI_GREY = '\x1b[37;1m'
 ANSI_RED = '\x1b[31;20m'
 ANSI_RED_BOLD = '\x1b[31;1m'
 ANSI_YELLOW = '\x1b[33;20m'
 ANSI_RESET = '\x1b[0m'
 LOG_FMT_COLOR = {
-    logging.DEBUG: ANSI_GREY + LOG_FMT_STR + ANSI_RESET,
-    logging.INFO: ANSI_BLUE + LOG_FMT_STR + ANSI_RESET,
-    logging.WARNING: ANSI_YELLOW + LOG_FMT_STR + ANSI_RESET,
-    logging.ERROR: ANSI_RED + LOG_FMT_STR + ANSI_RESET,
-    logging.CRITICAL: ANSI_RED_BOLD + LOG_FMT_STR + ANSI_RESET
+    logging.DEBUG: LOG_FMT_STR.format(ANSI_GREY, ANSI_GREEN, ANSI_RESET),
+    logging.INFO: LOG_FMT_STR.format(ANSI_GREY, ANSI_BLUE, ANSI_RESET),
+    logging.WARNING: LOG_FMT_STR.format(ANSI_GREY, ANSI_YELLOW, ANSI_RESET),
+    logging.ERROR: LOG_FMT_STR.format(ANSI_GREY, ANSI_RED, ANSI_RESET),
+    logging.CRITICAL: LOG_FMT_STR.format(ANSI_GREY, ANSI_RED_BOLD, ANSI_RESET),
 }
 
 
