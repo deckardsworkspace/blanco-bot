@@ -19,6 +19,12 @@ jobs:
         'jareddantis/blanco-bot'
       IMAGE_FLAVOR: |
         latest=true
+      IMAGE_TAGS: |
+        type=ref,event=branch
+        type=semver,pattern={{version}}
+        type=semver,pattern={{major}}.{{minor}}
+        type=semver,pattern={{major}}
+        type=sha,prefix=
   
   release:
     name: Create Release

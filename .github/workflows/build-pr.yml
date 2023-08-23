@@ -13,3 +13,8 @@ jobs:
         ghcr.io/${{ github.repository }}
       IMAGE_FLAVOR: |
         latest=false
+      IMAGE_TAGS: |
+        type=ref,event=branch
+        type=ref,event=pr
+        type=raw,staging
+        type=sha,prefix=

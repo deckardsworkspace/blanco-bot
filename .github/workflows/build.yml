@@ -18,6 +18,8 @@ on:
         required: true
       IMAGE_FLAVOR:
         required: true
+      IMAGE_TAGS:
+        required: true
 
 jobs:
   build:
@@ -29,6 +31,7 @@ jobs:
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
       IMAGES: ${{ secrets.IMAGES }}
       IMAGE_FLAVOR: ${{ secrets.IMAGE_FLAVOR }}
+      IMAGE_TAGS: ${{ secrets.IMAGE_TAGS }}
     
     steps:
       - name: Set up QEMU
@@ -60,12 +63,7 @@ jobs:
           images: |
             ${{ env.IMAGES }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha,prefix=
+            ${{ env.IMAGE_TAGS }}
       
       - name: Checkout repository
         uses: actions/checkout@v3
