@@ -26,16 +26,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: Release v${{ github.ref_name }}
           body: |
             <RELEASE SUMMARY>
 
             ```bash
             # Docker Hub
-            $ docker pull jareddantis/blanco-bot:${{ github.ref }}
+            $ docker pull jareddantis/blanco-bot:${{ github.ref_name }}
 
             # GHCR
-            $ docker pull ghcr.io/jareddantis-bots/blanco-bot:${{ github.ref }}
+            $ docker pull ghcr.io/jareddantis-bots/blanco-bot:${{ github.ref_name }}
             ```
 
             <hr>
