@@ -23,7 +23,8 @@ StatusChannel = Union[PartialMessageable, VoiceChannel, TextChannel, Thread]
 class BlancoBot(Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._config = None
+        self._config: Optional['Config'] = None
+        self._db: Optional[Database] = None
 
         # Status channels
         self._status_channels: Dict[int, 'StatusChannel'] = {}
@@ -48,6 +49,8 @@ class BlancoBot(Bot):
 
     @property
     def db(self) -> Database:
+        if self._db is None:
+            raise RuntimeError('Database has not been initialized')
         return self._db
     
     @property
@@ -83,15 +86,23 @@ class BlancoBot(Bot):
         self._logger.info(f'Logged in as {self.user}')
         self.load_extension('cogs')
 
-        # Sync commands
-        await self.sync_all_application_commands()
-        self._logger.info('Synced commands')
-
         if self.debug:
             self._logger.warn('Debug mode enabled')
             await self.change_presence(
                 activity=Activity(name='/play (debug)', type=ActivityType.listening)
             )
+
+            # Sync commands with debug guilds
+            if self._config is not None and self._config.debug_guild_ids is not None:
+                for guild in self._config.debug_guild_ids:
+                    self._logger.info(f'Syncing commands for debug guild {guild}')
+                    await self.sync_application_commands(guild_id=guild)
+                self._logger.info(f'Synced commands for {len(self._config.debug_guild_ids)} guild(s)!')
+        else:
+            # Sync commands
+            self._logger.info('Syncing global commands...')
+            await self.sync_application_commands()
+            self._logger.info('Synced commands!')
     
     async def on_application_command_error(self, itx: Interaction, error: Exception):
         embed = create_error_embed(str(error))
@@ -109,7 +120,7 @@ class BlancoBot(Bot):
         # Store session ID in database
         if node.session_id is not None:
             self._logger.debug(f'Storing new session ID `{node.session_id}\' for node `{node.label}\'')
-            self._db.set_session_id(node.label, node.session_id)
+            self.db.set_session_id(node.label, node.session_id)
     
     async def on_track_start(self, event: 'TrackStartEvent[Jockey]'):
         try:
@@ -119,13 +130,16 @@ class BlancoBot(Bot):
             self._logger.warn(f'Got track_start event for idle player in {event.player.guild.name}')
 
     async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
-        # Play next track in queue
-        self._logger.debug(f'Finished playing {event.track.title} in {event.player.guild.name}')
-        if event.player.suppress_skip:
-            self._logger.debug('Suppressing autoskip due to previous /skip command')
-            event.player.suppress_skip = False
-        else:
+        if event.reason == 'REPLACED':
+            self._logger.debug(f'Skipped `{event.track.title}\' in {event.player.guild.name}')
+        elif event.reason == 'FINISHED':
+            # Play next track in queue
+            self._logger.debug(f'Finished playing `{event.track.title}\' in {event.player.guild.name}')
             await event.player.skip()
+        elif event.reason == 'STOPPED':
+            self._logger.info(f'Stopped player in {event.player.guild.name}')
+        else:
+            self._logger.error(f'Unhandled {event.reason} in {event.player.guild.name} for `{event.track.title}\'')
     
     def set_status_channel(self, guild_id: int, channel: 'StatusChannel'):
         # If channel is None, remove the status channel
@@ -134,7 +148,7 @@ class BlancoBot(Bot):
         
         self._status_channels[guild_id] = channel
         try:
-            self._db.set_status_channel(guild_id, -1 if channel is None else channel.id)
+            self.db.set_status_channel(guild_id, -1 if channel is None else channel.id)
         except:
             self._logger.warn(f'Failed to save status channel for guild {guild_id} in DB')
         
@@ -146,7 +160,7 @@ class BlancoBot(Bot):
         # Get status channel ID from database
         channel_id = -1
         try:
-            channel_id = self._db.get_status_channel(guild_id)
+            channel_id = self.db.get_status_channel(guild_id)
         except:
             self._logger.warn(f'Failed to get status channel ID for guild {guild_id} from DB')
 
@@ -202,7 +216,7 @@ class BlancoBot(Bot):
             
             # Get session ID from database
             try:
-                session_id = self._db.get_session_id(node.id)
+                session_id = self.db.get_session_id(node.id)
             except:
                 session_id = None
                 self._logger.debug(f'No session ID for node `{node.id}\'')
@@ -228,7 +242,7 @@ class BlancoBot(Bot):
             raise ValueError(f'Status channel has not been set for guild {guild_id}')
 
         # Delete last now playing message, if it exists
-        last_msg_id = self._db.get_now_playing(guild_id)
+        last_msg_id = self.db.get_now_playing(guild_id)
         if last_msg_id != -1:
             try:
                 last_msg = await channel.fetch_message(last_msg_id)
@@ -242,4 +256,4 @@ class BlancoBot(Bot):
         msg = await channel.send(embed=embed, view=view)
 
         # Save now playing message ID
-        self._db.set_now_playing(guild_id, msg.id)
+        self.db.set_now_playing(guild_id, msg.id)

@@ -41,10 +41,6 @@ class Jockey(Player['BlancoBot']):
         self._loop = client.db.get_loop(channel.guild.id)
         self._loop_whole = False
 
-        # Suppress auto-skip on TrackEndEvents when the user skips using command
-        # This will be read by the event handler in main.py
-        self._suppress_skip = False
-
         # Shuffle indices
         self._shuffle_indices = []
 
@@ -98,14 +94,6 @@ class Jockey(Player['BlancoBot']):
     @shuffle_indices.setter
     def shuffle_indices(self, value: List[int]):
         self._shuffle_indices = value
-    
-    @property
-    def suppress_skip(self) -> bool:
-        return self._suppress_skip
-
-    @suppress_skip.setter
-    def suppress_skip(self, value: bool):
-        self._suppress_skip = value
     
     @property
     def status_channel(self) -> 'Messageable':
@@ -346,9 +334,6 @@ class Jockey(Player['BlancoBot']):
         
         # If index is specified, use that instead
         if index != -1:
-            # Suppress next autoskip
-            self._suppress_skip = True
-            
             if not await self._enqueue(index, auto=auto):
                 # Restore now playing message controls
                 view = NowPlayingView(self._bot, self)
@@ -366,9 +351,6 @@ class Jockey(Player['BlancoBot']):
                 # Re-enqueue the current track
                 await self._enqueue(self._queue_i, auto=auto)
                 return
-        else:
-            # Suppress next autoskip
-            self._suppress_skip = True
 
         # Queue up the next valid track, if any
         if isinstance(self._queue_i, int):
