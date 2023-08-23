@@ -63,7 +63,7 @@ jobs:
             ${{ inputs.IMAGE_FLAVOR }}
           images: |
             ghcr.io/${{ github.repository }}
-            ${{ (inputs.DOCKERHUB && 'jareddantis/blanco-bot') || '' }}
+            ${{ (env.DOCKERHUB_TOKEN && 'jareddantis/blanco-bot') || '' }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
