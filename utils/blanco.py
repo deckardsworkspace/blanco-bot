@@ -83,15 +83,23 @@ class BlancoBot(Bot):
         self._logger.info(f'Logged in as {self.user}')
         self.load_extension('cogs')
 
-        # Sync commands
-        await self.sync_all_application_commands()
-        self._logger.info('Synced commands')
-
         if self.debug:
             self._logger.warn('Debug mode enabled')
             await self.change_presence(
                 activity=Activity(name='/play (debug)', type=ActivityType.listening)
             )
+
+            # Sync commands with debug guilds
+            if self._config is not None and self._config.debug_guild_ids is not None:
+                for guild in self._config.debug_guild_ids:
+                    self._logger.info(f'Syncing commands for debug guild {guild}')
+                    await self.sync_application_commands(guild_id=guild)
+                self._logger.info(f'Synced commands for {len(self._config.debug_guild_ids)} guild(s)!')
+        else:
+            # Sync commands
+            self._logger.info('Syncing global commands...')
+            await self.sync_application_commands()
+            self._logger.info('Synced commands!')
     
     async def on_application_command_error(self, itx: Interaction, error: Exception):
         embed = create_error_embed(str(error))
