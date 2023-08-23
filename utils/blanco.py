@@ -137,7 +137,7 @@ class BlancoBot(Bot):
             self._logger.debug(f'Finished playing `{event.track.title}\' in {event.player.guild.name}')
             await event.player.skip()
         elif event.reason == 'STOPPED':
-            self._logger.debug(f'Stopped player in {event.player.guild.name}')
+            self._logger.info(f'Stopped player in {event.player.guild.name}')
         else:
             self._logger.error(f'Unhandled {event.reason} in {event.player.guild.name} for `{event.track.title}\'')
     
