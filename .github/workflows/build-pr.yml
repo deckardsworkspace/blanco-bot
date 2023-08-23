@@ -9,7 +9,6 @@ jobs:
   build:
     uses: ./.github/workflows/build.yml
     with:
-      DOCKERHUB: false
       IMAGE_FLAVOR: |
         latest=false
       ADDITIONAL_TAGS: |
