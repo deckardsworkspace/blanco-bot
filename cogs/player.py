@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class PlayerCog(Cog):
     def __init__(self, bot: BlancoBot):
         self._bot = bot
-        self._logger = create_logger(self.__class__.__name__)
+        self._logger = create_logger(self.__class__.__name__, bot.debug)
 
         # Initialize Lavalink client instance
         if not bot.pool_initialized:

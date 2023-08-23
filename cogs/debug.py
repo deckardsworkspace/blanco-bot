@@ -24,7 +24,7 @@ Memory  :: {used:.0f} MiB used
 class DebugCog(Cog):
     def __init__(self, bot: BlancoBot):
         self._bot = bot
-        self._logger = create_logger(self.__class__.__name__)
+        self._logger = create_logger(self.__class__.__name__, bot.debug)
         self._logger.info(f'Loaded cog')
     
     @slash_command(name='announce')

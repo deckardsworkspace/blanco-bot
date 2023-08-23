@@ -1,4 +1,5 @@
 from database import Database
+from logging import INFO
 from mafic import NodePool, VoiceRegion
 from nextcord import Activity, ActivityType, Interaction, PartialMessageable, TextChannel, Thread, VoiceChannel
 from nextcord.ext.commands import Bot
@@ -31,8 +32,8 @@ class BlancoBot(Bot):
         self._pool_initialized = False
 
         # Loggers
-        self._logger = create_logger(self.__class__.__name__)
-        self._jockey_logger = create_logger('jockey')
+        self._logger = create_logger(self.__class__.__name__, debug=True)
+        self._jockey_logger = create_logger('jockey', debug=True)
     
     @property
     def config(self) -> dict:
@@ -163,7 +164,13 @@ class BlancoBot(Bot):
         Initialize the bot with a config.
         """
         self._config = config
-        self._db = Database(self._config['bot']['database'])
+        
+        # Change log level if needed
+        if not self.debug:
+            self._logger.setLevel(INFO)
+            self._jockey_logger.setLevel(INFO)
+
+        self._db = Database(config.db_file)
         self._spotify_client = Spotify(
             client_id=self._config['spotify']['client_id'],
             client_secret=self._config['spotify']['client_secret']
