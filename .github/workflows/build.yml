@@ -1,7 +1,24 @@
 name: Docker Image CI
 
 on:
+  push:
+    branches:
+      - 'main'
+    paths-ignore:
+      - '**.md'
   workflow_call:
+    inputs:
+      IMAGE_FLAVOR:
+        description: 'Image flavor'
+        default: |
+          latest=true
+        type: string
+        required: false
+      ADDITIONAL_TAGS:
+        description: 'Additional tags for the image'
+        default: ''
+        type: string
+        required: false
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -9,12 +26,6 @@ on:
         required: false
       DOCKERHUB_REPOSITORY:
         required: false
-      IMAGES:
-        required: true
-      IMAGE_FLAVOR:
-        required: true
-      IMAGE_TAGS:
-        required: true
 
 jobs:
   build:
@@ -24,9 +35,6 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
-      IMAGES: ${{ secrets.IMAGES }}
-      IMAGE_FLAVOR: ${{ secrets.IMAGE_FLAVOR }}
-      IMAGE_TAGS: ${{ secrets.IMAGE_TAGS }}
     
     steps:
       - name: Set up QEMU
@@ -54,11 +62,18 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           flavor: |
-            ${{ env.IMAGE_FLAVOR }}
+            ${{ inputs.IMAGE_FLAVOR }}
           images: |
-            ${{ env.IMAGES }}
+            ghcr.io/${{ github.repository }}
+            'jareddantis/blanco-bot'
           tags: |
-            ${{ env.IMAGE_TAGS }}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=
+            ${{ inputs.ADDITIONAL_TAGS }}
       
       - name: Checkout repository
         uses: actions/checkout@v3
