@@ -42,14 +42,9 @@ class BlancoBot(Bot):
     
     @property
     def debug(self) -> bool:
-        if self._config is None:
+        if self._config is None or self._config.debug_guild_ids is None:
             return False
-
-        try:
-            debug_guilds = self._config.debug_guild_ids
-            return self._config.debug_enabled and len(debug_guilds) > 0
-        except KeyError:
-            return False
+        return self._config.debug_enabled and len(self._config.debug_guild_ids) > 0
 
     @property
     def db(self) -> Database:

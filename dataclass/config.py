@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -45,4 +45,4 @@ class Config:
 
     # Optional
     debug_enabled: bool = False
-    debug_guild_ids: List[int] = field(default_factory=list)
+    debug_guild_ids: Optional[List[int]] = None

@@ -82,7 +82,7 @@ class PlayerCog(Cog):
         except:
             pass
     
-    @slash_command(guild_ids=get_debug_guilds(), name='jump')
+    @slash_command(name='jump')
     @application_checks.check(check_mutual_voice)
     async def jump(self, itx: Interaction, position: int = SlashOption(description='Position to jump to', required=True)):
         """
@@ -100,7 +100,7 @@ class PlayerCog(Cog):
         await jockey.skip(index=position - 1, auto=False)
         await itx.followup.send(embed=create_success_embed(f'Jumped to track {str(position)}'))
     
-    @slash_command(guild_ids=get_debug_guilds(), name='loop')
+    @slash_command(name='loop')
     @application_checks.check(check_mutual_voice)
     async def loop(self, itx: Interaction):
         """
@@ -112,7 +112,7 @@ class PlayerCog(Cog):
             return await itx.response.send_message(embed=create_success_embed('Looping current track'))
         return await itx.response.send_message(embed=create_success_embed('Already looping current track'))
     
-    @slash_command(guild_ids=get_debug_guilds(), name='loopall')
+    @slash_command(name='loopall')
     @application_checks.check(check_mutual_voice)
     async def loopall(self, itx: Interaction):
         """
@@ -124,7 +124,7 @@ class PlayerCog(Cog):
             return await itx.response.send_message(embed=create_success_embed('Looping entire queue'))
         return await itx.response.send_message(embed=create_success_embed('Already looping entire queue'))
     
-    @slash_command(guild_ids=get_debug_guilds(), name='nowplaying')
+    @slash_command(name='nowplaying')
     @application_checks.check(check_mutual_voice)
     async def now_playing(self, itx: Interaction):
         """
@@ -135,7 +135,7 @@ class PlayerCog(Cog):
         embed = jockey.now_playing()
         await itx.followup.send(embed=embed)
 
-    @slash_command(guild_ids=get_debug_guilds(), name='pause')
+    @slash_command(name='pause')
     @application_checks.check(check_mutual_voice)
     async def pause(self, itx: Interaction):
         """
@@ -147,7 +147,7 @@ class PlayerCog(Cog):
         await jockey.pause()
         await itx.followup.send(embed=create_success_embed('Paused'))
 
-    @slash_command(guild_ids=get_debug_guilds(), name='play')
+    @slash_command(name='play')
     @application_checks.check(check_mutual_voice)
     async def play(self, itx: Interaction, query: str = SlashOption(description='Query string or URL', required=True)):
         """
@@ -193,7 +193,7 @@ class PlayerCog(Cog):
                 body=track_name
             ))
     
-    @slash_command(guild_ids=get_debug_guilds(), name='previous')
+    @slash_command(name='previous')
     @application_checks.check(check_mutual_voice)
     async def previous(self, itx: Interaction):
         """
@@ -211,7 +211,7 @@ class PlayerCog(Cog):
             embed = create_error_embed(f'Unable to rewind. Reason: {e}')
             await itx.followup.send(embed=embed)
     
-    @slash_command(guild_ids=get_debug_guilds(), name='queue')
+    @slash_command(name='queue')
     @application_checks.check(check_mutual_voice)
     async def queue(self, itx: Interaction):
         """
@@ -292,7 +292,7 @@ class PlayerCog(Cog):
         paginator = Paginator(itx)
         return await paginator.run(pages, start=homepage)
     
-    @slash_command(guild_ids=get_debug_guilds(), name='remove')
+    @slash_command(name='remove')
     @application_checks.check(check_mutual_voice)
     async def remove(
         self,
@@ -323,7 +323,7 @@ class PlayerCog(Cog):
             body=f'**{title}**\n{artist}'
         ))
 
-    @slash_command(guild_ids=get_debug_guilds(), name='shuffle')
+    @slash_command(name='shuffle')
     @application_checks.check(check_mutual_voice)
     async def shuffle(self, itx: Interaction):
         """
@@ -340,7 +340,7 @@ class PlayerCog(Cog):
         else:
             await itx.followup.send(embed=create_success_embed(f'{len(jockey.queue)} tracks shuffled'))
     
-    @slash_command(guild_ids=get_debug_guilds(), name='skip')
+    @slash_command(name='skip')
     @application_checks.check(check_mutual_voice)
     async def skip(self, itx: Interaction):
         """
@@ -358,7 +358,7 @@ class PlayerCog(Cog):
             embed = create_error_embed(f'Unable to skip. Reason: {e}')
             await itx.followup.send(embed=embed)
     
-    @slash_command(guild_ids=get_debug_guilds(), name='stop')
+    @slash_command(name='stop')
     @application_checks.check(check_mutual_voice)
     async def stop(self, itx: Interaction):
         """
@@ -369,7 +369,7 @@ class PlayerCog(Cog):
         await itx.response.defer()
         await self._disconnect(itx=itx, reason=f'Stopped by <@{itx.user.id}>')
     
-    @slash_command(guild_ids=get_debug_guilds(), name='unloop')
+    @slash_command(name='unloop')
     @application_checks.check(check_mutual_voice)
     async def unloop(self, itx: Interaction):
         """
@@ -382,7 +382,7 @@ class PlayerCog(Cog):
             return await itx.response.send_message(embed=create_success_embed('Stopped looping current track'))
         return await itx.response.send_message(embed=create_success_embed('Not currently looping current track'))
     
-    @slash_command(guild_ids=get_debug_guilds(), name='unloopall')
+    @slash_command(name='unloopall')
     @application_checks.check(check_mutual_voice)
     async def unloopall(self, itx: Interaction):
         """
@@ -395,7 +395,7 @@ class PlayerCog(Cog):
             return await itx.response.send_message(embed=create_success_embed('Stopped looping entire queue'))
         return await itx.response.send_message(embed=create_success_embed('Not currently looping entire queue'))
     
-    @slash_command(guild_ids=get_debug_guilds(), name='unpause')
+    @slash_command(name='unpause')
     @application_checks.check(check_mutual_voice)
     async def unpause(self, itx: Interaction):
         """
@@ -407,7 +407,7 @@ class PlayerCog(Cog):
         await jockey.resume()
         await itx.followup.send(embed=create_success_embed('Unpaused'))
 
-    @slash_command(guild_ids=get_debug_guilds(), name='unshuffle')
+    @slash_command(name='unshuffle')
     @application_checks.check(check_mutual_voice)
     async def unshuffle(self, itx: Interaction):
         """
@@ -421,7 +421,7 @@ class PlayerCog(Cog):
             return await itx.followup.send(embed=create_success_embed('Unshuffled'))
         await itx.followup.send(embed=create_error_embed('Current queue is not shuffled'))
     
-    @slash_command(guild_ids=get_debug_guilds(), name='volume')
+    @slash_command(name='volume')
     @application_checks.check(check_mutual_voice)
     async def volume(
         self,

@@ -2,7 +2,7 @@ from dataclass.config import Config, LavalinkNode
 from logging import INFO
 from os import environ
 from os.path import isfile
-from typing import List
+from typing import List, Optional
 from yaml import safe_load
 from .logger import create_logger
 
@@ -14,7 +14,7 @@ spotify_client_id = None
 spotify_client_secret = None
 lavalink_nodes = []
 debug_enabled = False
-debug_guild_ids = []
+debug_guild_ids = None
 
 # Parse config file if it exists
 if isfile('config.yml'):
@@ -134,7 +134,7 @@ config = Config(
 )
 
 
-def get_debug_guilds() -> List[int]:
+def get_debug_guilds() -> Optional[List[int]]:
     return config.debug_guild_ids
 
 
