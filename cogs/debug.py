@@ -72,8 +72,13 @@ class DebugCog(Cog):
         """
         Reloads all cogs.
         """
+        # Reload cogs
         self._bot.unload_extension('cogs')
         self._bot.load_extension('cogs')
+
+        # Resync commands
+        await self._bot.sync_all_application_commands()
+
         await itx.response.send_message(embed=create_success_embed('Reloaded extensions!'), ephemeral=True)
     
     @slash_command(name='stats')
