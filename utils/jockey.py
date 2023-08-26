@@ -149,11 +149,21 @@ class Jockey(Player['BlancoBot']):
             # Use ISRC if present
             results = []
             if item.isrc is not None:
+                # Try to match ISRC on Deezer
                 try:
-                    results = await get_youtube_matches(self.node, f'"{item.isrc}"', desired_duration_ms=item.duration)
-                except LavalinkSearchError:
-                    item.is_imperfect = True
+                    result = await get_deezer_track(self.node, item.isrc)
+                except:
                     pass
+                else:
+                    results.append(result)
+                    self._logger.debug(f'Found Deezer track for {item.title} [isrc={item.isrc}]')
+                
+                # Try to match ISRC on YouTube
+                if not len(results):
+                    try:
+                        results = await get_youtube_matches(self.node, f'"{item.isrc}"', desired_duration_ms=item.duration)
+                    except LavalinkSearchError:
+                        pass
             
             # Fallback to metadata search
             if not len(results):

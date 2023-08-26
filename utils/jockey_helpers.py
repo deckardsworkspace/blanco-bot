@@ -78,8 +78,9 @@ async def parse_query(node: 'Node', spotify: Spotify, query: str, requester: int
         # Check if the top result is similar enough
         top_similarity = max(similarities)
         if top_similarity > 0.6:
+            # Return
             track = results[similarities.index(top_similarity)]
-            top_result = QueueItem(
+            return [QueueItem(
                 requester=requester,
                 title=track.title,
                 artist=track.artist,
@@ -87,20 +88,7 @@ async def parse_query(node: 'Node', spotify: Spotify, query: str, requester: int
                 duration=track.duration_ms,
                 artwork=track.artwork,
                 isrc=track.isrc
-            )
-
-            # If an ISRC is present, try to get a stream URL from Deezer
-            if track.isrc:
-                try:
-                    deezer_track = await get_deezer_track(node, track.isrc)
-                except:
-                    pass
-                else:
-                    top_result.url = deezer_track.url
-                    top_result.lavalink_track = deezer_track.lavalink_track
-
-            # Return
-            return [top_result]
+            )]
 
     # Play the first matching track on YouTube
     results = await get_youtube_matches(node, yt_query, automatic=False)
