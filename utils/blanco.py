@@ -202,13 +202,8 @@ class BlancoBot(Bot):
             raise RuntimeError('Cannot initialize Lavalink without a config')
         nodes = self._config.lavalink_nodes
 
-        # Check if the node IDs are unique
-        node_ids = [node.id for node in nodes]
-        if len(node_ids) != len(set(node_ids)):
-            raise ValueError('Lavalink node IDs must be unique')
-
         # Add local node
-        for node in nodes:
+        for node in nodes.values():
             # Try to match regions against enum
             regions = []
             for region in node.regions:

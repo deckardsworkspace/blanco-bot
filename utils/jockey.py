@@ -149,28 +149,36 @@ class Jockey(Player['BlancoBot']):
             # Use ISRC if present
             results = []
             if item.isrc is not None:
-                # Try to match ISRC on Deezer
-                try:
-                    result = await get_deezer_track(self.node, item.isrc)
-                except:
-                    pass
-                else:
-                    results.append(result)
-                    self._logger.debug(f'Found Deezer track for {item.title} [isrc={item.isrc}]')
+                # Try to match ISRC on Deezer if enabled
+                assert self._bot.config is not None
+                if self._bot.config.lavalink_nodes[self.node.label].deezer:
+                    try:
+                        result = await get_deezer_track(self.node, item.isrc)
+                    except:
+                        self._logger.debug(f'No Deezer match for ISRC {item.isrc} ({item.title})')
+                    else:
+                        results.append(result)
+                        self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on Deezer')
                 
                 # Try to match ISRC on YouTube
                 if not len(results):
                     try:
                         results = await get_youtube_matches(self.node, f'"{item.isrc}"', desired_duration_ms=item.duration)
-                    except LavalinkSearchError:
-                        pass
+                    except:
+                        self._logger.debug(f'No YouTube match for ISRC {item.isrc} ({item.title})')
+                    else:
+                        self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on YouTube')
             
             # Fallback to metadata search
             if not len(results):
+                self._logger.warn(f'No ISRC match for `{item.title}\'')
+                item.is_imperfect = True
+
                 try:
                     results = await get_youtube_matches(self.node, f'{item.title} {item.artist}', desired_duration_ms=item.duration)
                 except LavalinkSearchError as e:
-                    self._logger.error(f'Failed to play: {e}')
+                    self._logger.critical(f'Failed to play `{item.title}\'.')
+                    self._logger.error(f'{e.message}')
                     return False
 
             # Try to add first result directly to Lavalink queue
