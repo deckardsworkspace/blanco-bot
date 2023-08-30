@@ -184,7 +184,9 @@ class PlayerCog(Cog):
         try:
             track_name = await jockey.play_impl(query, itx.user.id)
         except JockeyError as e:
-            await self._disconnect(itx=itx, reason=str(e))
+            # Disconnect if we're not playing anything
+            if not jockey.playing:
+                await self._disconnect(itx=itx, reason=str(e))
         except JockeyException as e:
             await itx.followup.send(embed=create_error_embed(str(e)))
         else:
@@ -204,9 +206,6 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         try:
             await jockey.skip(forward=False, auto=False)
-        except EndOfQueueError as e:
-            # Disconnect from voice
-            await self._disconnect(itx=itx, reason=str(e))
         except Exception as e:
             embed = create_error_embed(f'Unable to rewind. Reason: {e}')
             await itx.followup.send(embed=embed)
@@ -351,9 +350,6 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         try:
             await jockey.skip(auto=False)
-        except EndOfQueueError as e:
-            # Disconnect from voice
-            await self._disconnect(itx=itx, reason=str(e))
         except Exception as e:
             embed = create_error_embed(f'Unable to skip. Reason: {e}')
             await itx.followup.send(embed=embed)
