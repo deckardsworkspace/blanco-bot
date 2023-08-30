@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import List, Optional
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -10,6 +10,7 @@ class LavalinkNode:
     port: int
     regions: List[str]
     secure: bool = False
+    deezer: bool = False
 
     # Type checking
     def __post_init__(self):
@@ -28,6 +29,10 @@ class LavalinkNode:
         # Check if ssl is a bool
         if not isinstance(self.secure, bool):
             raise TypeError('ssl must be a bool')
+        
+        # Check if deezer is a bool
+        if not isinstance(self.deezer, bool):
+            raise TypeError('deezer must be a bool')
 
         # Check if regions is a list
         if not isinstance(self.regions, list):
@@ -41,7 +46,7 @@ class Config:
     discord_token: str
     spotify_client_id: str
     spotify_client_secret: str
-    lavalink_nodes: List[LavalinkNode]
+    lavalink_nodes: Dict[str, LavalinkNode]
 
     # Optional
     debug_enabled: bool = False

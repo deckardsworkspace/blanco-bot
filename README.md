@@ -22,7 +22,10 @@ The bot stores data in a local SQLite database. This database is populated autom
 
 # Deployment
 
-**Do not monetize, or attempt to submit for verification, any instance of this bot.** The Lavalink audio server pulls audio data from YouTube, which goes against the [YouTube Terms of Service.](https://www.youtube.com/t/terms) At best, Discord will reject your application for verification, and at worst, your developer account will get banned.
+> [!Warning]
+> **Do not monetize, or attempt to submit for verification, any instance of this bot.** The Lavalink audio server has the ability to pull audio data from YouTube, which goes against the [YouTube Terms of Service,](https://www.youtube.com/t/terms) and optionally Deezer, which goes against the [Deezer Terms of Use.](https://www.deezer.com/legal/cgu)
+>
+> At best, Discord will reject your application for verification, and at worst, your developer account will get banned.
 
 ## Prerequisites
 
@@ -56,6 +59,7 @@ Additionally, Blanco expects the following environment variables to be set for e
 | BLANCO_NODE_n | Node connection details | ✅ | `label:password@host:port` | `main:youshallnotpass@localhost:2333` |
 | BLANCO_NODE_n_REGIONS | Node regions | ✅ | Comma-separated list of strings | `us-central,us-east` |
 | BLANCO_NODE_n_SECURE | Whether the node supports SSL |  | `true` or `false` | `false` |
+| BLANCO_NODE_n_DEEZER | Whether the node supports playback from Deezer via LavaSrc |  | `true` or `false` | `false` |
 
 Make sure `n` is a unique integer for each node, and that you don't skip values of `n`.
 
@@ -80,7 +84,10 @@ lavalink:
       - us-east
 
     # Set to true if node supports SSL (https://, wss://)
-    ssl: false                   
+    ssl: false
+    
+    # Set to true if node supports playback from Deezer using LavaSrc
+    deezer: false
 # You may add more than one node here
 # - id: backup
 #   ...
@@ -129,6 +136,7 @@ services:
       - BLANCO_NODE_1=main:youshallnotpass@localhost:2333
       - BLANCO_NODE_1_REGIONS=us-central,us-east
       - BLANCO_NODE_1_SECURE=false
+      - BLANCO_NODE_1_DEEZER=false
       # - BLANCO_NODE_2=...
     
     volumes:

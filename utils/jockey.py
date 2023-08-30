@@ -149,18 +149,36 @@ class Jockey(Player['BlancoBot']):
             # Use ISRC if present
             results = []
             if item.isrc is not None:
-                try:
-                    results = await get_youtube_matches(self.node, f'"{item.isrc}"', desired_duration_ms=item.duration)
-                except LavalinkSearchError:
-                    item.is_imperfect = True
-                    pass
+                # Try to match ISRC on Deezer if enabled
+                assert self._bot.config is not None
+                if self._bot.config.lavalink_nodes[self.node.label].deezer:
+                    try:
+                        result = await get_deezer_track(self.node, item.isrc)
+                    except:
+                        self._logger.debug(f'No Deezer match for ISRC {item.isrc} ({item.title})')
+                    else:
+                        results.append(result)
+                        self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on Deezer')
+                
+                # Try to match ISRC on YouTube
+                if not len(results):
+                    try:
+                        results = await get_youtube_matches(self.node, f'"{item.isrc}"', desired_duration_ms=item.duration)
+                    except:
+                        self._logger.debug(f'No YouTube match for ISRC {item.isrc} ({item.title})')
+                    else:
+                        self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on YouTube')
             
             # Fallback to metadata search
             if not len(results):
+                self._logger.warn(f'No ISRC match for `{item.title}\'')
+                item.is_imperfect = True
+
                 try:
                     results = await get_youtube_matches(self.node, f'{item.title} {item.artist}', desired_duration_ms=item.duration)
                 except LavalinkSearchError as e:
-                    self._logger.error(f'Failed to play: {e}')
+                    self._logger.critical(f'Failed to play `{item.title}\'.')
+                    self._logger.error(f'{e.message}')
                     return False
 
             # Try to add first result directly to Lavalink queue
@@ -321,6 +339,15 @@ class Jockey(Player['BlancoBot']):
         """
         Skips the current track and plays the next one in the queue.
         """
+        async def restore_controls():
+            # Restore now playing message controls
+            view = NowPlayingView(self._bot, self)
+            if isinstance(np_msg, Message):
+                try:
+                    await np_msg.edit(view=view)
+                except:
+                    pass
+        
         # It takes a while for the player to skip,
         # so let's remove the player controls while we wait
         # to prevent the user from spamming them.
@@ -335,13 +362,7 @@ class Jockey(Player['BlancoBot']):
         # If index is specified, use that instead
         if index != -1:
             if not await self._enqueue(index, auto=auto):
-                # Restore now playing message controls
-                view = NowPlayingView(self._bot, self)
-                if isinstance(np_msg, Message):
-                    try:
-                        await np_msg.edit(view=view)
-                    except:
-                        pass
+                await restore_controls()
             return
 
         # Is this autoskipping?
@@ -356,24 +377,28 @@ class Jockey(Player['BlancoBot']):
         if isinstance(self._queue_i, int):
             # Set initial index
             next_i = self._shuffle_indices.index(self._queue_i) if self.is_shuffling else self._queue_i
-            while next_i < self.queue_size:
-                # Have we reached the end of the queue?
-                if next_i == self.queue_size - 1 and forward:
-                    # Reached the end of the queue, are we looping?
+            while next_i < self.queue_size and next_i >= 0:
+                # Have we reached an end of the queue?
+                if (next_i == self.queue_size - 1 and forward) or (
+                    next_i == 0 and not forward):
+                    # Reached an end of the queue, are we looping?
                     if self.is_looping_all:
-                        next_i = 0
+                        next_i = 0 if forward else self.queue_size - 1
                     else:
                         # If we reached this point,
                         # we are at one of either ends of the queue,
-                        # and the user was expecting to skip to the next.
+                        # and the user was expecting to skip past it.
+                        await restore_controls()
                         if not auto:
                             if forward:
                                 raise EndOfQueueError('Reached the end of the queue')
-                            raise EndOfQueueError('Reached the start of the queue')
+                            raise EndOfQueueError('Reached the beginning of the queue')
                         return
                 else:
                     next_i += 1 if forward else -1
                 
                 # Try to enqueue the next track
-                if await self._enqueue(next_i, auto=auto):
+                if not await self._enqueue(next_i, auto=auto):
+                    await restore_controls()
+                else:
                     return

@@ -1,8 +1,7 @@
 from dataclass.config import Config, LavalinkNode
-from logging import INFO
 from os import environ
 from os.path import isfile
-from typing import List, Optional
+from typing import Dict, List, Optional
 from yaml import safe_load
 from .logger import create_logger
 
@@ -12,7 +11,7 @@ db_file = None
 discord_token = None
 spotify_client_id = None
 spotify_client_secret = None
-lavalink_nodes = []
+lavalink_nodes: Dict[str, LavalinkNode] = {}
 debug_enabled = False
 debug_guild_ids = None
 
@@ -36,14 +35,20 @@ if isfile('config.yml'):
             
             # Parse Lavalink nodes from config.yml
             for node in config_file['lavalink']:
-                lavalink_nodes.append(LavalinkNode(
+                lavalink_node = LavalinkNode(
                     id=node['id'],
                     password=node['password'],
                     host=node['server'],
                     port=node['port'],
                     regions=node['regions'],
                     secure=node.get('secure', False)
-                ))
+                )
+
+                # Add optional config values
+                if 'deezer' in node:
+                    lavalink_node.deezer = node['deezer']
+
+                lavalink_nodes[node['id']] = lavalink_node
 
             # Add optional config values
             if 'debug' in config_file['bot']:
@@ -63,15 +68,6 @@ if 'BLANCO_DEBUG' in environ:
     debug_enabled = environ['BLANCO_DEBUG'].lower() == 'true'
     debug_guild_ids = [int(id) for id in environ['BLANCO_DEBUG_GUILDS'].split(',')]
 
-# Print parsed config
-if not debug_enabled:
-    logger.setLevel(INFO)
-logger.debug(f'Debug enabled. Printing parsed config:')
-logger.debug(f'  Database file: {db_file}')
-logger.debug(f'  Discord token: {discord_token}')
-logger.debug(f'  Spotify client ID: {spotify_client_id}')
-logger.debug(f'  Spotify client secret: {spotify_client_secret}')
-
 # Parse Lavalink nodes from environment variables
 i = 1
 while True:
@@ -81,6 +77,7 @@ while True:
         server, port = host.split(':')
         regions = environ[f'BLANCO_NODE_{i}_REGIONS'].split(',')
         secure = environ.get(f'BLANCO_NODE_{i}_SECURE', 'false').lower() == 'true'
+        deezer = environ.get(f'BLANCO_NODE_{i}_DEEZER', 'false').lower() == 'true'
     except KeyError as e:
         missing_key = e.args[0]
         if missing_key == f'BLANCO_NODE_{i}':
@@ -93,24 +90,18 @@ while True:
         break
     else:
         # Add node to list
-        lavalink_nodes.append(LavalinkNode(
+        lavalink_nodes[id] = LavalinkNode(
             id=id,
             password=password,
             host=server,
             port=int(port),
             regions=regions,
-            secure=secure
-        ))
+            secure=secure,
+            deezer=deezer
+        )
 
         i += 1
 
-
-# Print list of Lavalink nodes
-logger.debug(f'  Lavalink nodes:')
-for node in lavalink_nodes:
-    logger.debug(f'    - {node.id} ({node.host}:{node.port})')
-    logger.debug(f'      Secure: {node.secure}')
-    logger.debug(f'      Regions: {node.regions}')
 
 # Final checks
 if db_file is None:
@@ -121,6 +112,20 @@ if spotify_client_id is None:
     raise ValueError('No Spotify client ID specified')
 if spotify_client_secret is None:
     raise ValueError('No Spotify client secret specified')
+
+# Print parsed config
+if debug_enabled:
+    logger.debug(f'Parsed configuration:')
+    logger.debug(f'  Database file: {db_file}')
+    logger.debug(f'  Discord token: {discord_token[:3]}...{discord_token[-3:]}')
+    logger.debug(f'  Spotify client ID: {spotify_client_id[:3]}...{spotify_client_id[-3:]}')
+    logger.debug(f'  Spotify client secret: {spotify_client_secret[:3]}...{spotify_client_secret[-3:]}')
+    logger.debug(f'  Lavalink nodes:')
+    for node in lavalink_nodes.values():
+        logger.debug(f'    - {node.id} ({node.host}:{node.port})')
+        logger.debug(f'      Secure: {node.secure}')
+        logger.debug(f'      Supports Deezer: {node.deezer}')
+        logger.debug(f'      Regions: {node.regions}')
 
 # Create config object
 config = Config(

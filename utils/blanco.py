@@ -1,6 +1,6 @@
 from database import Database
 from logging import INFO
-from mafic import NodePool, VoiceRegion
+from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import Activity, ActivityType, Interaction, PartialMessageable, TextChannel, Thread, VoiceChannel
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
@@ -130,13 +130,13 @@ class BlancoBot(Bot):
             self._logger.warn(f'Got track_start event for idle player in {event.player.guild.name}')
 
     async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
-        if event.reason == 'REPLACED':
+        if event.reason == EndReason.REPLACED:
             self._logger.debug(f'Skipped `{event.track.title}\' in {event.player.guild.name}')
-        elif event.reason == 'FINISHED':
+        elif event.reason == EndReason.FINISHED:
             # Play next track in queue
             self._logger.debug(f'Finished playing `{event.track.title}\' in {event.player.guild.name}')
             await event.player.skip()
-        elif event.reason == 'STOPPED':
+        elif event.reason == EndReason.STOPPED:
             self._logger.info(f'Stopped player in {event.player.guild.name}')
         else:
             self._logger.error(f'Unhandled {event.reason} in {event.player.guild.name} for `{event.track.title}\'')
@@ -202,13 +202,8 @@ class BlancoBot(Bot):
             raise RuntimeError('Cannot initialize Lavalink without a config')
         nodes = self._config.lavalink_nodes
 
-        # Check if the node IDs are unique
-        node_ids = [node.id for node in nodes]
-        if len(node_ids) != len(set(node_ids)):
-            raise ValueError('Lavalink node IDs must be unique')
-
         # Add local node
-        for node in nodes:
+        for node in nodes.values():
             # Try to match regions against enum
             regions = []
             for region in node.regions:

@@ -84,6 +84,16 @@ async def get_tracks(node: 'Node', query: str, search_type: str = 'EMPTY') -> Tu
             return None, [parse_result(track) for track in result]
 
 
+async def get_deezer_track(node: 'Node', isrc: str) -> LavalinkResult:
+    search = await node.fetch_tracks(isrc, search_type=SearchType.DEEZER_ISRC.value)
+    
+    if (isinstance(search, list) and len(search) == 0) or search is None:
+        raise LavalinkSearchError(isrc, reason='No results found')
+
+    search_result = search[0] if isinstance(search, list) else search.tracks[0]
+    return parse_result(search_result)
+
+
 async def get_youtube_matches(node: 'Node', query: str, desired_duration_ms: Optional[int] = 0, automatic: bool = True) -> List[LavalinkResult]:
     results: List[LavalinkResult] = []
 
