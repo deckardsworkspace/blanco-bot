@@ -1,0 +1,46 @@
+/* Text */
+h1, h2, h3, p, li {
+    font-family: var(--font-family);
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+}
+h1, h2, h3, a, .heavy {
+    font-weight: 700;
+}
+h1 {
+    font-size: 3rem;
+    line-height: 3rem;
+}
+h2 {
+    font-size: 2rem;
+    line-height: 2.25rem;
+}
+h3 {
+    font-size: 1.5rem;
+    line-height: 1.875rem;
+}
+body, p, li {
+    font-size: 1rem;
+    line-height: 1.375rem;
+}
+.small {
+    font-size: 0.875rem;
+    line-height: 1.1875rem;
+}
+a {
+    text-decoration: none;
+    color: var(--color-highlight);
+}
+a::after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 2px;
+    background-color: var(--color-highlight);
+    transition: width 0.3s ease-in-out;
+}
+a:hover::after {
+    width: 100%;
+}

@@ -6,3 +6,4 @@ if TYPE_CHECKING:
 
 def setup_routes(app: 'Application'):
     app.router.add_get('/', homepage)
+    app.router.add_static('/static/', path='server/static', name='static')
