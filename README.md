@@ -209,7 +209,11 @@ If you want to deploy Blanco without Docker, make sure you have Python 3.11+ ins
     ```
 5. Install Blanco's requirements using `python3 -m pip install -r requirements.txt`.
 6. Configure Blanco according to the instructions in [Prerequisites](#prerequisites).
-7. Run Blanco using `python3 main.py`.
+7. If using the webserver, generate `server/static/css/main.css` by installing [Tailwind CLI](https://tailwindcss.com/blog/standalone-cli) and running
+    ```
+    tailwindcss -i ./server/static/css/base.css -o ./server/static/css/main.css --minify
+    ```
+8. Run Blanco using `python3 main.py`.
 
 # Debugging mode
 

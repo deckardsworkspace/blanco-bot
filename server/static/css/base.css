@@ -1,11 +1,23 @@
-* { box-sizing: border-box; }
-:root {
-    --font-family: 'IBM Plex Mono', 'PT Mono', 'Monaco', 'Consolas', 'Lucida Console', monospace;
-    --color-bg: #f4f1de;
-    --color-text: #000000;
-    --color-gray: #a5a5a5;
-    --color-highlight: #e07a5f;
-    --color-accent: #7a80ba;
-    font-size: 16px;
+@tailwind base;
+@layer base {
+    h1, h2, h3 {
+        @apply font-bold;
+    }
+    h1 {
+        @apply text-5xl;
+    }
+    h2 {
+        @apply text-[2rem];
+    }
+    h3 {
+        @apply text-2xl;
+    }
+    a {
+        @apply text-sienna underline;
+    }
+    body {
+        @apply bg-eggshell;
+    }
 }
-
+@tailwind components;
+@tailwind utilities;
