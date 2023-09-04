@@ -1,3 +1,4 @@
+from time import time
 from utils.logger import create_logger
 from .migrations import run_migrations
 import sqlite3 as sql
@@ -93,3 +94,42 @@ class Database:
         """
         self._cur.execute(f'INSERT OR REPLACE INTO lavalink (node_id, session_id) VALUES ("{node_id}", "{session_id}")')
         self._con.commit()
+    
+    def create_user(
+        self,
+        user_id: int,
+        username: str,
+        discord_access_token: str,
+        discord_refresh_token: str,
+        discord_expires_in: int
+    ):
+        """
+        Create a user in the database.
+        """
+        # Calculate expiry time
+        discord_expires_at = int(time()) + discord_expires_in
+
+        # Insert user
+        self._cur.execute(f'''
+            INSERT OR REPLACE INTO userdata (
+                user_id,
+                username,
+                discord_access_token,
+                discord_refresh_token,
+                discord_expires_at
+            ) VALUES (
+                {user_id},
+                "{username}",
+                "{discord_access_token}",
+                "{discord_refresh_token}",
+                {discord_expires_at}
+            )
+        ''')
+        self._con.commit()
+
+    def get_username(self, user_id: int) -> str:
+        """
+        Get a user from the database.
+        """
+        self._cur.execute(f'SELECT username FROM userdata WHERE user_id = {user_id}')
+        return self._cur.fetchone()[0]
