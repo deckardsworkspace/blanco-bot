@@ -1,11 +1,5 @@
 from aiohttp import web
-import aiohttp_jinja2
-import yarl
-
-
-@aiohttp_jinja2.template('homepage.html')
-async def homepage(request: web.Request):
-    return {}
+from yarl import URL
 
 
 async def login(request: web.Request):
@@ -14,7 +8,7 @@ async def login(request: web.Request):
     base_url = request.app['config'].base_url
 
     # Build URL
-    url = yarl.URL.build(
+    url = URL.build(
         scheme='https',
         host='discord.com',
         path='/api/oauth2/authorize',
