@@ -2,5 +2,46 @@
 {% block title %} | Home{% endblock %}
 
 {% block body %}
-    <h1>Home</h1>
+<div id="app" class="flex w-screen h-screen items-center justify-center">
+    <main class="w-full max-w-[480px]">
+        <!-- Bot name -->
+        <div class="flex w-full items-center justify-between">
+            <h1 class="text-3xl font-mono font-bold">Blanco</h1>
+            <img src="/static/images/logo.png"
+                alt="Blanco bot logo"
+                class="w-12 h-12 rounded-full"
+            >
+        </div>
+
+        <!-- Bot description -->
+        <div class="mt-4">
+            <p>No-frills Discord music bot built with Docker.</p>
+            <p class="my-2">
+                <a href="https://github.com/jareddantis-bots/blanco-bot#deployment">Start a container</a>,
+                invite into your server,<br>join a voice channel, and hit <code>/play</code>.
+            </p>
+            <p>
+                Also available on
+                <a href="https://github.com/jareddantis-bots/blanco-bot/pkgs/container/blanco-bot">
+                    GitHub Container Registry</a>.
+            </p>
+        </div>
+
+        <hr class="border-gray-300 my-8">
+
+        <!-- Credits -->
+        <div class="text-sm">
+            <p class="mb-2">
+                Powered by
+                <a href="https://nextcord.dev/">Nextcord</a>,
+                <a href="https://github.com/lavalink-devs/Lavalink">Lavalink</a>, and
+                <a href="https://github.com/ooliver1/Mafic">Mafic</a>.
+            </p>
+            <p>
+                Available under the MIT License on
+                <a href="https://github.com/jareddantis/blanco-bot">GitHub</a>.
+            </p>
+        </div>
+    </main>
+</div>
 {% endblock %}

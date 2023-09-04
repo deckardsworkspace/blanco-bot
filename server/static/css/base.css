@@ -13,10 +13,13 @@
         @apply text-2xl;
     }
     a {
-        @apply text-sienna underline;
+        @apply font-bold text-sienna underline;
     }
     body {
         @apply bg-eggshell;
+    }
+    code {
+        @apply bg-gray-100 text-blue text-xs rounded border border-gray-300 p-1;
     }
 }
 @tailwind components;
