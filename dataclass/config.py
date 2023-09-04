@@ -50,7 +50,6 @@ class Config:
     enable_server: bool
 
     # Optional
-    base_url: Optional[str] = None
     lastfm_api_key: Optional[str] = None
     lastfm_shared_secret: Optional[str] = None
     debug_enabled: bool = False

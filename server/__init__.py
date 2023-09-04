@@ -5,7 +5,6 @@ from utils.logger import create_logger
 from .routes import setup_routes
 if TYPE_CHECKING:
     from database import Database
-    from dataclass.config import Config
     from utils.blanco import BlancoBot
 
 
@@ -15,12 +14,9 @@ class AccessLogger(AbstractAccessLogger):
                          f' {request.path} (took {time*1000:.2f} ms)')
 
 
-async def run_app(config: 'Config', db: 'Database'):
-    if config.base_url is None:
-        raise RuntimeError('Base URL is not set in config')
-    
+async def run_app(db: 'Database', debug: bool):
     # Create logger
-    logger = create_logger('server', debug=config.debug_enabled)
+    logger = create_logger('server', debug=debug)
 
     # Create app
     app = web.Application()
@@ -31,9 +27,9 @@ async def run_app(config: 'Config', db: 'Database'):
     site = web.TCPSite(runner)
     await site.start()
 
-    logger.info(f'Web server started at {config.base_url}')
+    logger.info(f'Web server started')
 
 
 def setup(bot: 'BlancoBot'):
     assert bot.config is not None
-    bot.loop.create_task(run_app(bot.config, bot.db))
+    bot.loop.create_task(run_app(bot.db, bot.config.debug_enabled))

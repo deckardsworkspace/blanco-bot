@@ -50,7 +50,6 @@ The following table lists the environment variables that Blanco accepts:
 | BLANCO_SPOTIFY_ID | Spotify client ID | String | ✅ |
 | BLANCO_SPOTIFY_SECRET | Spotify client secret | String | ✅ |
 | BLANCO_ENABLE_SERVER | Whether to enable the webserver | `true` or `false` | |
-| BLANCO_BASE_URL | Webserver base URL | String | ✅ if `BLANCO_ENABLE_SERVER` is `true` |
 | BLANCO_LASTFM_KEY | Last.fm API key | String | |
 | BLANCO_LASTFM_SECRET | Last.fm API shared secret | String | |
 | BLANCO_DEBUG | Whether to enable debug mode | `true` or `false` |  |
@@ -152,6 +151,10 @@ services:
 
       # You can omit this if you're using env variables
       - /YOUR/PATH/HERE/config.yml:/opt/app/config.yml
+    
+    # You can omit this if you're not using the webserver
+    ports:
+      - 8080:8080
 ```
 
 Edit `/YOUR/PATH/HERE/config.yml` and `/YOUR/PATH/HERE/blanco.db` to match the paths to your `config.yml` and `blanco.db`.

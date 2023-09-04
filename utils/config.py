@@ -12,7 +12,6 @@ discord_token = None
 spotify_client_id = None
 spotify_client_secret = None
 enable_server = False
-base_url = None
 lastfm_api_key = None
 lastfm_shared_secret = None
 lavalink_nodes: Dict[str, LavalinkNode] = {}
@@ -71,7 +70,6 @@ logger.info('Reading config from environment variables')
 db_file = environ.get('BLANCO_DB_FILE', db_file)
 discord_token = environ.get('BLANCO_TOKEN', discord_token)
 enable_server = environ.get('BLANCO_ENABLE_SERVER', 'false').lower() == 'true'
-base_url = environ.get('BLANCO_BASE_URL', base_url)
 lastfm_api_key = environ.get('BLANCO_LASTFM_KEY', lastfm_api_key)
 lastfm_shared_secret = environ.get('BLANCO_LASTFM_SECRET', lastfm_shared_secret)
 spotify_client_id = environ.get('BLANCO_SPOTIFY_ID', spotify_client_id)
@@ -129,16 +127,16 @@ if spotify_client_secret is None:
 if debug_enabled:
     logger.debug(f'Parsed configuration:')
     logger.debug(f'  Database file: {db_file}')
+    logger.debug(f'  Server enabled: {enable_server}')
     logger.debug(f'  Discord token: {discord_token[:3]}...{discord_token[-3:]}')
     logger.debug(f'  Spotify client ID: {spotify_client_id[:3]}...{spotify_client_id[-3:]}')
     logger.debug(f'  Spotify client secret: {spotify_client_secret[:3]}...{spotify_client_secret[-3:]}')
-    logger.debug(f'  Server enabled: {enable_server} (base URL: {base_url})')
 
     if lastfm_api_key is not None and lastfm_shared_secret is not None:
         logger.debug(f'  Last.fm API key: {lastfm_api_key[:3]}...{lastfm_api_key[-3:]}')
         logger.debug(f'  Last.fm shared secret: {lastfm_shared_secret[:3]}...{lastfm_shared_secret[-3:]}')
     else:
-        logger.debug(f'  Last.fm integration: disabled')
+        logger.debug(f'  Last.fm integration disabled')
     
     logger.debug(f'  Lavalink nodes:')
     for node in lavalink_nodes.values():
@@ -157,7 +155,6 @@ config = Config(
     debug_enabled=debug_enabled,
     debug_guild_ids=debug_guild_ids,
     enable_server=enable_server,
-    base_url=base_url,
     lastfm_api_key=lastfm_api_key,
     lastfm_shared_secret=lastfm_shared_secret
 )
