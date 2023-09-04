@@ -73,9 +73,7 @@ class DebugCog(Cog):
         """
         # Reload cogs
         self._bot.unload_extension('cogs')
-        self._bot.unload_extension('server')
         self._bot.load_extension('cogs')
-        self._bot.load_extension('server')
 
         # Resync commands
         await self._bot.sync_all_application_commands()
