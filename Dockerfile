@@ -11,9 +11,8 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Compile Tailwind CSS
-COPY server /opt/build/
-COPY tailwind.config.js /opt/build/
-WORKDIR /opt/build
+COPY . /opt/app
+WORKDIR /opt/app
 RUN npm install -D tailwindcss && \
     npx tailwindcss -i ./server/static/css/base.css \
     -o ./server/static/css/main.css --minify
@@ -25,7 +24,7 @@ LABEL maintainer="Jared Dantis <jareddantis@gmail.com>"
 
 # Copy bot files and run bot
 COPY . /opt/app
-COPY --from=dependencies /opt/build/server/static/css/main.css /opt/app/server/static/css/main.css
+COPY --from=dependencies /opt/app/server/static/css/main.css /opt/app/server/static/css/main.css
 WORKDIR /opt/app
 ENV PATH="/opt/venv/bin:${PATH}"
 ENV PYTHONDONTWRITEBYTECODE=1
