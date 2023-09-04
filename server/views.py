@@ -1,5 +1,7 @@
 from aiohttp import web
+import aiohttp_jinja2
 
 
-async def index(request: web.Request):
-    return web.Response(text=f'Hello, world!')
+@aiohttp_jinja2.template('homepage.html')
+async def homepage(request: web.Request):
+    return {}

@@ -3,6 +3,8 @@ from aiohttp.abc import AbstractAccessLogger
 from typing import TYPE_CHECKING
 from utils.logger import create_logger
 from .routes import setup_routes
+import aiohttp_jinja2
+import jinja2
 if TYPE_CHECKING:
     from database import Database
     from utils.blanco import BlancoBot
@@ -20,8 +22,9 @@ async def run_app(db: 'Database', debug: bool):
 
     # Create app
     app = web.Application()
-    setup_routes(app)
     app['db'] = db
+    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('server/templates'))
+    setup_routes(app)
     runner = web.AppRunner(app, access_log=logger, access_log_class=AccessLogger)
     await runner.setup()
     site = web.TCPSite(runner)
