@@ -50,6 +50,8 @@ class Config:
     enable_server: bool
 
     # Optional
+    discord_oauth_id: Optional[str] = None
+    discord_oauth_secret: Optional[str] = None
     lastfm_api_key: Optional[str] = None
     lastfm_shared_secret: Optional[str] = None
     debug_enabled: bool = False

@@ -47,6 +47,8 @@ The following table lists the environment variables that Blanco accepts:
 | ------------- | ----------- | ------ | --------- |
 | BLANCO_DB_FILE | Path to SQLite database file | String | ✅ |
 | BLANCO_TOKEN | Discord bot token | String | ✅ |
+| BLANCO_OAUTH_ID | Discord OAuth client ID | String | ✅ if `BLANCO_ENABLE_SERVER` is `true` |
+| BLANCO_OAUTH_SECRET | Discord OAuth client secret | String | ✅ if `BLANCO_ENABLE_SERVER` is `true` |
 | BLANCO_SPOTIFY_ID | Spotify client ID | String | ✅ |
 | BLANCO_SPOTIFY_SECRET | Spotify client secret | String | ✅ |
 | BLANCO_ENABLE_SERVER | Whether to enable the webserver | `true` or `false` | |
@@ -75,6 +77,8 @@ bot:
   database: blanco.db
   discord_token: <your Discord bot token>
   enable_server: false    # Optional
+  discord_oauth_id: <your Discord OAuth client ID>           # Required if enable_server is true
+  discord_oauth_secret: <your Discord OAuth client secret>   # Required if enable_server is true
 spotify:
   client_id: <your client id>
   client_secret: <your client secret>

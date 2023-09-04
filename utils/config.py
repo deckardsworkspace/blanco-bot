@@ -8,6 +8,8 @@ from .logger import create_logger
 
 logger = create_logger('config', debug=True)
 db_file = None
+discord_oauth_id = None
+discord_oauth_secret = None
 discord_token = None
 spotify_client_id = None
 spotify_client_secret = None
@@ -55,6 +57,8 @@ if isfile('config.yml'):
 
             # Add optional config values
             enable_server = config_file['bot'].get('enable_server', False)
+            discord_oauth_id = config_file['bot'].get('discord_oauth_id', None)
+            discord_oauth_secret = config_file['bot'].get('discord_oauth_secret', None)
             if 'lastfm' in config_file:
                 lastfm_api_key = config_file['lastfm']['api_key']
                 lastfm_shared_secret = config_file['lastfm']['shared_secret']
@@ -69,6 +73,8 @@ if isfile('config.yml'):
 logger.info('Reading config from environment variables')
 db_file = environ.get('BLANCO_DB_FILE', db_file)
 discord_token = environ.get('BLANCO_TOKEN', discord_token)
+discord_oauth_id = environ.get('BLANCO_OAUTH_ID', discord_oauth_id)
+discord_oauth_secret = environ.get('BLANCO_OAUTH_SECRET', discord_oauth_secret)
 enable_server = environ.get('BLANCO_ENABLE_SERVER', 'false').lower() == 'true'
 lastfm_api_key = environ.get('BLANCO_LASTFM_KEY', lastfm_api_key)
 lastfm_shared_secret = environ.get('BLANCO_LASTFM_SECRET', lastfm_shared_secret)
@@ -122,12 +128,13 @@ if spotify_client_id is None:
     raise ValueError('No Spotify client ID specified')
 if spotify_client_secret is None:
     raise ValueError('No Spotify client secret specified')
+if enable_server and (discord_oauth_id is None or discord_oauth_secret is None):
+    raise ValueError('Discord OAuth ID and secret must be specified to enable server')
 
 # Print parsed config
 if debug_enabled:
     logger.debug(f'Parsed configuration:')
     logger.debug(f'  Database file: {db_file}')
-    logger.debug(f'  Server enabled: {enable_server}')
     logger.debug(f'  Discord token: {discord_token[:3]}...{discord_token[-3:]}')
     logger.debug(f'  Spotify client ID: {spotify_client_id[:3]}...{spotify_client_id[-3:]}')
     logger.debug(f'  Spotify client secret: {spotify_client_secret[:3]}...{spotify_client_secret[-3:]}')
@@ -137,6 +144,11 @@ if debug_enabled:
         logger.debug(f'  Last.fm shared secret: {lastfm_shared_secret[:3]}...{lastfm_shared_secret[-3:]}')
     else:
         logger.debug(f'  Last.fm integration disabled')
+    
+    logger.debug(f'  Webserver: {"enabled" if enable_server else "disabled"}')
+    if discord_oauth_id is not None and discord_oauth_secret is not None:
+        logger.debug(f'    - OAuth ID: {discord_oauth_id[:3]}...{discord_oauth_id[-3:]}')
+        logger.debug(f'    - OAuth secret: {discord_oauth_secret[:3]}...{discord_oauth_secret[-3:]}')
     
     logger.debug(f'  Lavalink nodes:')
     for node in lavalink_nodes.values():
