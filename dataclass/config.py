@@ -50,6 +50,7 @@ class Config:
     enable_server: bool
 
     # Optional
+    base_url: Optional[str] = None
     discord_oauth_id: Optional[str] = None
     discord_oauth_secret: Optional[str] = None
     lastfm_api_key: Optional[str] = None

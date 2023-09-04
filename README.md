@@ -47,8 +47,6 @@ The following table lists the environment variables that Blanco accepts:
 | ------------- | ----------- | ------ | --------- |
 | BLANCO_DB_FILE | Path to SQLite database file | String | ✅ |
 | BLANCO_TOKEN | Discord bot token | String | ✅ |
-| BLANCO_OAUTH_ID | Discord OAuth client ID | String | ✅ if `BLANCO_ENABLE_SERVER` is `true` |
-| BLANCO_OAUTH_SECRET | Discord OAuth client secret | String | ✅ if `BLANCO_ENABLE_SERVER` is `true` |
 | BLANCO_SPOTIFY_ID | Spotify client ID | String | ✅ |
 | BLANCO_SPOTIFY_SECRET | Spotify client secret | String | ✅ |
 | BLANCO_ENABLE_SERVER | Whether to enable the webserver | `true` or `false` | |
@@ -56,6 +54,14 @@ The following table lists the environment variables that Blanco accepts:
 | BLANCO_LASTFM_SECRET | Last.fm API shared secret | String | |
 | BLANCO_DEBUG | Whether to enable debug mode | `true` or `false` |  |
 | BLANCO_DEBUG_GUILDS | Guild IDs to register slash commands in when debug mode is enabled | Comma-separated list of integers |  |
+
+If `BLANCO_ENABLE_SERVER` is set to `true`, Blanco requires the following additional environment variables:
+
+| Variable name | Description | Type |
+| ------------- | ----------- | ------ |
+| BLANCO_BASE_URL | Webserver base URL | String |
+| BLANCO_OAUTH_ID | Discord OAuth client ID | String |
+| BLANCO_OAUTH_SECRET | Discord OAuth client secret | String |
 
 Additionally, Blanco expects the following environment variables to be set for each Lavalink node, where `n` in the variable name is an integer incrementing from 1:
 
@@ -76,13 +82,19 @@ Create an empty directory and create a file named `config.yml` in it, with the f
 bot:
   database: blanco.db
   discord_token: <your Discord bot token>
-  enable_server: false    # Optional
-  discord_oauth_id: <your Discord OAuth client ID>           # Required if enable_server is true
-  discord_oauth_secret: <your Discord OAuth client secret>   # Required if enable_server is true
+  debug: # Optional
+    enabled: true
+    guild_ids:
+      - 123456789012345678
+server: # Optional
+  enabled: false
+  base_url: http://localhost:8080
+  oauth_id: <your Discord OAuth client ID>
+  oauth_secret: <your Discord OAuth client secret>
 spotify:
   client_id: <your client id>
   client_secret: <your client secret>
-lastfm:                   # Optional
+lastfm: # Optional
   api_key: <your Last.fm API key>
   shared_secret: <your Last.fm API shared secret>
 lavalink:

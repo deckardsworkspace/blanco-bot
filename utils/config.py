@@ -8,12 +8,13 @@ from .logger import create_logger
 
 logger = create_logger('config', debug=True)
 db_file = None
-discord_oauth_id = None
-discord_oauth_secret = None
 discord_token = None
 spotify_client_id = None
 spotify_client_secret = None
 enable_server = False
+base_url = None
+discord_oauth_id = None
+discord_oauth_secret = None
 lastfm_api_key = None
 lastfm_shared_secret = None
 lavalink_nodes: Dict[str, LavalinkNode] = {}
@@ -56,9 +57,11 @@ if isfile('config.yml'):
                 lavalink_nodes[node['id']] = lavalink_node
 
             # Add optional config values
-            enable_server = config_file['bot'].get('enable_server', False)
-            discord_oauth_id = config_file['bot'].get('discord_oauth_id', None)
-            discord_oauth_secret = config_file['bot'].get('discord_oauth_secret', None)
+            if 'server' in config_file:
+                enable_server = config_file['server']['enabled']
+                base_url = config_file['server'].get('base_url', None)
+                discord_oauth_id = config_file['server'].get('oauth_id', None)
+                discord_oauth_secret = config_file['server'].get('oauth_secret', None)
             if 'lastfm' in config_file:
                 lastfm_api_key = config_file['lastfm']['api_key']
                 lastfm_shared_secret = config_file['lastfm']['shared_secret']
@@ -73,9 +76,6 @@ if isfile('config.yml'):
 logger.info('Reading config from environment variables')
 db_file = environ.get('BLANCO_DB_FILE', db_file)
 discord_token = environ.get('BLANCO_TOKEN', discord_token)
-discord_oauth_id = environ.get('BLANCO_OAUTH_ID', discord_oauth_id)
-discord_oauth_secret = environ.get('BLANCO_OAUTH_SECRET', discord_oauth_secret)
-enable_server = environ.get('BLANCO_ENABLE_SERVER', 'false').lower() == 'true'
 lastfm_api_key = environ.get('BLANCO_LASTFM_KEY', lastfm_api_key)
 lastfm_shared_secret = environ.get('BLANCO_LASTFM_SECRET', lastfm_shared_secret)
 spotify_client_id = environ.get('BLANCO_SPOTIFY_ID', spotify_client_id)
@@ -83,6 +83,11 @@ spotify_client_secret = environ.get('BLANCO_SPOTIFY_SECRET', spotify_client_secr
 if 'BLANCO_DEBUG' in environ:
     debug_enabled = environ['BLANCO_DEBUG'].lower() == 'true'
     debug_guild_ids = [int(id) for id in environ['BLANCO_DEBUG_GUILDS'].split(',')]
+if 'BLANCO_ENABLE_SERVER' in environ:
+    enable_server = environ['BLANCO_ENABLE_SERVER'].lower() == 'true'
+    base_url = environ.get('BLANCO_BASE_URL', base_url)
+    discord_oauth_id = environ.get('BLANCO_OAUTH_ID', discord_oauth_id)
+    discord_oauth_secret = environ.get('BLANCO_OAUTH_SECRET', discord_oauth_secret)
 
 # Parse Lavalink nodes from environment variables
 i = 1
@@ -128,8 +133,8 @@ if spotify_client_id is None:
     raise ValueError('No Spotify client ID specified')
 if spotify_client_secret is None:
     raise ValueError('No Spotify client secret specified')
-if enable_server and (discord_oauth_id is None or discord_oauth_secret is None):
-    raise ValueError('Discord OAuth ID and secret must be specified to enable server')
+if enable_server and (discord_oauth_id is None or discord_oauth_secret is None or base_url is None):
+    raise ValueError('Discord OAuth ID, secret, and base URL must be specified to enable server')
 
 # Print parsed config
 if debug_enabled:
@@ -146,8 +151,11 @@ if debug_enabled:
         logger.debug(f'  Last.fm integration disabled')
     
     logger.debug(f'  Webserver: {"enabled" if enable_server else "disabled"}')
-    if discord_oauth_id is not None and discord_oauth_secret is not None:
-        logger.debug(f'    - OAuth ID: {discord_oauth_id[:3]}...{discord_oauth_id[-3:]}')
+    if enable_server:
+        assert discord_oauth_id is not None
+        assert discord_oauth_secret is not None
+        logger.debug(f'    - Base URL: {base_url}')
+        logger.debug(f'    - OAuth ID: {str(discord_oauth_id)[:3]}...{str(discord_oauth_id)[-3:]}')
         logger.debug(f'    - OAuth secret: {discord_oauth_secret[:3]}...{discord_oauth_secret[-3:]}')
     
     logger.debug(f'  Lavalink nodes:')
@@ -167,6 +175,9 @@ config = Config(
     debug_enabled=debug_enabled,
     debug_guild_ids=debug_guild_ids,
     enable_server=enable_server,
+    base_url=base_url,
+    discord_oauth_id=discord_oauth_id,
+    discord_oauth_secret=discord_oauth_secret,
     lastfm_api_key=lastfm_api_key,
     lastfm_shared_secret=lastfm_shared_secret
 )
