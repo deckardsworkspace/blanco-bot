@@ -11,6 +11,10 @@ db_file = None
 discord_token = None
 spotify_client_id = None
 spotify_client_secret = None
+enable_server = False
+base_url = None
+lastfm_api_key = None
+lastfm_shared_secret = None
 lavalink_nodes: Dict[str, LavalinkNode] = {}
 debug_enabled = False
 debug_guild_ids = None
@@ -27,7 +31,7 @@ if isfile('config.yml'):
 
         # Get config values
         try:
-            # Read config from env vars first, then config.yml
+            # Read config from config.yml
             db_file = config_file['bot']['database']
             discord_token = config_file['bot']['discord_token']
             spotify_client_id = config_file['spotify']['client_id']
@@ -51,17 +55,25 @@ if isfile('config.yml'):
                 lavalink_nodes[node['id']] = lavalink_node
 
             # Add optional config values
+            enable_server = config_file['bot'].get('enable_server', False)
+            if 'lastfm' in config_file:
+                lastfm_api_key = config_file['lastfm']['api_key']
+                lastfm_shared_secret = config_file['lastfm']['shared_secret']
             if 'debug' in config_file['bot']:
                 debug_enabled = config_file['bot']['debug']['enabled']
                 debug_guild_ids = config_file['bot']['debug']['guild_ids']
         except KeyError as e:
-            raise ValueError(f'Required config missing from both config.yml and env: {e.args[0]}')
+            logger.warning(f'Config missing from config.yml: {e.args[0]}')
 
 
 # Override config from environment variables
 logger.info('Reading config from environment variables')
 db_file = environ.get('BLANCO_DB_FILE', db_file)
 discord_token = environ.get('BLANCO_TOKEN', discord_token)
+enable_server = environ.get('BLANCO_ENABLE_SERVER', 'false').lower() == 'true'
+base_url = environ.get('BLANCO_BASE_URL', base_url)
+lastfm_api_key = environ.get('BLANCO_LASTFM_KEY', lastfm_api_key)
+lastfm_shared_secret = environ.get('BLANCO_LASTFM_SECRET', lastfm_shared_secret)
 spotify_client_id = environ.get('BLANCO_SPOTIFY_ID', spotify_client_id)
 spotify_client_secret = environ.get('BLANCO_SPOTIFY_SECRET', spotify_client_secret)
 if 'BLANCO_DEBUG' in environ:
@@ -120,6 +132,14 @@ if debug_enabled:
     logger.debug(f'  Discord token: {discord_token[:3]}...{discord_token[-3:]}')
     logger.debug(f'  Spotify client ID: {spotify_client_id[:3]}...{spotify_client_id[-3:]}')
     logger.debug(f'  Spotify client secret: {spotify_client_secret[:3]}...{spotify_client_secret[-3:]}')
+    logger.debug(f'  Server enabled: {enable_server} (base URL: {base_url})')
+
+    if lastfm_api_key is not None and lastfm_shared_secret is not None:
+        logger.debug(f'  Last.fm API key: {lastfm_api_key[:3]}...{lastfm_api_key[-3:]}')
+        logger.debug(f'  Last.fm shared secret: {lastfm_shared_secret[:3]}...{lastfm_shared_secret[-3:]}')
+    else:
+        logger.debug(f'  Last.fm integration: disabled')
+    
     logger.debug(f'  Lavalink nodes:')
     for node in lavalink_nodes.values():
         logger.debug(f'    - {node.id} ({node.host}:{node.port})')
@@ -135,7 +155,11 @@ config = Config(
     spotify_client_secret=spotify_client_secret,
     lavalink_nodes=lavalink_nodes,
     debug_enabled=debug_enabled,
-    debug_guild_ids=debug_guild_ids
+    debug_guild_ids=debug_guild_ids,
+    enable_server=enable_server,
+    base_url=base_url,
+    lastfm_api_key=lastfm_api_key,
+    lastfm_shared_secret=lastfm_shared_secret
 )
 
 

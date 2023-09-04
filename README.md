@@ -49,6 +49,10 @@ The following table lists the environment variables that Blanco accepts:
 | BLANCO_TOKEN | Discord bot token | String | ✅ |
 | BLANCO_SPOTIFY_ID | Spotify client ID | String | ✅ |
 | BLANCO_SPOTIFY_SECRET | Spotify client secret | String | ✅ |
+| BLANCO_ENABLE_SERVER | Whether to enable the webserver | `true` or `false` | |
+| BLANCO_BASE_URL | Webserver base URL | String | ✅ if `BLANCO_ENABLE_SERVER` is `true` |
+| BLANCO_LASTFM_KEY | Last.fm API key | String | |
+| BLANCO_LASTFM_SECRET | Last.fm API shared secret | String | |
 | BLANCO_DEBUG | Whether to enable debug mode | `true` or `false` |  |
 | BLANCO_DEBUG_GUILDS | Guild IDs to register slash commands in when debug mode is enabled | Comma-separated list of integers |  |
 
@@ -71,9 +75,13 @@ Create an empty directory and create a file named `config.yml` in it, with the f
 bot:
   database: blanco.db
   discord_token: <your Discord bot token>
+  enable_server: false    # Optional
 spotify:
   client_id: <your client id>
   client_secret: <your client secret>
+lastfm:                   # Optional
+  api_key: <your Last.fm API key>
+  shared_secret: <your Last.fm API shared secret>
 lavalink:
   - id: main
     server: localhost

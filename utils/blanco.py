@@ -85,6 +85,7 @@ class BlancoBot(Bot):
     async def on_ready(self):
         self._logger.info(f'Logged in as {self.user}')
         self.load_extension('cogs')
+        self.load_extension('server')
 
         if self.debug:
             self._logger.warn('Debug mode enabled')
