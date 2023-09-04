@@ -6,15 +6,25 @@
     <main class="w-full max-w-[480px]">
         <!-- Bot name -->
         <div class="flex w-full items-center justify-between">
-            <h1 class="text-3xl font-mono font-bold">Blanco</h1>
-            <img src="/static/images/logo.png"
-                alt="Blanco bot logo"
-                class="w-12 h-12 rounded-full"
+            <div id="logo" class="flex items-center justify-start">
+                <img src="/static/images/logo.png"
+                    alt="Blanco bot logo"
+                    class="w-12 h-12 mr-4 rounded-full"
+                >
+                <h1 class="text-3xl font-mono font-bold">Blanco</h1>
+            </div>
+            <a href="/login" id="login"
+                class="text-sm text-blue font-bold no-underline
+                    px-4 py-3 border border-blue rounded-md
+                    hover:border-r-4 hover:border-b-4 active:border-r-2 active:border-b-2"
             >
+                Log in
+                <i class="fa-brands fa-discord"></i>
+            </a>
         </div>
 
         <!-- Bot description -->
-        <div class="mt-4">
+        <div class="mt-6">
             <p>No-frills Discord music bot built with Docker.</p>
             <p class="my-2">
                 <a href="https://github.com/jareddantis-bots/blanco-bot#deployment">Start a container</a>,
