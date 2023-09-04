@@ -1,9 +1,9 @@
 # Development webserver
 from database import Database
+from utils.config import config
 from server.main import run_app
 from subprocess import run
 import asyncio
-import sys
 import threading
 
 
@@ -13,14 +13,10 @@ def run_tailwind():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print(f'Usage: python {sys.argv[0]} <path to database>')
-        sys.exit(1)
-    
     thread = threading.Thread(target=run_tailwind)
     thread.start()
 
-    db = Database(sys.argv[1])
+    db = Database(config.db_file)
     loop = asyncio.get_event_loop()
-    loop.create_task(run_app(db, debug=True))
+    loop.create_task(run_app(db, config))
     loop.run_forever()

@@ -7,6 +7,7 @@ import aiohttp_jinja2
 import jinja2
 if TYPE_CHECKING:
     from database import Database
+    from dataclass.config import Config
 
 
 class AccessLogger(AbstractAccessLogger):
@@ -15,13 +16,14 @@ class AccessLogger(AbstractAccessLogger):
                          f' {request.path} (took {time*1000:.2f} ms)')
 
 
-async def run_app(db: 'Database', debug: bool):
+async def run_app(db: 'Database', config: 'Config'):
     # Create logger
-    logger = create_logger('server', debug=debug)
+    logger = create_logger('server', debug=config.debug_enabled)
 
     # Create app
     app = web.Application()
     app['db'] = db
+    app['config'] = config
     aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('server/templates'))
     setup_routes(app)
     runner = web.AppRunner(app, access_log=logger, access_log_class=AccessLogger)
