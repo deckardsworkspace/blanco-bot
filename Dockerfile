@@ -14,11 +14,10 @@ FROM python:3.11 AS dependencies
 RUN apt-get update && apt-get install -y build-essential
 
 # Install pip requirements under virtualenv
-RUN pip install --upgrade pip wheel
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:${PATH}"
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --upgrade pip wheel && pip install -r requirements.txt
 
 
 FROM python:3.11-slim AS main
