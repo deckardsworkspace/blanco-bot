@@ -9,4 +9,5 @@ def setup_routes(app: 'Application'):
     app.router.add_get('/dashboard', dashboard)
     app.router.add_get('/discordoauth', discordoauth)
     app.router.add_get('/login', login)
+    app.router.add_get('/logout', logout)
     app.router.add_static('/static/', path='server/static', name='static')
