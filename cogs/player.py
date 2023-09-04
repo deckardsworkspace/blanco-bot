@@ -1,11 +1,10 @@
-from asyncio import sleep, TimeoutError
-from nextcord import ClientUser, Color, Guild, Interaction, Member, slash_command, SlashOption, VoiceState
+from asyncio import TimeoutError
+from nextcord import Color, Guild, Interaction, Member, slash_command, SlashOption, VoiceState
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
 from typing import Optional, TYPE_CHECKING
 from dataclass.custom_embed import CustomEmbed
-from utils.config import get_debug_guilds
 from utils.exceptions import EndOfQueueError, JockeyException, JockeyError
 from utils.jockey import Jockey
 from utils.jockey_helpers import create_error_embed, create_success_embed, list_chunks
@@ -13,7 +12,6 @@ from utils.blanco import BlancoBot
 from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import *
-from utils.string_util import human_readable_time
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
 

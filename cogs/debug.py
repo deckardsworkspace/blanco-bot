@@ -1,5 +1,4 @@
 from dataclass.custom_embed import CustomEmbed
-from datetime import timedelta
 from nextcord import Color, Interaction, slash_command, SlashOption, PartialMessageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
