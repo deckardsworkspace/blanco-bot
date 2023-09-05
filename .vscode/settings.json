@@ -3,5 +3,6 @@
     "files.exclude": {
         "**/__pycache__": true
     },
-    "editor.tabSize": 4
+    "editor.tabSize": 4,
+    "css.lint.unknownAtRules": "ignore"
 }
