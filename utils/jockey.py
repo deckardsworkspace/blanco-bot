@@ -273,6 +273,14 @@ class Jockey(Player['BlancoBot']):
         if track.lavalink_track is not None:
             is_stream = track.lavalink_track.stream
         
+        # Check if the web server and Last.fm integration are enabled
+        assert self._bot.config is not None
+        server_enabled = self._bot.config.enable_server
+        lastfm_enabled = False
+        if server_enabled:
+            assert self._bot.config.base_url is not None
+            lastfm_enabled = self._bot.config.lastfm_api_key and self._bot.config.lastfm_shared_secret
+        
         embed = CustomEmbed(
             title='Now streaming' if is_stream else 'Now playing',
             description=[
@@ -281,7 +289,8 @@ class Jockey(Player['BlancoBot']):
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
                 ':warning: Could not find a perfect match for this track.' if track.is_imperfect else '',
-                f'Playing the [closest match]({current.uri}) instead.' if track.is_imperfect else ''
+                f'Playing the [closest match]({current.uri}) instead.' if track.is_imperfect else '',
+                f'**New:** [Link your Last.fm account]({self._bot.config.base_url}) to scrobble as you play :sparkles:' if lastfm_enabled else ''
             ],
             footer=f'Track {self.current_index + 1} of {len(self._queue)}',
             color=Color.teal(),
