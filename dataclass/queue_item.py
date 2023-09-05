@@ -31,6 +31,9 @@ class QueueItem:
     # Imperfect match - True when ISRC is present but no match found on YouTube
     is_imperfect: Optional[bool] = False
 
+    # When the track started playing
+    start_time: Optional[int] = None
+
     # Get title and artist
     def get_details(self) -> Tuple[str, str]:
         if self.title is not None:

@@ -5,16 +5,17 @@ from nextcord import Activity, ActivityType, Interaction, PartialMessageable, Te
 from nextcord.ext.commands import Bot
 from nextcord.ext.tasks import loop
 from typing import Dict, Optional, TYPE_CHECKING, Union
-from utils.exceptions import EndOfQueueError
-from utils.jockey_helpers import create_error_embed
-from utils.logger import create_logger
-from utils.spotify_client import Spotify
+from .exceptions import EndOfQueueError
+from .jockey_helpers import create_error_embed
+from .logger import create_logger
+from .scrobbler import Scrobbler
+from .spotify_client import Spotify
 from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
     from dataclass.config import Config
     from logging import Logger
     from mafic import Node, TrackStartEvent, TrackEndEvent
-    from utils.jockey import Jockey
+    from .jockey import Jockey
 
 
 StatusChannel = Union[PartialMessageable, VoiceChannel, TextChannel, Thread]
@@ -36,6 +37,9 @@ class BlancoBot(Bot):
         # Loggers
         self._logger = create_logger(self.__class__.__name__, debug=True)
         self._jockey_logger = create_logger('jockey', debug=True)
+
+        # Scrobblers per user
+        self._scrobblers: Dict[int, 'Scrobbler'] = {}
     
     @property
     def config(self) -> Optional['Config']:
@@ -142,6 +146,26 @@ class BlancoBot(Bot):
         else:
             self._logger.error(f'Unhandled {event.reason} in {event.player.guild.name} for `{event.track.title}\'')
     
+    #####################
+    # Utility functions #
+    #####################
+
+    def get_scrobbler(self, user_id: int) -> Optional['Scrobbler']:
+        # Check if a scrobbler already exists
+        if user_id in self._scrobblers:
+            return self._scrobblers[user_id]
+        
+        # Check if user is authenticated with Last.fm
+        creds = self.db.get_lastfm_credentials(user_id)
+        if creds is None:
+            return None
+        
+        # Create scrobbler
+        assert self._config is not None
+        scrobbler = Scrobbler(self._config, creds)
+        self._scrobblers[user_id] = scrobbler
+        return self._scrobblers.get(user_id, None)
+
     def set_status_channel(self, guild_id: int, channel: 'StatusChannel'):
         # If channel is None, remove the status channel
         if channel is None:

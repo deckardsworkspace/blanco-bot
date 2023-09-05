@@ -2,6 +2,7 @@ from collections import deque
 from mafic import Player, PlayerNotConnected
 from nextcord import Message, StageChannel, VoiceChannel
 from random import shuffle
+from time import time
 from typing import Deque, Optional, TYPE_CHECKING
 from views.now_playing import NowPlayingView
 from .exceptions import *
@@ -139,15 +140,38 @@ class Jockey(Player['BlancoBot']):
             self._queue_i = current
             return False
         else:
+            # Scrobble if possible
+            last_track = self._queue[current]
+            time_now = int(time())
+            try:
+                duration = last_track.duration
+                if last_track.lavalink_track is not None:
+                    duration = last_track.lavalink_track.length
+
+                if last_track.start_time is not None and duration is not None:
+                    # Check if track is longer than 30 seconds
+                    if duration < 30000:
+                        raise ValueError('Track is too short')
+
+                    # Check if enough time has passed (1/2 duration or 4 min, whichever is less)
+                    elapsed_ms = (time_now - last_track.start_time) * 1000
+                    if elapsed_ms < min(duration // 2, 240000):
+                        raise ValueError('Not enough time has passed')
+                else:
+                    # Default to current time for timestamp
+                    last_track.start_time = time_now
+            except ValueError as e:
+                self._logger.debug(f'Failed to scrobble `{last_track.title}\': {e.args[0]}')
+            else:
+                self._scrobble(last_track)
+            
             return result
     
     async def _play(self, item: QueueItem) -> bool:
-        if item.lavalink_track is not None:
-            # Track has already been processed by Lavalink so just play it directly
-            await self.play(item.lavalink_track)
-        else:
+        results = []
+
+        if item.lavalink_track is None:
             # Use ISRC if present
-            results = []
             if item.isrc is not None:
                 # Try to match ISRC on Deezer if enabled
                 assert self._bot.config is not None
@@ -181,16 +205,34 @@ class Jockey(Player['BlancoBot']):
                     self._logger.error(f'{e.message}')
                     return False
 
-            # Try to add first result directly to Lavalink queue
-            await self.play(results[0].lavalink_track)
+            # Save Lavalink result
+            item.lavalink_track = results[0].lavalink_track
+
+        # Play track
+        await self.play(item.lavalink_track)
 
         # We don't want to play if the player is not idle
         # as that will effectively skip the current track.
         if not self.playing:
             await self.resume()
 
+        # Save start time for scrobbling
+        item.start_time = int(time())
+
         return True
 
+    def _scrobble(self, item: QueueItem):
+        if not isinstance(self.channel, VoiceChannel):
+            return
+        
+        # Scrobble for every user
+        for member in self.channel.members:
+            if not member.bot:
+                scrobbler = self._bot.get_scrobbler(member.id)
+                if scrobbler is not None:
+                    self._logger.debug(f'Scrobbling `{item.title}\' for {member.display_name}')
+                    scrobbler.scrobble(item)
+    
     def now_playing(self, current: Optional['Track'] = None) -> 'Embed':
         """
         Returns information about the currently playing track.
@@ -388,11 +430,12 @@ class Jockey(Player['BlancoBot']):
                         # If we reached this point,
                         # we are at one of either ends of the queue,
                         # and the user was expecting to skip past it.
-                        await restore_controls()
                         if not auto:
+                            await restore_controls()
                             if forward:
                                 raise EndOfQueueError('Reached the end of the queue')
                             raise EndOfQueueError('Reached the beginning of the queue')
+                        
                         return
                 else:
                     next_i += 1 if forward else -1
