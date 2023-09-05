@@ -3,7 +3,7 @@ from aiohttp_session import get_session
 from base64 import b64encode
 from dataclass.oauth import OAuth
 from time import time
-from .constants import *
+from utils.constants import SPOTIFY_ACCOUNTS_BASE_URL, SPOTIFY_API_BASE_URL, USER_AGENT
 import requests
 
 

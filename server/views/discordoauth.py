@@ -2,7 +2,7 @@ from aiohttp import web
 from aiohttp_session import get_session
 from dataclass.oauth import OAuth
 from time import time
-from .constants import DISCORD_API_BASE_URL, USER_AGENT
+from utils.constants import DISCORD_API_BASE_URL, USER_AGENT
 import requests
 
 

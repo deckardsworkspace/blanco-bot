@@ -2,7 +2,7 @@ from aiohttp import web
 from aiohttp_session import get_session
 from dataclass.oauth import LastfmAuth
 from hashlib import md5
-from .constants import LASTFM_API_BASE_URL, USER_AGENT
+from utils.constants import LASTFM_API_BASE_URL, USER_AGENT
 import requests
 
 
