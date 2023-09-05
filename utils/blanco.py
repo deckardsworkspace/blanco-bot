@@ -153,6 +153,7 @@ class BlancoBot(Bot):
     def get_scrobbler(self, user_id: int) -> Optional['Scrobbler']:
         # Check if a scrobbler already exists
         if user_id in self._scrobblers:
+            self._logger.debug(f'Using cached scrobbler for user {user_id}')
             return self._scrobblers[user_id]
         
         # Check if user is authenticated with Last.fm
@@ -164,7 +165,8 @@ class BlancoBot(Bot):
         assert self._config is not None
         scrobbler = Scrobbler(self._config, creds)
         self._scrobblers[user_id] = scrobbler
-        return self._scrobblers.get(user_id, None)
+        self._logger.debug(f'Created scrobbler for user {user_id}')
+        return scrobbler
 
     def set_status_channel(self, guild_id: int, channel: 'StatusChannel'):
         # If channel is None, remove the status channel
