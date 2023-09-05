@@ -39,12 +39,27 @@
             <div class="flex items-start justify-between">
                 <div>
                     <h2 class="mb-2">Spotify</h2>
+                    {% if spotify_logged_in %}
+                    <p class="max-w-md mb-2">
+                        <i class="fa-solid fa-check"></i>
+                        Logged in as <strong>{{ spotify_username }}</strong>
+                    </p>
+                    {% endif %}
                     <p class="max-w-md">
                         Linking your Spotify account to Blanco lets you do cool things
                         like add items to your Liked Songs as you listen and play your
                         playlists without the URL.
                     </p>
                 </div>
+                {% if spotify_logged_in %}
+                <a href="/unlink?service=spotify"
+                    class="text-md text-sienna font-bold no-underline
+                        px-4 py-3 border border-sienna rounded-md transition-all hover:mt-[-4px]
+                        hover:border-r-4 hover:border-b-4 active:border-r-2 active:border-b-2"
+                >
+                    Unlink account
+                </a>
+                {% else %}
                 <a href="/linkspotify"
                     class="text-md text-black font-bold no-underline
                         px-4 py-3 border border-black rounded-md transition-all hover:mt-[-4px]
@@ -53,6 +68,7 @@
                     Log in with
                     <i class="fa-brands fa-spotify"></i>
                 </a>
+                {% endif %}
             </div>
 
             <!-- Last.fm -->

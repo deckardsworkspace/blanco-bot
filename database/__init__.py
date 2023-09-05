@@ -131,7 +131,20 @@ class Database:
         row = self._cur.fetchone()
         if row is None:
             return None
-        return OAuth(*row)
+        return OAuth(
+            user_id=row[0],
+            username=row[1],
+            access_token=row[2],
+            refresh_token=row[3],
+            expires_at=row[4]
+        )
+    
+    def delete_oauth(self, provider: str, user_id: int):
+        """
+        Delete OAuth2 data for a user from the database.
+        """
+        self._cur.execute(f'DELETE FROM {provider}_oauth WHERE user_id = {user_id}')
+        self._con.commit()
     
     def set_spotify_scopes(self, user_id: int, scopes: List[str]):
         """

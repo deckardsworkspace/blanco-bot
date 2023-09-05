@@ -20,7 +20,7 @@ def run(con: 'Connection'):
             access_token TEXT NOT NULL,
             refresh_token TEXT NOT NULL,
             expires_at INTEGER NOT NULL,
-            scopes TEXT NOT NULL
+            scopes TEXT NOT NULL DEFAULT ''
         )
     ''')
     con.commit()

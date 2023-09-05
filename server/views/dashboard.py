@@ -19,7 +19,15 @@ async def dashboard(request: web.Request):
     if user is None:
         return web.HTTPFound('/login')
     
+    # Get Spotify info
+    spotify_username = None
+    spotify: OAuth = db.get_oauth('spotify', session['user_id'])
+    if spotify is not None:
+        spotify_username = spotify.username
+    
     # Render template
     return {
-        'username': user.username
+        'username': user.username,
+        'spotify_logged_in': spotify is not None,
+        'spotify_username': spotify_username
     }
