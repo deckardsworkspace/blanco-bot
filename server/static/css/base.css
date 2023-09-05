@@ -4,16 +4,19 @@
         @apply font-bold;
     }
     h1 {
-        @apply text-5xl;
+        @apply text-3xl md:text-5xl;
     }
     h2 {
-        @apply text-[2rem];
+        @apply text-xl md:text-[2rem];
     }
     h3 {
-        @apply text-2xl;
+        @apply text-lg md:text-2xl;
     }
     a {
-        @apply font-bold text-sienna underline;
+        @apply text-sm md:text-base font-bold text-sienna underline;
+    }
+    p {
+        @apply text-sm md:text-base;
     }
     body {
         @apply bg-eggshell;

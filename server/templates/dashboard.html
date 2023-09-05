@@ -13,15 +13,15 @@
                 alt="Blanco bot logo"
                 class="w-8 h-8 mr-4 rounded-full"
             >
-            <h1 class="text-xl font-mono font-bold">Blanco</h1>
+            <h1 class="text-xl font-mono font-bold hidden md:block">Blanco</h1>
         </div>
 
         <!-- User -->
-        <div id="user" class="flex items-center justify-end">
-            <p class="mr-4 text-sm">Hi, <strong>{{ username }}</strong></p>
+        <div id="user" class="grid grid-cols-2 gap-2 items-center relative">
+            <p class="text-sm">Hi, <strong>{{ username }}</strong></p>
             <a href="/logout" id="logout"
-                class="text-sm text-blue font-bold no-underline transition-all
-                    px-3 py-2 border border-blue rounded-md hover:mt-[-4px] hover:ml-[-4px]
+                class="text-sm text-blue font-bold no-underline absolute right-0
+                    px-3 py-2 border border-blue rounded-md transition-all block
                     hover:border-r-4 hover:border-b-4 active:border-r-2 active:border-b-2"
             >
                 Log out
@@ -33,19 +33,19 @@
     <main class="mt-12 mb-8">
         <!-- Account linking -->
         <section>
-            <h1 class="mb-8">Linked accounts</h1>
+            <h1 class="mb-4 md:mb-8">Linked accounts</h1>
 
             <!-- Spotify -->
-            <div class="flex items-start justify-between">
+            <div class="md:flex items-start justify-between">
                 <div>
-                    <h2 class="mb-2">Spotify</h2>
+                    <h2 class="mb-2 md:mb-4">Spotify</h2>
                     {% if spotify_logged_in %}
                     <p class="max-w-md mb-2">
-                        <i class="fa-solid fa-check"></i>
+                        <i class="fa-solid fa-check text-green-600"></i>
                         Logged in as <strong>{{ spotify_username }}</strong>
                     </p>
                     {% endif %}
-                    <p class="max-w-md">
+                    <p class="max-w-md mb-8 md:mb-0">
                         Linking your Spotify account to Blanco lets you do cool things
                         like add items to your Liked Songs as you listen and play your
                         playlists without the URL.
@@ -72,16 +72,16 @@
             </div>
 
             <!-- Last.fm -->
-            <div class="flex items-start justify-between mt-8 mb-2">
+            <div class="md:flex items-start justify-between mt-10 md:mt-8 mb-2">
                 <div>
-                    <h2 class="mb-2">Last.fm</h2>
+                    <h2 class="mb-2 md:mb-4">Last.fm</h2>
                     {% if lastfm_logged_in %}
                     <p class="max-w-md mb-2">
-                        <i class="fa-solid fa-check"></i>
+                        <i class="fa-solid fa-check text-green-600"></i>
                         Logged in as <strong>{{ lastfm_username }}</strong>
                     </p>
                     {% endif %}
-                    <p class="max-w-md">
+                    <p class="max-w-md mb-8 md:mb-0">
                         Linking your Last.fm account to Blanco lets you
                         scrobble compatible tracks as you listen.
                     </p>
@@ -109,14 +109,20 @@
 
         <!-- Account management -->
         <section class="mt-12">
-            <h1 class="mb-8">Delete account</h1>
+            <h1 class="mb-4 md:mb-8">Manage account</h1>
 
-            <div class="flex items-start justify-between">
-                <p class="max-w-md">
-                    <strong>This is irreversible!</strong> Blanco will delete linked
-                    accounts and your Discord login data, but you will have to unlink
-                    Blanco from Spotify and Last.fm yourself.
-                </p>
+            <div class="md:flex items-start justify-between">
+                <div class="max-w-md mb-8 md:mb-0">
+                    <h2 class="mb-2 md:mb-4">Delete account</h2>
+                    <p class="mb-2">
+                        This will delete your linked accounts and login data,
+                        but you will have to unlink Blanco from your Spotify and Last.fm
+                        account pages yourself.
+                    </p>
+                    <p>
+                        <strong>This is irreversible and will not require confirmation!</strong>
+                    </p>
+                </div>
                 <a href="/deleteaccount"
                     class="text-md text-sienna font-bold no-underline
                         px-4 py-3 border border-sienna rounded-md transition-all hover:mt-[-4px]
