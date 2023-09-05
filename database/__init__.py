@@ -1,4 +1,4 @@
-from dataclass.oauth import OAuth
+from dataclass.oauth import OAuth, LastfmAuth
 from typing import List, Optional
 from utils.logger import create_logger
 from .migrations import run_migrations
@@ -138,6 +138,33 @@ class Database:
             refresh_token=row[3],
             expires_at=row[4]
         )
+
+    def set_lastfm_credentials(self, credentials: LastfmAuth):
+        """
+        Save Last.fm credentials for a user.
+        """
+        self._cur.execute(f'''
+            INSERT OR REPLACE INTO lastfm_oauth (
+                user_id,
+                username,
+                session_key
+            ) VALUES (
+                {credentials.user_id},
+                "{credentials.username}",
+                "{credentials.session_key}"
+            )
+        ''')
+        self._con.commit()
+
+    def get_lastfm_credentials(self, user_id: int) -> Optional[LastfmAuth]:
+        """
+        Get Last.fm credentials for a user.
+        """
+        self._cur.execute(f'SELECT * FROM lastfm_oauth WHERE user_id = {user_id}')
+        row = self._cur.fetchone()
+        if row is None:
+            return None
+        return LastfmAuth(*row)
     
     def delete_oauth(self, provider: str, user_id: int):
         """

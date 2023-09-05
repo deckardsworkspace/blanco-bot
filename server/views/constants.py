@@ -7,6 +7,12 @@ DISCORD_API_BASE_URL = URL.build(
     path='/api/v10'
 )
 
+LASTFM_API_BASE_URL = URL.build(
+    scheme='https',
+    host='ws.audioscrobbler.com',
+    path='/2.0'
+)
+
 SPOTIFY_ACCOUNTS_BASE_URL = URL.build(
     scheme='https',
     host='accounts.spotify.com',

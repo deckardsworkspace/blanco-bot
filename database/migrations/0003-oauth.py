@@ -23,4 +23,11 @@ def run(con: 'Connection'):
             scopes TEXT NOT NULL DEFAULT ''
         )
     ''')
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS lastfm_oauth (
+            user_id INTEGER PRIMARY KEY NOT NULL,
+            username TEXT NOT NULL,
+            session_key TEXT NOT NULL
+        )
+    ''')
     con.commit()
