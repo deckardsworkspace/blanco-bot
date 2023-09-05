@@ -142,7 +142,7 @@ Then point the bot to the database file path by setting either the `BLANCO_DB_FI
 
 Blanco comes in a Docker image, so you do not have to install anything aside from Docker. All of the dependencies are included in the Docker image, which has been tested on Linux hosts using Docker CE, and on Windows and macOS hosts using Docker Desktop.
 
-Aside from `linux/amd64`, the bot image is built with both `linux/arm/v7` and `linux/arm64` support, so you can, for instance, run the bot on a Raspberry Pi or a Mac with Apple silicon with reasonable performance.
+Aside from `linux/amd64`, the bot image is also built with `linux/arm64/v8` support, so you can run the bot on a Raspberry Pi 3B+ or a Mac with Apple silicon with reasonable performance. `linux/armv7` images are no longer available starting with Release 0.4.0, but you are welcome to deploy Blanco without Docker if you need to run it on a Raspberry Pi 2 or older.
 
 Make sure you followed [Prerequisites](#prerequisites), then create a `docker-compose.yml` file in the same folder with the following contents:
 
