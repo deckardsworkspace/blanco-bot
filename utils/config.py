@@ -12,6 +12,7 @@ discord_token = None
 spotify_client_id = None
 spotify_client_secret = None
 enable_server = False
+server_port = 8080
 base_url = None
 discord_oauth_id = None
 discord_oauth_secret = None
@@ -59,6 +60,7 @@ if isfile('config.yml'):
             # Add optional config values
             if 'server' in config_file:
                 enable_server = config_file['server']['enabled']
+                server_port = config_file['server'].get('port', 8080)
                 base_url = config_file['server'].get('base_url', None)
                 discord_oauth_id = config_file['server'].get('oauth_id', None)
                 discord_oauth_secret = config_file['server'].get('oauth_secret', None)
@@ -85,6 +87,7 @@ if 'BLANCO_DEBUG' in environ:
     debug_guild_ids = [int(id) for id in environ['BLANCO_DEBUG_GUILDS'].split(',')]
 if 'BLANCO_ENABLE_SERVER' in environ:
     enable_server = environ['BLANCO_ENABLE_SERVER'].lower() == 'true'
+    server_port = int(environ.get('BLANCO_SERVER_PORT', server_port))
     base_url = environ.get('BLANCO_BASE_URL', base_url)
     discord_oauth_id = environ.get('BLANCO_OAUTH_ID', discord_oauth_id)
     discord_oauth_secret = environ.get('BLANCO_OAUTH_SECRET', discord_oauth_secret)
@@ -154,6 +157,7 @@ if debug_enabled:
     if enable_server:
         assert discord_oauth_id is not None
         assert discord_oauth_secret is not None
+        logger.debug(f'    - Listening on port {server_port}')
         logger.debug(f'    - Base URL: {base_url}')
         logger.debug(f'    - OAuth ID: {str(discord_oauth_id)[:3]}...{str(discord_oauth_id)[-3:]}')
         logger.debug(f'    - OAuth secret: {discord_oauth_secret[:3]}...{discord_oauth_secret[-3:]}')
@@ -175,6 +179,7 @@ config = Config(
     debug_enabled=debug_enabled,
     debug_guild_ids=debug_guild_ids,
     enable_server=enable_server,
+    server_port=server_port,
     base_url=base_url,
     discord_oauth_id=discord_oauth_id,
     discord_oauth_secret=discord_oauth_secret,

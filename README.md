@@ -55,13 +55,16 @@ The following table lists the environment variables that Blanco accepts:
 | BLANCO_DEBUG | Whether to enable debug mode | `true` or `false` |  |
 | BLANCO_DEBUG_GUILDS | Guild IDs to register slash commands in when debug mode is enabled | Comma-separated list of integers |  |
 
-If `BLANCO_ENABLE_SERVER` is set to `true`, Blanco requires the following additional environment variables:
+If `BLANCO_ENABLE_SERVER` is set to `true`, Blanco expects the following additional environment variables:
 
-| Variable name | Description | Type |
-| ------------- | ----------- | ------ |
-| BLANCO_BASE_URL | Webserver base URL | String |
-| BLANCO_OAUTH_ID | Discord OAuth client ID | String |
-| BLANCO_OAUTH_SECRET | Discord OAuth client secret | String |
+| Variable name | Description | Type | Required? |
+| ------------- | ----------- | ------ | --------- |
+| BLANCO_SERVER_PORT | Port that the webserver listens on | Integer | |
+| BLANCO_BASE_URL | Webserver base URL | String | ✅ |
+| BLANCO_OAUTH_ID | Discord OAuth client ID | String | ✅ |
+| BLANCO_OAUTH_SECRET | Discord OAuth client secret | String | ✅ |
+
+`BLANCO_SERVER_PORT` defaults to `8080`. Having this configurable is especially useful when running Blanco in host networking mode, e.g., when running Lavalink and Blanco in the same Docker host with IPv6 support enabled.
 
 Additionally, Blanco expects the following environment variables to be set for each Lavalink node, where `n` in the variable name is an integer incrementing from 1:
 
@@ -88,6 +91,7 @@ bot:
       - 123456789012345678
 server: # Optional
   enabled: false
+  port: 8080
   base_url: http://localhost:8080
   oauth_id: <your Discord OAuth client ID>
   oauth_secret: <your Discord OAuth client secret>

@@ -40,7 +40,7 @@ async def run_app(db: 'Database', config: 'Config'):
     # Run app
     runner = web.AppRunner(app, access_log=logger, access_log_class=AccessLogger)
     await runner.setup()
-    site = web.TCPSite(runner)
+    site = web.TCPSite(runner, port=config.server_port)
     await site.start()
 
     logger.info(f'Web server started')
