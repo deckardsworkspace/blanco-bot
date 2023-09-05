@@ -45,7 +45,8 @@ async def spotifyoauth(request: web.Request):
         },
         headers={
             'Authorization': f'Basic {b64encode(f"{oauth_id}:{oauth_secret}".encode()).decode()}',
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': USER_AGENT
         }
     )
     try:
@@ -58,7 +59,8 @@ async def spotifyoauth(request: web.Request):
     user_info = requests.get(
         str(SPOTIFY_API_BASE_URL / 'me'),
         headers={
-            'Authorization': f'Bearer {parsed["access_token"]}'
+            'Authorization': f'Bearer {parsed["access_token"]}',
+            'User-Agent': USER_AGENT
         }
     )
     try:

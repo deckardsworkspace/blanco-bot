@@ -2,7 +2,7 @@ from aiohttp import web
 from aiohttp_session import get_session
 from dataclass.oauth import OAuth
 from time import time
-from .constants import *
+from .constants import DISCORD_API_BASE_URL, USER_AGENT
 import requests
 
 
@@ -42,7 +42,8 @@ async def discordoauth(request: web.Request):
             'redirect_uri': f'{base_url}/discordoauth'
         },
         headers={
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': USER_AGENT
         }
     )
     try:
@@ -55,7 +56,8 @@ async def discordoauth(request: web.Request):
     user_info = requests.get(
         str(DISCORD_API_BASE_URL / 'users/@me'),
         headers={
-            'Authorization': f'Bearer {parsed["access_token"]}'
+            'Authorization': f'Bearer {parsed["access_token"]}',
+            'User-Agent': USER_AGENT
         }
     )
     try:

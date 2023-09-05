@@ -1,6 +1,8 @@
 from yarl import URL
 
 
+USER_AGENT = 'blanco-bot/0.4.0 ( https://blanco.dantis.me )'
+
 DISCORD_API_BASE_URL = URL.build(
     scheme='https',
     host='discord.com',

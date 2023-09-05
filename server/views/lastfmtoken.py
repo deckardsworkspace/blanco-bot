@@ -2,7 +2,7 @@ from aiohttp import web
 from aiohttp_session import get_session
 from dataclass.oauth import LastfmAuth
 from hashlib import md5
-from .constants import LASTFM_API_BASE_URL
+from .constants import LASTFM_API_BASE_URL, USER_AGENT
 import requests
 
 
@@ -47,7 +47,12 @@ async def lastfm_token(request: web.Request):
     })
 
     # Get response
-    response = requests.get(str(url))
+    response = requests.get(
+        str(url),
+        headers={
+            'User-Agent': USER_AGENT
+        }
+    )
     try:
         response.raise_for_status()
     except requests.HTTPError as e:
