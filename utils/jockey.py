@@ -141,29 +141,7 @@ class Jockey(Player['BlancoBot']):
             return False
         else:
             # Scrobble if possible
-            last_track = self._queue[current]
-            time_now = int(time())
-            try:
-                duration = last_track.duration
-                if last_track.lavalink_track is not None:
-                    duration = last_track.lavalink_track.length
-
-                if last_track.start_time is not None and duration is not None:
-                    # Check if track is longer than 30 seconds
-                    if duration < 30000:
-                        raise ValueError('Track is too short')
-
-                    # Check if enough time has passed (1/2 duration or 4 min, whichever is less)
-                    elapsed_ms = (time_now - last_track.start_time) * 1000
-                    if elapsed_ms < min(duration // 2, 240000):
-                        raise ValueError('Not enough time has passed')
-                else:
-                    # Default to current time for timestamp
-                    last_track.start_time = time_now
-            except ValueError as e:
-                self._logger.debug(f'Failed to scrobble `{last_track.title}\': {e.args[0]}')
-            else:
-                self._scrobble(last_track)
+            self._scrobble(self._queue[current])
             
             return result
     
@@ -225,6 +203,33 @@ class Jockey(Player['BlancoBot']):
         if not isinstance(self.channel, VoiceChannel):
             return
         
+        # Check if scrobbling is enabled
+        assert self._bot.config is not None
+        if not self._bot.config.lastfm_api_key or not self._bot.config.lastfm_shared_secret:
+            return
+        
+        # Check if track can be scrobbled
+        time_now = int(time())
+        try:
+            duration = item.duration
+            if item.lavalink_track is not None:
+                duration = item.lavalink_track.length
+
+            if item.start_time is not None and duration is not None:
+                # Check if track is longer than 30 seconds
+                if duration < 30000:
+                    raise ValueError('Track is too short')
+
+                # Check if enough time has passed (1/2 duration or 4 min, whichever is less)
+                elapsed_ms = (time_now - item.start_time) * 1000
+                if elapsed_ms < min(duration // 2, 240000):
+                    raise ValueError('Not enough time has passed')
+            else:
+                # Default to current time for timestamp
+                item.start_time = time_now
+        except ValueError as e:
+            self._logger.warning(f'Failed to scrobble `{item.title}\': {e.args[0]}')
+
         # Scrobble for every user
         for member in self.channel.members:
             if not member.bot:
@@ -427,14 +432,17 @@ class Jockey(Player['BlancoBot']):
                     if self.is_looping_all:
                         next_i = 0 if forward else self.queue_size - 1
                     else:
-                        # If we reached this point,
-                        # we are at one of either ends of the queue,
-                        # and the user was expecting to skip past it.
                         if not auto:
+                            # If we reached this point,
+                            # we are at one of either ends of the queue,
+                            # and the user was expecting to skip past it.
                             await restore_controls()
                             if forward:
                                 raise EndOfQueueError('Reached the end of the queue')
                             raise EndOfQueueError('Reached the beginning of the queue')
+                        else:
+                            # Queue likely finished on its own. Scrobble last track.
+                            self._scrobble(self._queue[self._queue_i])
                         
                         return
                 else:
