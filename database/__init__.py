@@ -11,7 +11,7 @@ class Database:
     """
 
     def __init__(self, db_filename: str):
-        self._con = sql.connect(db_filename)
+        self._con = sql.connect(db_filename, check_same_thread=False)
         self._cur = self._con.cursor()
         self._logger = create_logger(self.__class__.__name__)
         self._logger.info(f'Connected to database: {db_filename}')

@@ -1,4 +1,5 @@
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from mafic import Player, PlayerNotConnected
 from nextcord import Message, StageChannel, VoiceChannel
 from random import shuffle
@@ -47,6 +48,9 @@ class Jockey(Player['BlancoBot']):
 
         # Volume
         self._volume = client.db.get_volume(channel.guild.id)
+
+        # Scrobble executor
+        self._executor = ThreadPoolExecutor(max_workers=1)
 
         # Logger
         self._logger = client.jockey_logger
@@ -141,7 +145,7 @@ class Jockey(Player['BlancoBot']):
             return False
         else:
             # Scrobble if possible
-            self._scrobble(self._queue[current])
+            await self._scrobble(self._queue[current])
             
             return result
     
@@ -199,7 +203,7 @@ class Jockey(Player['BlancoBot']):
 
         return True
 
-    def _scrobble(self, item: QueueItem):
+    async def _scrobble(self, item: QueueItem):
         if not isinstance(self.channel, VoiceChannel):
             return
         
@@ -236,7 +240,7 @@ class Jockey(Player['BlancoBot']):
                 scrobbler = self._bot.get_scrobbler(member.id)
                 if scrobbler is not None:
                     self._logger.debug(f'Scrobbling `{item.title}\' for {member.display_name}')
-                    scrobbler.scrobble(item)
+                    await self._bot.loop.run_in_executor(self._executor, scrobbler.scrobble, item)
     
     def now_playing(self, current: Optional['Track'] = None) -> 'Embed':
         """
@@ -442,7 +446,7 @@ class Jockey(Player['BlancoBot']):
                             raise EndOfQueueError('Reached the beginning of the queue')
                         else:
                             # Queue likely finished on its own. Scrobble last track.
-                            self._scrobble(self._queue[self._queue_i])
+                            await self._scrobble(self._queue[self._queue_i])
                         
                         return
                 else:
