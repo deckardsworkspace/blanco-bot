@@ -201,7 +201,7 @@ class PlayerCog(Cog):
         """
         if itx.user is None:
             return
-        await itx.response.defer(ephemeral=True)
+        await itx.response.defer()
         
         # Get Spotify client
         try:
@@ -217,7 +217,7 @@ class PlayerCog(Cog):
             ), ephemeral=True)
         
         # Create dropdown
-        view = SpotifyDropdownView(self._bot, playlists)
+        view = SpotifyDropdownView(self._bot, playlists, itx.user.id)
         await itx.followup.send(embed=create_success_embed(
             title='Pick a playlist',
             body='Select a playlist from the dropdown below.'
