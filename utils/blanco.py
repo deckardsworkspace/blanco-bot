@@ -10,6 +10,7 @@ from .jockey_helpers import create_error_embed
 from .logger import create_logger
 from .scrobbler import Scrobbler
 from .spotify_client import Spotify
+from .spotify_private import PrivateSpotify
 from views.now_playing import NowPlayingView
 if TYPE_CHECKING:
     from dataclass.config import Config
@@ -38,8 +39,9 @@ class BlancoBot(Bot):
         self._logger = create_logger(self.__class__.__name__, debug=True)
         self._jockey_logger = create_logger('jockey', debug=True)
 
-        # Scrobblers per user
+        # Scrobblers and Spotify Clients per user
         self._scrobblers: Dict[int, 'Scrobbler'] = {}
+        self._spotify_clients: Dict[int, PrivateSpotify] = {}
     
     @property
     def config(self) -> Optional['Config']:
@@ -167,6 +169,27 @@ class BlancoBot(Bot):
         self._scrobblers[user_id] = scrobbler
         self._logger.debug(f'Created scrobbler for user {user_id}')
         return scrobbler
+    
+    def get_spotify_client(self, user_id: int) -> PrivateSpotify:
+        """
+        Gets a Spotify client instance for the specified user.
+        """
+        if user_id not in self._spotify_clients:
+            assert self._config is not None and self._db is not None
+
+            # Try to get credentials
+            creds = self._db.get_oauth('spotify', user_id)
+            if creds is None:
+                raise ValueError(f'Please link your Spotify account [here.]({self._config.base_url})')
+            
+            self._spotify_clients[user_id] = PrivateSpotify(
+                config=self._config,
+                db=self._db,
+                credentials=creds
+            )
+            self._logger.debug(f'Created Spotify client for user {user_id}')
+        
+        return self._spotify_clients[user_id]
 
     def set_status_channel(self, guild_id: int, channel: 'StatusChannel'):
         # If channel is None, remove the status channel
@@ -273,8 +296,9 @@ class BlancoBot(Bot):
                 pass
         
         # Send now playing embed
+        current_track = event.player.queue[event.player.current_index]
         embed = event.player.now_playing(event.track)
-        view = NowPlayingView(self, event.player)
+        view = NowPlayingView(self, event.player, current_track.spotify_id)
         msg = await channel.send(embed=embed, view=view)
 
         # Save now playing message ID

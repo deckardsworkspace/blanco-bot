@@ -78,7 +78,8 @@ class PrivateSpotify:
         response = requests.get(
             str(SPOTIFY_API_BASE_URL / 'me' / 'playlists'),
             headers={
-                'Authorization': f'Bearer {self._credentials.access_token}'
+                'Authorization': f'Bearer {self._credentials.access_token}',
+                'User-Agent': USER_AGENT
             },
             params={
                 'limit': 25
@@ -96,3 +97,25 @@ class PrivateSpotify:
             playlist['id']: f'{playlist["name"]} ({playlist["tracks"]["total"]} tracks)' # type: ignore
             for playlist in parsed['items']
         }
+    
+    def save_track(self, spotify_id: str):
+        """
+        Adds a track to the user's Liked Songs.
+        """
+        self._ensure_auth()
+        response = requests.put(
+            str(SPOTIFY_API_BASE_URL / 'me' / 'tracks'),
+            headers={
+                'Authorization': f'Bearer {self._credentials.access_token}',
+                'User-Agent': USER_AGENT
+            },
+            params={
+                'ids': spotify_id
+            }
+        )
+
+        try:
+            response.raise_for_status()
+        except Exception as e:
+            self._logger.error(f'Could not like track {spotify_id}: {e}')
+            raise
