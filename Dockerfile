@@ -1,7 +1,9 @@
 FROM node:lts-alpine AS tailwind
 
 # Compile Tailwind CSS
-COPY . /opt/build
+RUN mkdir -p /opt/build
+COPY tailwind.config.js /opt/build/
+COPY server/ /opt/build/server
 WORKDIR /opt/build
 RUN npm install -D tailwindcss && \
     npx tailwindcss -i ./server/static/css/base.css \
