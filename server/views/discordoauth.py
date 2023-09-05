@@ -1,5 +1,7 @@
 from aiohttp import web
 from aiohttp_session import get_session
+from dataclass.oauth import OAuth
+from time import time
 from .constants import *
 import requests
 
@@ -61,16 +63,19 @@ async def discordoauth(request: web.Request):
     except Exception as e:
         return web.HTTPBadRequest(text=f'Error getting user info: {e}')
     
-    # Store user info in DB
+    # Calculate expiry timestamp
     user_parsed = user_info.json()
+    expires_at = int(time()) + parsed['expires_in']
+
+    # Store user info in DB
     db = request.app['db']
-    db.create_user(
+    db.set_oauth('discord', OAuth(
         user_id=user_parsed['id'],
         username=user_parsed['username'],
-        discord_access_token=parsed['access_token'],
-        discord_refresh_token=parsed['refresh_token'],
-        discord_expires_in=parsed['expires_in']
-    )
+        access_token=parsed['access_token'],
+        refresh_token=parsed['refresh_token'],
+        expires_at=expires_at
+    ))
 
     # Redirect to dashboard
     del session['state']

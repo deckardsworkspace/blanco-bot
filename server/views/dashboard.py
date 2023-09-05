@@ -1,6 +1,9 @@
 from aiohttp import web
 from aiohttp_session import get_session
+from typing import TYPE_CHECKING
 import aiohttp_jinja2
+if TYPE_CHECKING:
+    from dataclass.oauth import OAuth
 
 
 @aiohttp_jinja2.template('dashboard.html')
@@ -12,11 +15,11 @@ async def dashboard(request: web.Request):
     
     # Get user info
     db = request.app['db']
-    username = db.get_username(session['user_id'])
-    if username is None:
+    user: OAuth = db.get_oauth('discord', session['user_id'])
+    if user is None:
         return web.HTTPFound('/login')
     
     # Render template
     return {
-        'username': username
+        'username': user.username
     }

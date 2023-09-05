@@ -1,4 +1,5 @@
-from time import time
+from dataclass.oauth import OAuth
+from typing import List, Optional
 from utils.logger import create_logger
 from .migrations import run_migrations
 import sqlite3 as sql
@@ -95,41 +96,53 @@ class Database:
         self._cur.execute(f'INSERT OR REPLACE INTO lavalink (node_id, session_id) VALUES ("{node_id}", "{session_id}")')
         self._con.commit()
     
-    def create_user(
-        self,
-        user_id: int,
-        username: str,
-        discord_access_token: str,
-        discord_refresh_token: str,
-        discord_expires_in: int
-    ):
+    def set_oauth(self, provider: str, credentials: OAuth):
         """
-        Create a user in the database.
-        """
-        # Calculate expiry time
-        discord_expires_at = int(time()) + discord_expires_in
+        Save OAuth2 data for a user.
 
-        # Insert user
+        :param provider: The provider to save the data for. Can be either 'discord' or 'spotify'.
+        :param credentials: The OAuth2 credentials to save.
+        """
         self._cur.execute(f'''
-            INSERT OR REPLACE INTO userdata (
+            INSERT OR REPLACE INTO {provider}_oauth (
                 user_id,
                 username,
-                discord_access_token,
-                discord_refresh_token,
-                discord_expires_at
+                access_token,
+                refresh_token,
+                expires_at
             ) VALUES (
-                {user_id},
-                "{username}",
-                "{discord_access_token}",
-                "{discord_refresh_token}",
-                {discord_expires_at}
+                {credentials.user_id},
+                "{credentials.username}",
+                "{credentials.access_token}",
+                "{credentials.refresh_token}",
+                {credentials.expires_at}
             )
         ''')
         self._con.commit()
 
-    def get_username(self, user_id: int) -> str:
+    def get_oauth(self, provider: str, user_id: int) -> Optional[OAuth]:
         """
-        Get a user from the database.
+        Get OAuth2 data for a user from the database.
+
+        :param provider: The provider to get credentials for. Can be either 'discord' or 'spotify'.
+        :param user_id: The user ID to get credentials for
         """
-        self._cur.execute(f'SELECT username FROM userdata WHERE user_id = {user_id}')
-        return self._cur.fetchone()[0]
+        self._cur.execute(f'SELECT * FROM {provider}_oauth WHERE user_id = {user_id}')
+        row = self._cur.fetchone()
+        if row is None:
+            return None
+        return OAuth(*row)
+    
+    def set_spotify_scopes(self, user_id: int, scopes: List[str]):
+        """
+        Set the Spotify scopes for a user.
+        """
+        self._cur.execute(f'UPDATE spotify_oauth SET scopes = "{",".join(scopes)}" WHERE user_id = {user_id}')
+        self._con.commit()
+
+    def get_spotify_scopes(self, user_id: int) -> List[str]:
+        """
+        Get the Spotify scopes for a user.
+        """
+        self._cur.execute(f'SELECT scopes FROM spotify_oauth WHERE user_id = {user_id}')
+        return self._cur.fetchone()[0].split(',')
