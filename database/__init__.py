@@ -1,3 +1,5 @@
+from dataclass.oauth import OAuth, LastfmAuth
+from typing import List, Optional
 from utils.logger import create_logger
 from .migrations import run_migrations
 import sqlite3 as sql
@@ -9,7 +11,7 @@ class Database:
     """
 
     def __init__(self, db_filename: str):
-        self._con = sql.connect(db_filename)
+        self._con = sql.connect(db_filename, check_same_thread=False)
         self._cur = self._con.cursor()
         self._logger = create_logger(self.__class__.__name__)
         self._logger.info(f'Connected to database: {db_filename}')
@@ -93,3 +95,94 @@ class Database:
         """
         self._cur.execute(f'INSERT OR REPLACE INTO lavalink (node_id, session_id) VALUES ("{node_id}", "{session_id}")')
         self._con.commit()
+    
+    def set_oauth(self, provider: str, credentials: OAuth):
+        """
+        Save OAuth2 data for a user.
+
+        :param provider: The provider to save the data for. Can be either 'discord' or 'spotify'.
+        :param credentials: The OAuth2 credentials to save.
+        """
+        self._cur.execute(f'''
+            INSERT OR REPLACE INTO {provider}_oauth (
+                user_id,
+                username,
+                access_token,
+                refresh_token,
+                expires_at
+            ) VALUES (
+                {credentials.user_id},
+                "{credentials.username}",
+                "{credentials.access_token}",
+                "{credentials.refresh_token}",
+                {credentials.expires_at}
+            )
+        ''')
+        self._con.commit()
+
+    def get_oauth(self, provider: str, user_id: int) -> Optional[OAuth]:
+        """
+        Get OAuth2 data for a user from the database.
+
+        :param provider: The provider to get credentials for. Can be either 'discord' or 'spotify'.
+        :param user_id: The user ID to get credentials for
+        """
+        self._cur.execute(f'SELECT * FROM {provider}_oauth WHERE user_id = {user_id}')
+        row = self._cur.fetchone()
+        if row is None:
+            return None
+        return OAuth(
+            user_id=row[0],
+            username=row[1],
+            access_token=row[2],
+            refresh_token=row[3],
+            expires_at=row[4]
+        )
+
+    def set_lastfm_credentials(self, credentials: LastfmAuth):
+        """
+        Save Last.fm credentials for a user.
+        """
+        self._cur.execute(f'''
+            INSERT OR REPLACE INTO lastfm_oauth (
+                user_id,
+                username,
+                session_key
+            ) VALUES (
+                {credentials.user_id},
+                "{credentials.username}",
+                "{credentials.session_key}"
+            )
+        ''')
+        self._con.commit()
+
+    def get_lastfm_credentials(self, user_id: int) -> Optional[LastfmAuth]:
+        """
+        Get Last.fm credentials for a user.
+        """
+        self._cur.execute(f'SELECT * FROM lastfm_oauth WHERE user_id = {user_id}')
+        row = self._cur.fetchone()
+        if row is None:
+            return None
+        return LastfmAuth(*row)
+    
+    def delete_oauth(self, provider: str, user_id: int):
+        """
+        Delete OAuth2 data for a user from the database.
+        """
+        self._cur.execute(f'DELETE FROM {provider}_oauth WHERE user_id = {user_id}')
+        self._con.commit()
+    
+    def set_spotify_scopes(self, user_id: int, scopes: List[str]):
+        """
+        Set the Spotify scopes for a user.
+        """
+        self._cur.execute(f'UPDATE spotify_oauth SET scopes = "{",".join(scopes)}" WHERE user_id = {user_id}')
+        self._con.commit()
+
+    def get_spotify_scopes(self, user_id: int) -> List[str]:
+        """
+        Get the Spotify scopes for a user.
+        """
+        self._cur.execute(f'SELECT scopes FROM spotify_oauth WHERE user_id = {user_id}')
+        return self._cur.fetchone()[0].split(',')

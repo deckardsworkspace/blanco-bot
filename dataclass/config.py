@@ -47,7 +47,14 @@ class Config:
     spotify_client_id: str
     spotify_client_secret: str
     lavalink_nodes: Dict[str, LavalinkNode]
+    enable_server: bool
 
     # Optional
+    server_port: int = 8080
+    base_url: Optional[str] = None
+    discord_oauth_id: Optional[str] = None
+    discord_oauth_secret: Optional[str] = None
+    lastfm_api_key: Optional[str] = None
+    lastfm_shared_secret: Optional[str] = None
     debug_enabled: bool = False
     debug_guild_ids: Optional[List[int]] = None

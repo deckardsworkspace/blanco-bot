@@ -1,11 +1,10 @@
-from asyncio import sleep, TimeoutError
-from nextcord import ClientUser, Color, Guild, Interaction, Member, slash_command, SlashOption, VoiceState
+from asyncio import TimeoutError
+from nextcord import Color, Guild, Interaction, Member, slash_command, SlashOption, VoiceState
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
 from typing import Optional, TYPE_CHECKING
 from dataclass.custom_embed import CustomEmbed
-from utils.config import get_debug_guilds
 from utils.exceptions import EndOfQueueError, JockeyException, JockeyError
 from utils.jockey import Jockey
 from utils.jockey_helpers import create_error_embed, create_success_embed, list_chunks
@@ -13,7 +12,7 @@ from utils.blanco import BlancoBot
 from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import *
-from utils.string_util import human_readable_time
+from views.spotify_dropdown import SpotifyDropdownView
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
 
@@ -195,6 +194,35 @@ class PlayerCog(Cog):
                 body=track_name
             ))
     
+    @slash_command(name='playlists')
+    async def playlist(self, itx: Interaction):
+        """
+        Pick a Spotify playlist from your library to play.
+        """
+        if itx.user is None:
+            return
+        await itx.response.defer()
+        
+        # Get Spotify client
+        try:
+            spotify = self._bot.get_spotify_client(itx.user.id)
+        except ValueError as e:
+            return await itx.followup.send(embed=create_error_embed(e.args[0]), ephemeral=True)
+        
+        # Get the user's playlists
+        playlists = spotify.get_user_playlists()
+        if len(playlists) == 0:
+            return await itx.followup.send(embed=create_error_embed(
+                message='You have no playlists.'
+            ), ephemeral=True)
+        
+        # Create dropdown
+        view = SpotifyDropdownView(self._bot, playlists, itx.user.id)
+        await itx.followup.send(embed=create_success_embed(
+            title='Pick a playlist',
+            body='Select a playlist from the dropdown below.'
+        ), view=view)
+
     @slash_command(name='previous')
     @application_checks.check(check_mutual_voice)
     async def previous(self, itx: Interaction):

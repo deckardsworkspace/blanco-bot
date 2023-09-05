@@ -1,0 +1,29 @@
+@tailwind base;
+@layer base {
+    h1, h2, h3 {
+        @apply font-bold;
+    }
+    h1 {
+        @apply text-3xl md:text-5xl;
+    }
+    h2 {
+        @apply text-xl md:text-[2rem];
+    }
+    h3 {
+        @apply text-lg md:text-2xl;
+    }
+    a {
+        @apply text-sm md:text-base font-bold text-sienna underline;
+    }
+    p {
+        @apply text-sm md:text-base;
+    }
+    body {
+        @apply bg-eggshell;
+    }
+    code {
+        @apply bg-gray-100 text-blue text-xs rounded border border-gray-300 p-1;
+    }
+}
+@tailwind components;
+@tailwind utilities;

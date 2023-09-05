@@ -1,3 +1,8 @@
 {
-    "python.analysis.typeCheckingMode": "basic"
+    "python.analysis.typeCheckingMode": "basic",
+    "files.exclude": {
+        "**/__pycache__": true
+    },
+    "editor.tabSize": 4,
+    "css.lint.unknownAtRules": "ignore"
 }

@@ -1,7 +1,9 @@
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from mafic import Player, PlayerNotConnected
 from nextcord import Message, StageChannel, VoiceChannel
 from random import shuffle
+from time import time
 from typing import Deque, Optional, TYPE_CHECKING
 from views.now_playing import NowPlayingView
 from .exceptions import *
@@ -46,6 +48,9 @@ class Jockey(Player['BlancoBot']):
 
         # Volume
         self._volume = client.db.get_volume(channel.guild.id)
+
+        # Scrobble executor
+        self._executor = ThreadPoolExecutor(max_workers=1)
 
         # Logger
         self._logger = client.jockey_logger
@@ -139,15 +144,16 @@ class Jockey(Player['BlancoBot']):
             self._queue_i = current
             return False
         else:
+            # Scrobble if possible
+            await self._scrobble(self._queue[current])
+            
             return result
     
     async def _play(self, item: QueueItem) -> bool:
-        if item.lavalink_track is not None:
-            # Track has already been processed by Lavalink so just play it directly
-            await self.play(item.lavalink_track)
-        else:
+        results = []
+
+        if item.lavalink_track is None:
             # Use ISRC if present
-            results = []
             if item.isrc is not None:
                 # Try to match ISRC on Deezer if enabled
                 assert self._bot.config is not None
@@ -181,16 +187,61 @@ class Jockey(Player['BlancoBot']):
                     self._logger.error(f'{e.message}')
                     return False
 
-            # Try to add first result directly to Lavalink queue
-            await self.play(results[0].lavalink_track)
+            # Save Lavalink result
+            item.lavalink_track = results[0].lavalink_track
+
+        # Play track
+        await self.play(item.lavalink_track)
 
         # We don't want to play if the player is not idle
         # as that will effectively skip the current track.
         if not self.playing:
             await self.resume()
 
+        # Save start time for scrobbling
+        item.start_time = int(time())
+
         return True
 
+    async def _scrobble(self, item: QueueItem):
+        if not isinstance(self.channel, VoiceChannel):
+            return
+        
+        # Check if scrobbling is enabled
+        assert self._bot.config is not None
+        if not self._bot.config.lastfm_api_key or not self._bot.config.lastfm_shared_secret:
+            return
+        
+        # Check if track can be scrobbled
+        time_now = int(time())
+        try:
+            duration = item.duration
+            if item.lavalink_track is not None:
+                duration = item.lavalink_track.length
+
+            if item.start_time is not None and duration is not None:
+                # Check if track is longer than 30 seconds
+                if duration < 30000:
+                    raise ValueError('Track is too short')
+
+                # Check if enough time has passed (1/2 duration or 4 min, whichever is less)
+                elapsed_ms = (time_now - item.start_time) * 1000
+                if elapsed_ms < min(duration // 2, 240000):
+                    raise ValueError('Not enough time has passed')
+            else:
+                # Default to current time for timestamp
+                item.start_time = time_now
+        except ValueError as e:
+            self._logger.warning(f'Failed to scrobble `{item.title}\': {e.args[0]}')
+
+        # Scrobble for every user
+        for member in self.channel.members:
+            if not member.bot:
+                scrobbler = self._bot.get_scrobbler(member.id)
+                if scrobbler is not None:
+                    self._logger.debug(f'Scrobbling `{item.title}\' for {member.display_name}')
+                    await self._bot.loop.run_in_executor(self._executor, scrobbler.scrobble, item)
+    
     def now_playing(self, current: Optional['Track'] = None) -> 'Embed':
         """
         Returns information about the currently playing track.
@@ -222,6 +273,14 @@ class Jockey(Player['BlancoBot']):
         if track.lavalink_track is not None:
             is_stream = track.lavalink_track.stream
         
+        # Check if the web server and Last.fm integration are enabled
+        assert self._bot.config is not None
+        server_enabled = self._bot.config.enable_server
+        lastfm_enabled = False
+        if server_enabled:
+            assert self._bot.config.base_url is not None
+            lastfm_enabled = self._bot.config.lastfm_api_key and self._bot.config.lastfm_shared_secret
+        
         embed = CustomEmbed(
             title='Now streaming' if is_stream else 'Now playing',
             description=[
@@ -230,7 +289,8 @@ class Jockey(Player['BlancoBot']):
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
                 ':warning: Could not find a perfect match for this track.' if track.is_imperfect else '',
-                f'Playing the [closest match]({current.uri}) instead.' if track.is_imperfect else ''
+                f'Playing the [closest match]({current.uri}) instead.' if track.is_imperfect else '',
+                f'**New:** [Link your Last.fm account]({self._bot.config.base_url}) to scrobble as you play :sparkles:' if lastfm_enabled else ''
             ],
             footer=f'Track {self.current_index + 1} of {len(self._queue)}',
             color=Color.teal(),
@@ -385,14 +445,18 @@ class Jockey(Player['BlancoBot']):
                     if self.is_looping_all:
                         next_i = 0 if forward else self.queue_size - 1
                     else:
-                        # If we reached this point,
-                        # we are at one of either ends of the queue,
-                        # and the user was expecting to skip past it.
-                        await restore_controls()
                         if not auto:
+                            # If we reached this point,
+                            # we are at one of either ends of the queue,
+                            # and the user was expecting to skip past it.
+                            await restore_controls()
                             if forward:
                                 raise EndOfQueueError('Reached the end of the queue')
                             raise EndOfQueueError('Reached the beginning of the queue')
+                        else:
+                            # Queue likely finished on its own. Scrobble last track.
+                            await self._scrobble(self._queue[self._queue_i])
+                        
                         return
                 else:
                     next_i += 1 if forward else -1
