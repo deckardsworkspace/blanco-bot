@@ -3,7 +3,7 @@ from nextcord import Color, Guild, Interaction, Member, slash_command, SlashOpti
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
-from typing import Optional, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING
 from dataclass.custom_embed import CustomEmbed
 from utils.exceptions import EndOfQueueError, JockeyException, JockeyError
 from utils.jockey import Jockey
@@ -12,6 +12,8 @@ from utils.blanco import BlancoBot
 from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import *
+from utils.spotify_private import PrivateSpotify
+from views.spotify_dropdown import SpotifyDropdownView
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
 
@@ -19,6 +21,7 @@ if TYPE_CHECKING:
 class PlayerCog(Cog):
     def __init__(self, bot: BlancoBot):
         self._bot = bot
+        self._spotify_clients: Dict[int, PrivateSpotify] = {}
         self._logger = create_logger(self.__class__.__name__, bot.debug)
 
         # Initialize Lavalink client instance
@@ -47,6 +50,27 @@ class PlayerCog(Cog):
             raise RuntimeError('[player] Attempted to access Jockey for a guild that is not connected to voice')
         
         return jockey
+    
+    def _get_spotify_client(self, user_id: int) -> Optional[PrivateSpotify]:
+        """
+        Gets a Spotify client instance for the specified user.
+        """
+        if user_id not in self._spotify_clients:
+            assert self._bot.config is not None
+
+            # Try to get credentials
+            creds = self._bot.db.get_oauth('spotify', user_id)
+            if creds is None:
+                return None
+            
+            self._spotify_clients[user_id] = PrivateSpotify(
+                config=self._bot.config,
+                db=self._bot.db,
+                credentials=creds
+            )
+            self._logger.debug(f'Created Spotify client for user {user_id}')
+        
+        return self._spotify_clients[user_id]
     
     async def _disconnect(
         self,
@@ -193,6 +217,43 @@ class PlayerCog(Cog):
                 body=track_name
             ))
     
+    @slash_command(name='playlists')
+    async def playlist(self, itx: Interaction):
+        """
+        Pick a Spotify playlist from your library to play.
+        """
+        if itx.user is None:
+            return
+        await itx.response.defer(ephemeral=True)
+        
+        # Check if the user has linked their Spotify account
+        assert self._bot.config is not None
+        if not self._bot.db.get_oauth('spotify', itx.user.id):
+            return await itx.followup.send(embed=create_error_embed(
+                message=f'Please link your Spotify account [here.]({self._bot.config.base_url})'
+            ), ephemeral=True)
+        
+        # Create Spotify client
+        spotify = self._get_spotify_client(itx.user.id)
+        if spotify is None:
+            return await itx.followup.send(embed=create_error_embed(
+                message='Unable to get Spotify playlists. Try again later.'
+            ), ephemeral=True)
+        
+        # Get the user's playlists
+        playlists = spotify.get_user_playlists()
+        if len(playlists) == 0:
+            return await itx.followup.send(embed=create_error_embed(
+                message='You have no playlists.'
+            ), ephemeral=True)
+        
+        # Create dropdown
+        view = SpotifyDropdownView(self._bot, playlists)
+        await itx.followup.send(embed=create_success_embed(
+            title='Pick a playlist',
+            body='Select a playlist from the dropdown below.'
+        ), view=view)
+
     @slash_command(name='previous')
     @application_checks.check(check_mutual_voice)
     async def previous(self, itx: Interaction):
