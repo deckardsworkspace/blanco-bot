@@ -39,7 +39,7 @@ class PlayerCog(Cog):
             else:
                 # Did we get server undeafened?
                 if member.id == member.guild.me.id and before.deaf and not after.deaf:
-                    await self._deafen(member.guild.me, jockey.status_channel)
+                    await self._deafen(member.guild.me, was_deafened=True, channel=jockey.status_channel)
     
     async def _get_jockey(self, itx: Interaction) -> Jockey:
         """
@@ -53,23 +53,30 @@ class PlayerCog(Cog):
         
         return jockey
     
-    async def _deafen(self, bot_user: Member, channel: Optional[Messageable] = None):
+    async def _deafen(self, bot_user: Member, was_deafened: bool = False, channel: Optional[Messageable] = None):
         """
         Attempt to deafen the bot user.
         
         :param bot_user: The bot user to deafen. Should be an instance of nextcord.Member.
+        :param was_deafened: Whether the bot user was previously deafened.
         :param channel: The Messageable channel to send the error message to.
         """
-        err = 'Please server deafen me.'
+        # Check if we're already deafened
+        if not was_deafened and bot_user.voice is not None and bot_user.voice.deaf:
+            return
+        
         if bot_user.guild_permissions.deafen_members:
             try:
                 await bot_user.edit(deafen=True)
-                err = 'Please do not undeafen me.'
             except:
                 pass
         
         # Send message
         if channel is not None and hasattr(channel, 'send'):
+            err = 'Please server deafen me.'
+            if was_deafened:
+                err = 'Please do not undeafen me.'
+            
             try:
                 await channel.send(embed=create_error_embed(
                     message=f'{err} Deafening helps save server resources.'
@@ -201,7 +208,7 @@ class PlayerCog(Cog):
             try:
                 await vc.connect(cls=Jockey) # type: ignore
                 await vc.guild.change_voice_state(channel=vc, self_deaf=True)
-                await self._deafen(itx.guild.me, channel)
+                await self._deafen(itx.guild.me, channel=channel)
             except TimeoutError:
                 return await itx.followup.send(embed=create_error_embed(
                     message='Timed out while connecting to voice. Try again later.'
