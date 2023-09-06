@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 def create_error_embed(message: str) -> Embed:
     embed = CustomEmbed(
         color=Color.red(),
-        title=':x:｜Error processing command',
+        title=':x:｜Error',
         description=message
     )
     return embed.get()

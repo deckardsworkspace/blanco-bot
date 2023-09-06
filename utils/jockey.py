@@ -253,7 +253,7 @@ class Jockey(Player['BlancoBot']):
                     self._logger.debug(f'Scrobbling `{item.title}\' for {member.display_name}')
                     await self._bot.loop.run_in_executor(self._executor, scrobbler.scrobble, item)
 
-    async def disconnect(self):
+    async def disconnect(self, *, force: bool = False):
         """
         Removes the controls from Now Playing, then disconnects.
         """
@@ -266,7 +266,7 @@ class Jockey(Player['BlancoBot']):
                 pass
         
         # Disconnect
-        await super().disconnect()
+        await super().disconnect(force=force)
 
     def now_playing(self, current: Optional['Track'] = None) -> 'Embed':
         """

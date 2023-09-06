@@ -2,20 +2,20 @@
 {% block title %} | Home{% endblock %}
 
 {% block body %}
-<div id="app" class="flex w-screen h-screen items-center justify-center">
-    <main class="w-full max-w-[480px]">
+<div id="app" class="m-4 md:w-screen md:h-screen md:flex md:items-center md:justify-center">
+    <main class="w-full md:max-w-[480px]">
         <!-- Bot name -->
         <div class="flex w-full items-center justify-between">
             <div id="logo" class="flex items-center justify-start">
                 <img src="/static/images/logo.svg"
                     alt="Blanco bot logo"
-                    class="w-12 h-12 mr-4 rounded-full"
+                    class="w-8 h-8 md:w-12 md:h-12 mr-4 rounded-full"
                 >
-                <h1 class="text-3xl font-mono font-bold">Blanco</h1>
+                <h1 class="text-lg sm:text-xl md:text-3xl font-mono font-bold">Blanco</h1>
             </div>
             <a href="/login" id="login"
-                class="text-sm text-blue font-bold no-underline
-                    px-4 py-3 border border-blue rounded-md
+                class="text-sm text-blue font-bold no-underline transition-all
+                    px-3 py-2 md:px-4 md:py-3 border border-blue rounded-md
                     hover:border-r-4 hover:border-b-4 active:border-r-2 active:border-b-2"
             >
                 Log in
@@ -28,7 +28,7 @@
             <p>No-frills Discord music bot built with Docker.</p>
             <p class="my-2">
                 <a href="https://github.com/jareddantis-bots/blanco-bot#deployment">Start a container</a>,
-                invite into your server,<br>join a voice channel, and hit <code>/play</code>.
+                invite into your server, <br class="hidden md:inline">join a voice channel, and hit <code>/play</code>.
             </p>
             <p>
                 Also available on

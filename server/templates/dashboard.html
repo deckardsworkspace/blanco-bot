@@ -3,10 +3,10 @@
 
 {% block body %}
 <div id="app"
-    class="max-w-4xl w-screen mx-auto px-4 py-8"
+    class="max-w-4xl w-screen mx-auto px-6 py-4 md:py-8"
 >
     <!-- Header -->
-    <nav class="flex items-center justify-between">
+    <nav class="flex items-center justify-between mb-12">
         <!-- Logo -->
         <div id="logo" class="flex items-center justify-start">
             <img src="/static/images/logo.svg"
@@ -30,7 +30,7 @@
     </nav>
 
     <!-- Main -->
-    <main class="mt-12 mb-8">
+    <main>
         <!-- Account linking -->
         <section>
             <h1 class="mb-4 md:mb-8">Linked accounts</h1>
@@ -108,7 +108,7 @@
         </section>
 
         <!-- Account management -->
-        <section class="mt-12">
+        <section class="mt-16">
             <h1 class="mb-4 md:mb-8">Manage account</h1>
 
             <div class="md:flex items-start justify-between">
@@ -133,5 +133,40 @@
             </div>
         </section>
     </main>
+
+    <footer class="mt-16">
+        <hr class="border-gray-300 my-8">
+
+        <!-- Credits -->
+        <div class="max-w-md">
+            <p>
+                Made with &#10084; by
+                <a href="https://dantis.me">@jareddantis</a>.
+            </p>
+            <p>
+                Blanco is powered by
+                <a href="https://nextcord.dev/">Nextcord</a>,
+                <a href="https://github.com/lavalink-devs/Lavalink">Lavalink</a>, and
+                <a href="https://github.com/ooliver1/Mafic">Mafic</a>,
+                and is available under the MIT License on
+                <a href="https://github.com/jareddantis/blanco-bot">GitHub</a>.
+            </p>
+            <p class="text-xs text-gray-500 mt-4">
+                This dashboard uses cookies only to keep you logged in.
+                By logging into the dashboard and/or linking your accounts,
+                you consent to the use of cookies and the storage of your
+                data in Blanco's database.
+            </p>
+            <p class="text-xs text-gray-500">
+                We take your privacy seriously. We do not sell your data,
+                nor do we use it for any purpose other than to provide
+                the basic functionality offered by Blanco.
+            </p>
+            <p class="text-xs text-gray-500">
+                You may delete your account at any time, which will purge
+                your data from the database and log you out.
+            </p>
+        </div>
+    </footer>
 </div>
 {% endblock %}

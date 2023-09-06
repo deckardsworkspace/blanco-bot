@@ -28,5 +28,17 @@
     {% endblock %}
 
     <script src="https://kit.fontawesome.com/c8e66fe49c.js" crossorigin="anonymous"></script>
+    <script>
+        // Make all <a> links open in new tabs
+        window.addEventListener('load', () => {
+            const links = document.querySelectorAll('a');
+            links.forEach(link => {
+                // Skip if link is a button
+                if (link.classList.contains('border')) return;
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            });
+        });
+    </script>
 </body>
 </html>

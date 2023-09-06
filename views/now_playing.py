@@ -1,6 +1,7 @@
 from nextcord import ButtonStyle, Interaction
 from nextcord.ui import button, View
 from typing import Optional, TYPE_CHECKING
+from utils.player_checks import check_mutual_voice
 if TYPE_CHECKING:
     from cogs.player import PlayerCog
     from nextcord import Interaction
@@ -20,27 +21,41 @@ class NowPlayingView(View):
         self._spotify_id = spotify_id
         self._player = player
     
+    async def _check_mutual_voice(self, interaction: 'Interaction') -> bool:
+        try:
+            _ = check_mutual_voice(interaction)
+        except Exception as e:
+            await interaction.response.send_message(e.args[0], ephemeral=True)
+            return False
+        
+        return True
+    
     @button(label='📋', style=ButtonStyle.green)
     async def queue(self, _: 'Button', interaction: 'Interaction'):
-        return await self._cog.queue(interaction)
+        if await self._check_mutual_voice(interaction):
+            return await self._cog.queue(interaction)
     
     @button(label='⏮️', style=ButtonStyle.grey)
     async def skip_backward(self, _: 'Button', interaction: 'Interaction'):
-        return await self._cog.previous(interaction)
+        if await self._check_mutual_voice(interaction):
+            return await self._cog.previous(interaction)
 
     @button(label='⏯️', style=ButtonStyle.blurple)
     async def toggle_pause(self, _: 'Button', interaction: 'Interaction'):
-        if self._player.paused:
-            return await self._cog.unpause(interaction)
-        return await self._cog.pause(interaction)
+        if await self._check_mutual_voice(interaction):
+            if self._player.paused:
+                return await self._cog.unpause(interaction)
+            return await self._cog.pause(interaction)
 
     @button(label='⏭️', style=ButtonStyle.grey)
     async def skip_forward(self, _: 'Button', interaction: 'Interaction'):
-        return await self._cog.skip(interaction)
+        if await self._check_mutual_voice(interaction):
+            return await self._cog.skip(interaction)
     
     @button(label='⏹️', style=ButtonStyle.red)
     async def stop(self, _: 'Button', interaction: 'Interaction'):
-        return await self._cog.stop(interaction)
+        if await self._check_mutual_voice(interaction):
+            return await self._cog.stop(interaction)
     
     @button(label='Like on Spotify', style=ButtonStyle.grey)
     async def like(self, _: 'Button', interaction: 'Interaction'):
@@ -68,7 +83,8 @@ class NowPlayingView(View):
     
     @button(label='Toggle shuffle', style=ButtonStyle.grey)
     async def shuffle(self, _: 'Button', interaction: 'Interaction'):
-        status = self._player.is_shuffling
-        if status:
-            return await self._cog.unshuffle(interaction)
-        return await self._cog.shuffle(interaction)
+        if await self._check_mutual_voice(interaction):
+            status = self._player.is_shuffling
+            if status:
+                return await self._cog.unshuffle(interaction)
+            return await self._cog.shuffle(interaction)
