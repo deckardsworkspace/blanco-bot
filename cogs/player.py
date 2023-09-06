@@ -141,10 +141,10 @@ class PlayerCog(Cog):
         Pauses the current track.
         """
         # Dispatch to jockey
-        await itx.response.defer(ephemeral=True)
+        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         await jockey.pause()
-        await itx.followup.send(embed=create_success_embed('Paused'))
+        await itx.followup.send(embed=create_success_embed('Paused'), delete_after=5.0)
 
     @slash_command(name='play')
     @application_checks.check(check_mutual_voice)
@@ -426,10 +426,10 @@ class PlayerCog(Cog):
         Unpauses the current track.
         """
         # Dispatch to jockey
-        await itx.response.defer(ephemeral=True)
+        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         await jockey.resume()
-        await itx.followup.send(embed=create_success_embed('Unpaused'))
+        await itx.followup.send(embed=create_success_embed('Unpaused'), delete_after=5.0)
 
     @slash_command(name='unshuffle')
     @application_checks.check(check_mutual_voice)
