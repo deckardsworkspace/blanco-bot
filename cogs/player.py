@@ -32,10 +32,25 @@ class PlayerCog(Cog):
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
         # Get the player for this guild from cache
         jockey: Jockey = member.guild.voice_client # type: ignore
+        if jockey is not None: 
+            # Stop playing if we're left alone
+            if len(jockey.channel.members) == 1 and after.channel is None: # type: ignore
+                return await self._disconnect(jockey=jockey, reason='You left me alone :(')
+            else:
+                # Did we get server undeafened?
+                if member.id == member.guild.me.id and after.deaf == False:
+                    try:
+                        await member.edit(deafen=True)
+                    except:
+                        pass
 
-        # Stop playing if we're left alone
-        if jockey is not None and len(jockey.channel.members) == 1 and after.channel is None: # type: ignore
-            return await self._disconnect(jockey=jockey, reason='You left me alone :(')
+                    # Send message
+                    try:
+                        await jockey.status_channel.send(embed=create_error_embed(
+                            message='Please do not undeafen me - deafening helps save server resources.'
+                        ))
+                    except:
+                        pass
     
     async def _get_jockey(self, itx: Interaction) -> Jockey:
         """
@@ -173,6 +188,10 @@ class PlayerCog(Cog):
             try:
                 await vc.connect(cls=Jockey) # type: ignore
                 await vc.guild.change_voice_state(channel=vc, self_deaf=True)
+                try:
+                    await itx.guild.me.edit(deafen=True)
+                except:
+                    pass
             except TimeoutError:
                 return await itx.followup.send(embed=create_error_embed(
                     message='Timed out while connecting to voice. Try again later.'
