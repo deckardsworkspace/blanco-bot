@@ -12,7 +12,7 @@ from .string_util import human_readable_time
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
     from mafic import Track
-    from nextcord import Embed
+    from nextcord import Embed, Message
     from nextcord.abc import Connectable, Messageable
     from .blanco import BlancoBot
 
@@ -149,6 +149,17 @@ class Jockey(Player['BlancoBot']):
             
             return result
     
+    async def _get_now_playing(self) -> Optional[Message]:
+        np_msg_id = self._db.get_now_playing(self.guild.id)
+        if np_msg_id != -1:
+            try:
+                np_msg = await self.status_channel.fetch_message(np_msg_id)
+                return np_msg
+            except:
+                pass
+        
+        return None
+
     async def _play(self, item: QueueItem) -> bool:
         results = []
 
@@ -241,7 +252,22 @@ class Jockey(Player['BlancoBot']):
                 if scrobbler is not None:
                     self._logger.debug(f'Scrobbling `{item.title}\' for {member.display_name}')
                     await self._bot.loop.run_in_executor(self._executor, scrobbler.scrobble, item)
-    
+
+    async def disconnect(self):
+        """
+        Removes the controls from Now Playing, then disconnects.
+        """
+        # Get now playing message
+        np_msg = await self._get_now_playing()
+        if np_msg is not None:
+            try:
+                await np_msg.edit(view=None)
+            except:
+                pass
+        
+        # Disconnect
+        await super().disconnect()
+
     def now_playing(self, current: Optional['Track'] = None) -> 'Embed':
         """
         Returns information about the currently playing track.
@@ -290,7 +316,7 @@ class Jockey(Player['BlancoBot']):
                 f'\nrequested by <@{track.requester}>',
                 ':warning: Could not find a perfect match for this track.' if track.is_imperfect else '',
                 f'Playing the [closest match]({current.uri}) instead.' if track.is_imperfect else '',
-                f'**New:** [Link your Last.fm account]({self._bot.config.base_url}) to scrobble as you play :sparkles:' if lastfm_enabled else ''
+                f':sparkles: [Link your Last.fm account]({self._bot.config.base_url}) to scrobble as you listen' if lastfm_enabled else ''
             ],
             footer=f'Track {self.current_index + 1} of {len(self._queue)}',
             color=Color.teal(),
@@ -411,10 +437,9 @@ class Jockey(Player['BlancoBot']):
         # It takes a while for the player to skip,
         # so let's remove the player controls while we wait
         # to prevent the user from spamming them.
-        np_msg = self._db.get_now_playing(self.guild.id)
-        if np_msg != -1:
+        np_msg = await self._get_now_playing()
+        if np_msg is not None:
             try:
-                np_msg = await self.status_channel.fetch_message(np_msg)
                 await np_msg.edit(view=None)
             except:
                 pass
