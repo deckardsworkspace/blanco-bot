@@ -1,21 +1,22 @@
-from database import Database
 from logging import INFO
+from typing import TYPE_CHECKING, Dict, Optional, Union
 from mafic import EndReason, NodePool, VoiceRegion
-from nextcord import Activity, ActivityType, Interaction, PartialMessageable, TextChannel, Thread, VoiceChannel
+from nextcord import (Activity, ActivityType, Interaction, PartialMessageable,
+                      TextChannel, Thread, VoiceChannel)
 from nextcord.ext.commands import Bot
-from nextcord.ext.tasks import loop
-from typing import Dict, Optional, TYPE_CHECKING, Union
+from database import Database
+from views.now_playing import NowPlayingView
 from .exceptions import EndOfQueueError
 from .jockey_helpers import create_error_embed
 from .logger import create_logger
 from .scrobbler import Scrobbler
 from .spotify_client import Spotify
 from .spotify_private import PrivateSpotify
-from views.now_playing import NowPlayingView
+
 if TYPE_CHECKING:
-    from dataclass.config import Config
     from logging import Logger
-    from mafic import Node, TrackStartEvent, TrackEndEvent
+    from mafic import Node, TrackEndEvent, TrackStartEvent
+    from dataclass.config import Config
     from .jockey import Jockey
 
 
@@ -74,15 +75,6 @@ class BlancoBot(Bot):
     @property
     def spotify(self) -> Spotify:
         return self._spotify_client
-
-    @loop(seconds=3600)
-    async def _bot_loop(self):
-        activity = Activity(name=f'{len(self.guilds)} servers | /play', type=ActivityType.listening)
-        await self.change_presence(activity=activity)
-
-    @_bot_loop.before_loop
-    async def _bot_loop_before(self):
-        await self.wait_until_ready()
     
     ###################
     # Event listeners #
@@ -106,6 +98,10 @@ class BlancoBot(Bot):
                     await self.sync_application_commands(guild_id=guild)
                 self._logger.info(f'Synced commands for {len(self._config.debug_guild_ids)} guild(s)!')
         else:
+            await self.change_presence(
+                activity=Activity(name='/play', type=ActivityType.listening)
+            )
+            
             # Sync commands
             self._logger.info('Syncing global commands...')
             await self.sync_application_commands()
