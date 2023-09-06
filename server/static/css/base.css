@@ -13,10 +13,13 @@
         @apply text-lg md:text-2xl;
     }
     a {
-        @apply text-sm md:text-base font-bold text-sienna underline;
+        @apply font-bold text-sienna underline;
     }
     p {
         @apply text-sm md:text-base;
+    }
+    footer p {
+        @apply text-xs md:text-sm mb-2;
     }
     body {
         @apply bg-eggshell;
