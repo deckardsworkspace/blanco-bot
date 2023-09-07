@@ -21,10 +21,10 @@ async def unlink(request: web.Request):
     except KeyError as e:
         return web.HTTPBadRequest(text=f'Missing parameter: {e.args[0]}')
     else:
-        if service == 'spotify':
-            db.delete_oauth('spotify', user_id)
-        else:
+        if service not in ('lastfm', 'spotify'):
             raise web.HTTPBadRequest(text=f'Unknown service: {service}')
+        
+        db.delete_oauth(service, user_id)
     
     # Redirect to dashboard
     return web.HTTPFound('/dashboard')
