@@ -1,13 +1,24 @@
+"""
+Spotify OAuth view. Displayed on redirect from Spotify auth flow.
+"""
+
+from base64 import b64encode
+from time import time
+
+import requests
 from aiohttp import web
 from aiohttp_session import get_session
-from base64 import b64encode
+from requests.exceptions import HTTPError, Timeout
+
 from dataclass.oauth import OAuth
-from time import time
-from utils.constants import SPOTIFY_ACCOUNTS_BASE_URL, SPOTIFY_API_BASE_URL, USER_AGENT
-import requests
+from utils.constants import (SPOTIFY_ACCOUNTS_BASE_URL, SPOTIFY_API_BASE_URL,
+                             USER_AGENT)
 
 
 async def spotifyoauth(request: web.Request):
+    """
+    Exchange the code for an access token and store it in the database.
+    """
     # Get session
     session = await get_session(request)
 
@@ -18,7 +29,7 @@ async def spotifyoauth(request: web.Request):
         return web.HTTPBadRequest(text='You are not logged into Blanco with Discord.')
     state = session['state']
     user_id = session['user_id']
-    
+
     # Get OAuth ID, secret, and base URL
     oauth_id = request.app['config'].spotify_client_id
     oauth_secret = request.app['config'].spotify_client_secret
@@ -28,13 +39,13 @@ async def spotifyoauth(request: web.Request):
     try:
         code = request.query['code']
         state = request.query['state']
-    except KeyError as e:
-        return web.HTTPBadRequest(text=f'Missing parameter: {e.args[0]}')
+    except KeyError as err:
+        return web.HTTPBadRequest(text=f'Missing parameter: {err.args[0]}')
 
     # Check state
     if state != session['state']:
         return web.HTTPBadRequest(text='Invalid state, try logging in again.')
-    
+
     # Get access token
     response = requests.post(
         str(SPOTIFY_ACCOUNTS_BASE_URL / 'token'),
@@ -47,12 +58,15 @@ async def spotifyoauth(request: web.Request):
             'Authorization': f'Basic {b64encode(f"{oauth_id}:{oauth_secret}".encode()).decode()}',
             'Content-Type': 'application/x-www-form-urlencoded',
             'User-Agent': USER_AGENT
-        }
+        },
+        timeout=5
     )
     try:
         response.raise_for_status()
-    except Exception as e:
-        return web.HTTPBadRequest(text=f'Error getting Spotify access token: {e}')
+    except HTTPError as err:
+        return web.HTTPBadRequest(text=f'Error getting Spotify access token: {err}')
+    except Timeout:
+        return web.HTTPBadRequest(text='Timed out while requesting Spotify access token')
 
     # Get user info
     parsed = response.json()
@@ -61,27 +75,30 @@ async def spotifyoauth(request: web.Request):
         headers={
             'Authorization': f'Bearer {parsed["access_token"]}',
             'User-Agent': USER_AGENT
-        }
+        },
+        timeout=5
     )
     try:
         user_info.raise_for_status()
-    except Exception as e:
-        return web.HTTPBadRequest(text=f'Error getting Spotify user info: {e}')
-    
+    except HTTPError as err:
+        return web.HTTPBadRequest(text=f'Error getting Spotify user info: {err}')
+    except Timeout:
+        return web.HTTPBadRequest(text='Timed out while requesting Spotify user info')
+
     # Calculate expiry timestamp
     user_parsed = user_info.json()
     expires_at = int(time()) + parsed['expires_in']
-    
+
     # Store user info in DB
-    db = request.app['db']
-    db.set_oauth('spotify', OAuth(
+    database = request.app['db']
+    database.set_oauth('spotify', OAuth(
         user_id=user_id,
         username=user_parsed['id'],
         access_token=parsed['access_token'],
         refresh_token=parsed['refresh_token'],
         expires_at=expires_at
     ))
-    db.set_spotify_scopes(user_id, parsed['scope'].split(' '))
+    database.set_spotify_scopes(user_id, parsed['scope'].split(' '))
 
     # Redirect to dashboard
     del session['state']

@@ -1,12 +1,21 @@
+"""
+Dataclass for an instance of nextcord.Embed with convenience fields
+for the timestamp, multiline description, etc.
+"""
+
 from dataclasses import dataclass, field
 from datetime import datetime
-from nextcord import Colour, Embed, Message
-from nextcord.ext.commands import Context
 from typing import List, Optional, Union
+
+from nextcord import Colour, Embed
 
 
 @dataclass
 class CustomEmbed:
+    """
+    Dataclass for an instance of nextcord.Embed with convenience fields
+    for the timestamp, multiline description, etc.
+    """
     # All optional
     title: Optional[str] = None
     color: Colour = Colour.og_blurple()
@@ -37,7 +46,7 @@ class CustomEmbed:
         if isinstance(self.description, list):
             description = '\n'.join(list(filter(None, self.description)))
         embed = Embed(title=self.title, description=description, color=self.color)
-        
+
         # Set embed parts
         if self.header is not None:
             embed.set_author(name=self.header)
@@ -49,29 +58,20 @@ class CustomEmbed:
             embed.set_author(name=self.header, url=self.header_url, icon_url=self.header_icon_url)
         if self.footer is not None:
             embed.set_footer(text=self.footer, icon_url=self.footer_icon_url)
-        if len(self.fields):
-            for field in self.fields:
-                embed.add_field(name=field[0], value=field[1], inline=self.inline_fields)
+        if len(self.fields) > 0:
+            for f in self.fields: # pylint: disable=invalid-name
+                embed.add_field(name=f[0], value=f[1], inline=self.inline_fields)
 
         # Save embed
         self.embed = embed
-    
+
     # Get embed object
     def get(self) -> Embed:
+        """
+        Get the resulting nextcord.Embed object.
+        """
         # Add timestamp to embed
         if self.timestamp_now:
             self.embed.timestamp = datetime.now()
 
         return self.embed
-        
-    # Send embed
-    async def send(self, ctx: Context, as_reply: bool = False) -> Message:
-        # Add timestamp to embed
-        if self.timestamp_now:
-            self.embed.timestamp = datetime.now()
-        else:
-            self.embed.timestamp = ctx.message.created_at
-
-        if as_reply:
-            return await ctx.reply(embed=self.embed)
-        return await ctx.send(embed=self.embed)

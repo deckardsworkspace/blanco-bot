@@ -1,19 +1,36 @@
-from dataclass.custom_embed import CustomEmbed
-from dataclass.queue_item import QueueItem
+"""
+Helper functions for the music player.
+"""
+
 from itertools import islice
+from typing import TYPE_CHECKING, Any, Generator, List, Optional
+
 from mafic import SearchType
 from nextcord import Color, Embed
-from typing import Any, Generator, List, Optional, TYPE_CHECKING
-from .exceptions import *
-from .lavalink_client import *
+
+from dataclass.custom_embed import CustomEmbed
+from dataclass.queue_item import QueueItem
+
+from .exceptions import (JockeyException, LavalinkInvalidIdentifierError,
+                         SpotifyNoResultsError)
+from .lavalink_client import check_similarity, get_tracks, get_youtube_matches
 from .spotify_client import Spotify
-from .url import *
+from .url import (check_sc_url, check_spotify_url, check_url,
+                  check_youtube_playlist_url, check_youtube_url,
+                  check_ytmusic_playlist_url, check_ytmusic_url,
+                  get_spinfo_from_url, get_ytid_from_url,
+                  get_ytlistid_from_url)
+
 if TYPE_CHECKING:
-    from dataclass.spotify_track import SpotifyTrack
     from mafic import Node
+
+    from dataclass.spotify_track import SpotifyTrack
 
 
 def create_error_embed(message: str) -> Embed:
+    """
+    Create an error embed.
+    """
     embed = CustomEmbed(
         color=Color.red(),
         title=':x:｜Error',
@@ -23,13 +40,16 @@ def create_error_embed(message: str) -> Embed:
 
 
 def create_success_embed(title: Optional[str] = None, body: Optional[str] = None) -> Embed:
+    """
+    Create a success embed.
+    """
     if body is None:
         if title is None:
             raise ValueError('Either title or body must be specified')
 
         body = title
         title = 'Success'
-    
+
     embed = CustomEmbed(
         color=Color.green(),
         title=f':white_check_mark:｜{title}',
@@ -39,29 +59,45 @@ def create_success_embed(title: Optional[str] = None, body: Optional[str] = None
 
 
 def list_chunks(data: List[Any]) -> Generator[List[Any], Any, Any]:
+    """
+    Yield 10-element chunks of a list. Used for pagination.
+    """
     for i in range(0, len(data), 10):
         yield list(islice(data, i, i + 10))
 
 
-async def parse_query(node: 'Node', spotify: Spotify, query: str, requester: int) -> List[QueueItem]:
+async def parse_query(
+    node: 'Node',
+    spotify: Spotify,
+    query: str,
+    requester: int
+) -> List[QueueItem]:
+    """
+    Parse a query and return a list of QueueItems.
+
+    :param node: The Lavalink node to use for searching. Must be an instance of mafic.Node.
+    :param spotify: The Spotify client to use for searching. See utils/spotify_client.py.
+    :param query: The query to parse. Can be plain language or a URL.
+    :param requester: The ID of the user who requested the track.
+    """
     query_is_url = check_url(query)
     if query_is_url:
         if check_spotify_url(query):
             # Query is a Spotify URL.
             return await parse_spotify_query(spotify, query, requester)
-        elif check_youtube_url(query) or check_ytmusic_url(query):
+        if check_youtube_url(query) or check_ytmusic_url(query):
             # Query is a YouTube URL.
             return await parse_youtube_query(node, query, requester)
-        elif check_youtube_playlist_url(query) or check_ytmusic_playlist_url(query):
+        if check_youtube_playlist_url(query) or check_ytmusic_playlist_url(query):
             # Query is a YouTube playlist URL.
             return await parse_youtube_playlist(node, query, requester)
-        elif check_sc_url(query):
+        if check_sc_url(query):
             # Query is a SoundCloud URL.
             return await parse_sc_query(node, query, requester)
-    
+
         # Direct URL playback is deprecated
         raise JockeyException('Direct playback from unsupported URLs is deprecated')
-    
+
     # Attempt to look for a matching track on Spotify
     yt_query = query
     try:
@@ -105,29 +141,36 @@ async def parse_query(node: 'Node', spotify: Spotify, query: str, requester: int
 
 
 async def parse_sc_query(node: 'Node', query: str, requester: int) -> List[QueueItem]:
-    # Get entity type
-    entity_type = get_sctype_from_url(query)
-
+    """
+    Parse a SoundCloud query and return a list of QueueItems.
+    See parse_query() for more information.
+    """
     try:
         # Get results with Lavalink
-        set_name, tracks = await get_tracks(node, query, search_type=SearchType.SOUNDCLOUD.value)
-    except:
-        raise LavalinkInvalidIdentifierError(f'Entity {query} is private, nonexistent, or has no stream URL')
-    else:
-        return [QueueItem(
-            requester=requester,
-            title=track.title,
-            artist=track.author,
-            artwork=track.artwork_url,
-            duration=track.duration_ms,
-            url=track.url,
-            lavalink_track=track.lavalink_track
-        ) for track in tracks]
+        _, tracks = await get_tracks(node, query, search_type=SearchType.SOUNDCLOUD.value)
+    except Exception as exc:
+        raise LavalinkInvalidIdentifierError(
+            f'Entity {query} is private, nonexistent, or has no stream URL'
+        ) from exc
+
+    return [QueueItem(
+        requester=requester,
+        title=track.title,
+        artist=track.author,
+        artwork=track.artwork_url,
+        duration=track.duration_ms,
+        url=track.url,
+        lavalink_track=track.lavalink_track
+    ) for track in tracks]
 
 
 async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> List[QueueItem]:
+    """
+    Parse a Spotify query and return a list of QueueItems.
+    See parse_query() for more information.
+    """
     # Get artwork for Spotify album/playlist
-    sp_type, sp_id = get_spinfo_from_url(query, valid_types=['track', 'album', 'playlist'])
+    sp_type, sp_id = get_spinfo_from_url(query)
 
     new_tracks = []
     track_queue: List['SpotifyTrack']
@@ -153,11 +196,15 @@ async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> L
             artwork=track.artwork,
             isrc=track.isrc
         ))
-    
+
     return new_tracks
 
 
 async def parse_youtube_playlist(node: 'Node', query: str, requester: int) -> List[QueueItem]:
+    """
+    Parse a YouTube playlist query and return a list of QueueItems.
+    See parse_query() for more information.
+    """
     try:
         # Get playlist tracks from YouTube
         playlist_id = get_ytlistid_from_url(query)
@@ -166,22 +213,29 @@ async def parse_youtube_playlist(node: 'Node', query: str, requester: int) -> Li
             f'https://youtube.com/playlist?list={playlist_id}',
             search_type=SearchType.YOUTUBE.value
         )
-    except:
+    except Exception as exc:
         # No tracks.
-        raise LavalinkInvalidIdentifierError(query, f'Playlist is empty, private, or nonexistent')
-    else:
-        return [QueueItem(
-            requester=requester,
-            title=track.title,
-            artist=track.author,
-            artwork=track.artwork_url,
-            duration=track.duration_ms,
-            url=track.url,
-            lavalink_track=track.lavalink_track
-        ) for track in tracks]
+        raise LavalinkInvalidIdentifierError(
+            query,
+            'Playlist is empty, private, or nonexistent'
+        ) from exc
+
+    return [QueueItem(
+        requester=requester,
+        title=track.title,
+        artist=track.author,
+        artwork=track.artwork_url,
+        duration=track.duration_ms,
+        url=track.url,
+        lavalink_track=track.lavalink_track
+    ) for track in tracks]
 
 
 async def parse_youtube_query(node: 'Node', query: str, requester: int) -> List[QueueItem]:
+    """
+    Parse a non-playlist YouTube query and return a list of QueueItems.
+    See parse_query() for more information.
+    """
     # Is it a video?
     try:
         video_id = get_ytid_from_url(query)
@@ -199,5 +253,8 @@ async def parse_youtube_query(node: 'Node', query: str, requester: int) -> List[
         )]
     except LavalinkInvalidIdentifierError:
         raise
-    except:
-        raise LavalinkInvalidIdentifierError(query, 'Only YouTube video and playlist URLs are supported.')
+    except Exception as exc:
+        raise LavalinkInvalidIdentifierError(
+            query,
+            'Only YouTube video and playlist URLs are supported.'
+        ) from exc

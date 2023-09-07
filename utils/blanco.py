@@ -149,38 +149,49 @@ class BlancoBot(Bot):
     #####################
 
     def get_scrobbler(self, user_id: int) -> Optional['Scrobbler']:
-        # Check if a scrobbler already exists
-        if user_id in self._scrobblers:
-            self._logger.debug(f'Using cached scrobbler for user {user_id}')
-            return self._scrobblers[user_id]
-        
+        """
+        Gets a Last.fm scrobbler instance for the specified user.
+        """
+        assert self._config is not None and self._db is not None
+
         # Check if user is authenticated with Last.fm
-        creds = self.db.get_lastfm_credentials(user_id)
+        creds = self._db.get_lastfm_credentials(user_id)
         if creds is None:
+            if user_id in self._scrobblers:
+                # User must have unlinked their account, so delete the cached scrobbler
+                del self._scrobblers[user_id]
+            
             return None
         
-        # Create scrobbler
-        assert self._config is not None
-        scrobbler = Scrobbler(self._config, creds)
-        self._scrobblers[user_id] = scrobbler
-        self._logger.debug(f'Created scrobbler for user {user_id}')
-        return scrobbler
+        # Check if a scrobbler already exists
+        if user_id not in self._scrobblers:
+            # Create scrobbler
+            self._scrobblers[user_id] = Scrobbler(self._config, creds)
+            self._logger.debug(f'Created scrobbler for user {user_id}')
+        
+        return self._scrobblers[user_id]
     
     def get_spotify_client(self, user_id: int) -> PrivateSpotify:
         """
         Gets a Spotify client instance for the specified user.
         """
-        if user_id not in self._spotify_clients:
-            assert self._config is not None and self._db is not None
+        assert self._config is not None and self._db is not None
 
-            # Try to get credentials
-            creds = self._db.get_oauth('spotify', user_id)
-            if creds is None:
-                raise ValueError(f'Please link your Spotify account [here.]({self._config.base_url})')
+        # Try to get credentials
+        creds = self._db.get_oauth('spotify', user_id)
+        if creds is None:
+            # Check if there is a cached client for this user
+            if user_id in self._spotify_clients:
+                # User must have unlinked their account, so delete the cached client
+                del self._spotify_clients[user_id]
             
+            raise ValueError(f'Please link your Spotify account [here.]({self._config.base_url})')
+        
+        # Check if a client already exists
+        if user_id not in self._spotify_clients:
             self._spotify_clients[user_id] = PrivateSpotify(
                 config=self._config,
-                db=self._db,
+                database=self._db,
                 credentials=creds
             )
             self._logger.debug(f'Created Spotify client for user {user_id}')
@@ -199,6 +210,9 @@ class BlancoBot(Bot):
             self._logger.warn(f'Failed to save status channel for guild {guild_id} in DB')
         
     def get_status_channel(self, guild_id: int) -> Optional['StatusChannel']:
+        """
+        Gets the status channel for the specified guild.
+        """
         # Check if status channel is cached
         if guild_id in self._status_channels:
             return self._status_channels[guild_id]

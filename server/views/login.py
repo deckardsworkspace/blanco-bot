@@ -1,11 +1,19 @@
-from aiohttp import web
-from aiohttp_session import get_session
+"""
+Login view.
+"""
+
 from secrets import choice
 from string import ascii_letters, digits
+
+from aiohttp import web
+from aiohttp_session import get_session
 from yarl import URL
 
 
 async def login(request: web.Request):
+    """
+    Construct a Discord OAuth2 authorization URL and redirect to it.
+    """
     # Create session
     session = await get_session(request)
 

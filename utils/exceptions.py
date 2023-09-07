@@ -1,46 +1,58 @@
+"""
+Custom exceptions for Blanco
+"""
+
 class EndOfQueueError(Exception):
-    def __init__(self, reason):
-        self.message = reason
-        super().__init__(self.message)
+    """
+    Raised when the end of the queue is reached.
+    """
 
 
 class JockeyError(Exception):
     """
     Raised when an error warrants disconnection from the voice channel.
     """
-    pass
 
 
 class JockeyException(Exception):
     """
     Raised when an error does not warrant disconnection from the voice channel.
     """
-    pass
-
 
 class LavalinkInvalidIdentifierError(Exception):
+    """
+    Raised when an invalid identifier is passed to Lavalink.
+    """
     def __init__(self, url, reason=None):
         self.message = f'Error encountered while processing "{url}": `{reason}`'
         super().__init__(self.message)
 
 
 class LavalinkSearchError(Exception):
+    """
+    Raised when Lavalink fails to search for a query.
+    """
     def __init__(self, query, reason=None):
         self.message = f'Could not search for "{query}" on YouTube. Reason: {reason}'
         super().__init__(self.message)
 
 
 class SpotifyInvalidURLError(Exception):
+    """
+    Raised when an invalid Spotify link or URI is passed.
+    """
     def __init__(self, url):
-        self.message = "Invalid Spotify link or URI: {}".format(url)
+        self.message = f'Invalid Spotify link or URI: {url}'
         super().__init__(self.message)
 
 
 class SpotifyNoResultsError(Exception):
-    pass
+    """
+    Raised when no results are found for a Spotify query.
+    """
 
 
 class VoiceCommandError(Exception):
-    def __init__(self, reason):
-        self.message = reason
-        super().__init__(self.message)
+    """
+    Raised when a command that requires a voice channel is invoked outside of one.
+    """

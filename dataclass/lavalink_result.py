@@ -1,11 +1,19 @@
+"""
+Dataclass for storing Lavalink search results.
+"""
+
 from dataclasses import dataclass
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
 if TYPE_CHECKING:
     from mafic import Track
 
 
 @dataclass
 class LavalinkResult:
+    """
+    Dataclass for storing Lavalink search results.
+    """
     title: str
     author: str
     duration_ms: int

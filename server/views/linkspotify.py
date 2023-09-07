@@ -1,11 +1,19 @@
-from aiohttp import web
-from aiohttp_session import get_session
+"""
+Spotify auth view.
+"""
+
 from secrets import choice
 from string import ascii_letters, digits
+
+from aiohttp import web
+from aiohttp_session import get_session
 from yarl import URL
 
 
 async def link_spotify(request: web.Request):
+    """
+    Construct a Spotify OAuth2 authorization URL and redirect to it.
+    """
     # Create session
     session = await get_session(request)
 

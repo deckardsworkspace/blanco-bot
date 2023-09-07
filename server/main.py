@@ -1,32 +1,48 @@
+"""
+Main module for the web server.
+"""
+
+from base64 import urlsafe_b64decode
+from typing import TYPE_CHECKING
+
+import aiohttp_jinja2
+import jinja2
 from aiohttp import web
 from aiohttp.abc import AbstractAccessLogger
 from aiohttp_session import setup as setup_sessions
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
-from base64 import urlsafe_b64decode
 from cryptography.fernet import Fernet
-from typing import TYPE_CHECKING
+
 from utils.logger import create_logger
+
 from .routes import setup_routes
-import aiohttp_jinja2
-import jinja2
+
 if TYPE_CHECKING:
     from database import Database
     from dataclass.config import Config
 
 
 class AccessLogger(AbstractAccessLogger):
+    """
+    Custom access logger that logs the response status code, request method,
+    path, and time taken to process the request.
+    """
+
     def log(self, request, response, time):
-        self.logger.info(f'Server: {response.status} {request.method}'
-                         f' {request.path} (took {time*1000:.2f} ms)')
+        log_fmt = 'Server: %s %s %s (took %.2f ms)'
+        self.logger.info(log_fmt, response.status, request.method, request.path, time*1000)
 
 
-async def run_app(db: 'Database', config: 'Config'):
+async def run_app(database: 'Database', config: 'Config'):
+    """
+    Run the web server.
+    """
     # Create logger
     logger = create_logger('server', debug=config.debug_enabled)
 
     # Create app
     app = web.Application()
-    app['db'] = db
+    app['db'] = database
     app['config'] = config
 
     # Setup sessions
@@ -43,4 +59,4 @@ async def run_app(db: 'Database', config: 'Config'):
     site = web.TCPSite(runner, port=config.server_port)
     await site.start()
 
-    logger.info(f'Web server started')
+    logger.info('Web server started')

@@ -1,46 +1,70 @@
-from asyncio import TimeoutError
-from nextcord import Color, Guild, Interaction, Member, slash_command, SlashOption, VoiceState
+"""
+PlayerCog: Cog for controlling the music player.
+"""
+
+from asyncio import TimeoutError as AsyncioTimeoutError
+from typing import TYPE_CHECKING, Optional
+
+from nextcord import (Color, Forbidden, Guild, HTTPException, Interaction,
+                      Member, SlashOption, VoiceState, slash_command)
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
-from typing import Optional, TYPE_CHECKING
+
 from dataclass.custom_embed import CustomEmbed
-from utils.exceptions import EndOfQueueError, JockeyException, JockeyError
-from utils.jockey import Jockey
-from utils.jockey_helpers import create_error_embed, create_success_embed, list_chunks
 from utils.blanco import BlancoBot
+from utils.exceptions import EndOfQueueError, JockeyError, JockeyException
+from utils.jockey import Jockey
+from utils.jockey_helpers import (create_error_embed, create_success_embed,
+                                  list_chunks)
 from utils.logger import create_logger
 from utils.paginator import Paginator
-from utils.player_checks import *
+from utils.player_checks import check_mutual_voice
 from views.spotify_dropdown import SpotifyDropdownView
+
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
 
 
 class PlayerCog(Cog):
+    """
+    Cog for creating, controlling, and destroying music players for guilds.
+    """
     def __init__(self, bot: BlancoBot):
+        """
+        Constructor for PlayerCog.
+        """
         self._bot = bot
         self._logger = create_logger(self.__class__.__name__, bot.debug)
 
         # Initialize Lavalink client instance
         if not bot.pool_initialized:
             bot.loop.create_task(bot.init_pool())
-        
-        self._logger.info(f'Loaded cog')
-    
+
+        self._logger.info('Loaded PlayerCog')
+
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+        """
+        Called every time the voice state of a member changes.
+        In this cog, we use it to check if the bot is left alone in a voice channel,
+        or if the bot has been server-undeafened.
+        """
         # Get the player for this guild from cache
         jockey: Jockey = member.guild.voice_client # type: ignore
-        if jockey is not None: 
+        if jockey is not None:
             # Stop playing if we're left alone
             if len(jockey.channel.members) == 1 and after.channel is None: # type: ignore
                 return await self._disconnect(jockey=jockey, reason='You left me alone :(')
             else:
                 # Did we get server undeafened?
                 if member.id == member.guild.me.id and before.deaf and not after.deaf:
-                    await self._deafen(member.guild.me, was_deafened=True, channel=jockey.status_channel)
-    
+                    await self._deafen(
+                        member.guild.me,
+                        was_deafened=True,
+                        channel=jockey.status_channel
+                    )
+
     async def _get_jockey(self, itx: Interaction) -> Jockey:
         """
         Gets the Jockey instance for the specified guild.
@@ -49,11 +73,16 @@ class PlayerCog(Cog):
         if jockey is None:
             if not itx.response.is_done():
                 await itx.followup.send(embed=create_error_embed('Not connected to voice'))
-            raise RuntimeError('[player] Attempted to access Jockey for a guild that is not connected to voice')
-        
+            raise RuntimeError('Attempted to access nonexistent jockey')
+
         return jockey
-    
-    async def _deafen(self, bot_user: Member, was_deafened: bool = False, channel: Optional[Messageable] = None):
+
+    async def _deafen(
+        self,
+        bot_user: Member,
+        was_deafened: bool = False,
+        channel: Optional[Messageable] = None
+    ):
         """
         Attempt to deafen the bot user.
         
@@ -64,25 +93,25 @@ class PlayerCog(Cog):
         # Check if we're already deafened
         if not was_deafened and bot_user.voice is not None and bot_user.voice.deaf:
             return
-        
+
         if bot_user.guild_permissions.deafen_members:
             try:
                 await bot_user.edit(deafen=True)
-            except:
+            except Forbidden:
                 pass
-        
+
         # Send message
         if channel is not None and hasattr(channel, 'send'):
             err = 'Please server deafen me.'
             if was_deafened:
                 err = 'Please do not undeafen me.'
-            
+
             try:
                 await channel.send(embed=create_error_embed(
                     message=f'{err} Deafening helps save server resources.'
                 ))
-            except:
-                pass
+            except (Forbidden, HTTPException):
+                self._logger.error('Unable to send deafen message in guild %d', bot_user.guild.id)
 
     async def _disconnect(
         self,
@@ -113,12 +142,16 @@ class PlayerCog(Cog):
                 channel = self._bot.get_status_channel(guild_id)
                 if channel is not None:
                     await channel.send(embed=embed)
-        except:
-            pass
-    
+        except (Forbidden, HTTPException):
+            self._logger.error('Unable to send disconnect message in guild %d', jockey.guild.id)
+
     @slash_command(name='jump')
     @application_checks.check(check_mutual_voice)
-    async def jump(self, itx: Interaction, position: int = SlashOption(description='Position to jump to', required=True)):
+    async def jump(
+        self,
+        itx: Interaction,
+        position: int = SlashOption(description='Position to jump to', required=True)
+    ):
         """
         Jumps to the specified position in the queue.
         """
@@ -126,14 +159,17 @@ class PlayerCog(Cog):
 
         # First check if the value is within range
         if position < 1 or position > len(jockey.queue):
-            await itx.response.send_message(f'Specify a number from 1 to {str(len(jockey.queue))}.', ephemeral=True)
+            await itx.response.send_message(
+                f'Specify a number from 1 to {str(len(jockey.queue))}.',
+                ephemeral=True
+            )
             return
-        
+
         # Dispatch to jockey
         await itx.response.defer()
         await jockey.skip(index=position - 1, auto=False)
         await itx.followup.send(embed=create_success_embed(f'Jumped to track {str(position)}'))
-    
+
     @slash_command(name='loop')
     @application_checks.check(check_mutual_voice)
     async def loop(self, itx: Interaction):
@@ -143,9 +179,8 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         if not jockey.is_looping:
             jockey.is_looping = True
-            return await itx.response.send_message(embed=create_success_embed('Looping current track'))
-        return await itx.response.send_message(embed=create_success_embed('Already looping current track'))
-    
+        return await itx.response.send_message(embed=create_success_embed('Looping current track'))
+
     @slash_command(name='loopall')
     @application_checks.check(check_mutual_voice)
     async def loopall(self, itx: Interaction):
@@ -155,9 +190,8 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         if not jockey.is_looping_all:
             jockey.is_looping_all = True
-            return await itx.response.send_message(embed=create_success_embed('Looping entire queue'))
-        return await itx.response.send_message(embed=create_success_embed('Already looping entire queue'))
-    
+        return await itx.response.send_message(embed=create_success_embed('Looping entire queue'))
+
     @slash_command(name='nowplaying')
     @application_checks.check(check_mutual_voice)
     async def now_playing(self, itx: Interaction):
@@ -171,19 +205,27 @@ class PlayerCog(Cog):
 
     @slash_command(name='pause')
     @application_checks.check(check_mutual_voice)
-    async def pause(self, itx: Interaction):
+    async def pause(self, itx: Interaction, quiet: bool = False):
         """
         Pauses the current track.
         """
+        if not quiet:
+            await itx.response.defer()
+
         # Dispatch to jockey
-        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         await jockey.pause()
-        await itx.followup.send(embed=create_success_embed('Paused'), delete_after=5.0)
+
+        if not quiet:
+            await itx.followup.send(embed=create_success_embed('Paused'), delete_after=5.0)
 
     @slash_command(name='play')
     @application_checks.check(check_mutual_voice)
-    async def play(self, itx: Interaction, query: str = SlashOption(description='Query string or URL', required=True)):
+    async def play(
+        self,
+        itx: Interaction,
+        query: str = SlashOption(description='Query string or URL', required=True)
+    ):
         """
         Play a song from a search query or a URL.
         If you want to unpause a paused player, use /unpause instead.
@@ -193,23 +235,26 @@ class PlayerCog(Cog):
             return await itx.response.send_message(embed=create_error_embed(
                 message='Connect to a server voice channel to use this command.'
             ), ephemeral=True)
-        
+
         # Set status channel
         guild_id = itx.guild.id
         channel = itx.channel
         if not isinstance(channel, Messageable):
             raise RuntimeError('[player::play] itx.channel is not Messageable')
         self._bot.set_status_channel(guild_id, channel)
-        
+
         # Connect to voice
         await itx.response.defer()
-        vc = itx.user.voice.channel
+        voice_channel = itx.user.voice.channel
         if itx.guild.voice_client is None:
             try:
-                await vc.connect(cls=Jockey) # type: ignore
-                await vc.guild.change_voice_state(channel=vc, self_deaf=True)
+                await voice_channel.connect(cls=Jockey) # type: ignore
+                await voice_channel.guild.change_voice_state(
+                    channel=voice_channel,
+                    self_deaf=True
+                )
                 await self._deafen(itx.guild.me, channel=channel)
-            except TimeoutError:
+            except AsyncioTimeoutError:
                 return await itx.followup.send(embed=create_error_embed(
                     message='Timed out while connecting to voice. Try again later.'
                 ))
@@ -218,18 +263,29 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         try:
             track_name = await jockey.play_impl(query, itx.user.id)
-        except JockeyError as e:
+        except JockeyError as err:
             # Disconnect if we're not playing anything
             if not jockey.playing:
-                await self._disconnect(itx=itx, reason=str(e))
-        except JockeyException as e:
-            await itx.followup.send(embed=create_error_embed(str(e)))
+                await self._disconnect(itx=itx, reason=str(err))
+        except JockeyException as err:
+            await itx.followup.send(embed=create_error_embed(str(err)))
         else:
+            body = [track_name]
+
+            # Add Last.fm integration promo if enabled
+            assert self._bot.config is not None
+            server_enabled = self._bot.config.enable_server
+            if (server_enabled and self._bot.config.base_url is not None and
+                self._bot.config.lastfm_api_key is not None and
+                self._bot.config.lastfm_shared_secret is not None):
+                template = ':sparkles: [Link Last.fm]({}) to scrobble as you listen'
+                body.append(template.format(self._bot.config.base_url))
+
             return await itx.followup.send(embed=create_success_embed(
                 title='Added to queue',
-                body=track_name
+                body='\n\n'.join(body)
             ))
-    
+
     @slash_command(name='playlists')
     async def playlist(self, itx: Interaction):
         """
@@ -238,20 +294,23 @@ class PlayerCog(Cog):
         if itx.user is None:
             return
         await itx.response.defer()
-        
+
         # Get Spotify client
         try:
             spotify = self._bot.get_spotify_client(itx.user.id)
-        except ValueError as e:
-            return await itx.followup.send(embed=create_error_embed(e.args[0]), ephemeral=True)
-        
+        except ValueError as err:
+            return await itx.followup.send(
+                embed=create_error_embed(err.args[0]),
+                ephemeral=True
+            )
+
         # Get the user's playlists
         playlists = spotify.get_user_playlists()
         if len(playlists) == 0:
             return await itx.followup.send(embed=create_error_embed(
                 message='You have no playlists.'
             ), ephemeral=True)
-        
+
         # Create dropdown
         view = SpotifyDropdownView(self._bot, playlists, itx.user.id)
         await itx.followup.send(embed=create_success_embed(
@@ -270,10 +329,10 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         try:
             await jockey.skip(forward=False, auto=False)
-        except Exception as e:
-            embed = create_error_embed(f'Unable to rewind. Reason: {e}')
+        except EndOfQueueError as err:
+            embed = create_error_embed(f'Unable to rewind: {err.args[0]}')
             await itx.followup.send(embed=embed)
-    
+
     @slash_command(name='queue')
     @application_checks.check(check_mutual_voice)
     async def queue(self, itx: Interaction):
@@ -289,17 +348,19 @@ class PlayerCog(Cog):
         if len(jockey.queue) == 0:
             await itx.followup.send(embed=create_error_embed('Queue is empty'))
             return
-        
+
         # Show loop status
         embed_header = [f'{len(jockey.queue)} total']
         if jockey.is_looping_all:
             embed_header.append(':repeat: Looping entire queue (`/unloopall` to disable)')
-        
+
         # Show shuffle status
         queue = list(jockey.queue)
         current = jockey.current_index
         if jockey.is_shuffling:
-            embed_header.append(':twisted_rightwards_arrows: Shuffling queue  (`/unshuffle` to disable)')
+            embed_header.append(
+                ':twisted_rightwards_arrows: Shuffling queue  (`/unshuffle` to disable)'
+            )
             current = jockey.shuffle_indices.index(current)
 
             # Get shuffled version of queue
@@ -322,13 +383,13 @@ class PlayerCog(Cog):
                 index = str(count)
                 while len(index) < prefix_len:
                     index = ' ' + index
-                
+
                 # Is this the current track?
                 line_prefix = '  '
                 if count - 1 == current:
                     line_prefix = '> '
                     homepage = i
-                
+
                 # Create item line
                 line_prefix = '> ' if count - 1 == current else '  '
                 line = f'{line_prefix} {index} :: {title} - {artist}'
@@ -350,11 +411,11 @@ class PlayerCog(Cog):
                 color=Color.lighter_gray()
             )
             pages.append(embed.get())
-    
+
         # Run paginator
         paginator = Paginator(itx)
         return await paginator.run(pages, start=homepage)
-    
+
     @slash_command(name='remove')
     @application_checks.check(check_mutual_voice)
     async def remove(
@@ -377,7 +438,7 @@ class PlayerCog(Cog):
             return await itx.response.send_message(embed=create_error_embed(
                 message='You cannot remove the currently playing track.'
             ), ephemeral=True)
-        
+
         # Dispatch to jockey
         await itx.response.defer()
         title, artist = await jockey.remove(index=position - 1)
@@ -388,21 +449,27 @@ class PlayerCog(Cog):
 
     @slash_command(name='shuffle')
     @application_checks.check(check_mutual_voice)
-    async def shuffle(self, itx: Interaction):
+    async def shuffle(self, itx: Interaction, quiet: bool = False):
         """
         Shuffle the current playlist.
         If you want to unshuffle the current queue, use /unshuffle instead.
         """
+        if not quiet:
+            await itx.response.defer()
+
         # Dispatch to jockey
-        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         try:
             await jockey.shuffle()
-        except EndOfQueueError as e:
-            await itx.followup.send(embed=create_error_embed(str(e)))
+        except EndOfQueueError as err:
+            if not quiet:
+                await itx.followup.send(embed=create_error_embed(str(err.args[0])))
         else:
-            await itx.followup.send(embed=create_success_embed(f'{len(jockey.queue)} tracks shuffled'))
-    
+            if not quiet:
+                await itx.followup.send(
+                    embed=create_success_embed(f'{len(jockey.queue)} tracks shuffled')
+                )
+
     @slash_command(name='skip')
     @application_checks.check(check_mutual_voice)
     async def skip(self, itx: Interaction):
@@ -414,10 +481,10 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         try:
             await jockey.skip(auto=False)
-        except Exception as e:
-            embed = create_error_embed(f'Unable to skip. Reason: {e}')
+        except EndOfQueueError as err:
+            embed = create_error_embed(f'Unable to skip: {err.args[0]}')
             await itx.followup.send(embed=embed)
-    
+
     @slash_command(name='stop')
     @application_checks.check(check_mutual_voice)
     async def stop(self, itx: Interaction):
@@ -428,7 +495,7 @@ class PlayerCog(Cog):
             raise RuntimeError('[player::stop] itx.user is not a Member')
         await itx.response.defer()
         await self._disconnect(itx=itx, reason=f'Stopped by <@{itx.user.id}>')
-    
+
     @slash_command(name='unloop')
     @application_checks.check(check_mutual_voice)
     async def unloop(self, itx: Interaction):
@@ -439,9 +506,10 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         if jockey.is_looping:
             jockey.is_looping = False
-            return await itx.response.send_message(embed=create_success_embed('Stopped looping current track'))
-        return await itx.response.send_message(embed=create_success_embed('Not currently looping current track'))
-    
+        return await itx.response.send_message(
+            embed=create_success_embed('Not looping current track')
+        )
+
     @slash_command(name='unloopall')
     @application_checks.check(check_mutual_voice)
     async def unloopall(self, itx: Interaction):
@@ -452,35 +520,47 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         if jockey.is_looping_all:
             jockey.is_looping_all = False
-            return await itx.response.send_message(embed=create_success_embed('Stopped looping entire queue'))
-        return await itx.response.send_message(embed=create_success_embed('Not currently looping entire queue'))
-    
+        return await itx.response.send_message(
+            embed=create_success_embed('Not looping entire queue')
+        )
+
     @slash_command(name='unpause')
     @application_checks.check(check_mutual_voice)
-    async def unpause(self, itx: Interaction):
+    async def unpause(self, itx: Interaction, quiet: bool = False):
         """
         Unpauses the current track.
         """
+        if not quiet:
+            await itx.response.defer()
+
         # Dispatch to jockey
-        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         await jockey.resume()
-        await itx.followup.send(embed=create_success_embed('Unpaused'), delete_after=5.0)
+
+        if not quiet:
+            await itx.followup.send(embed=create_success_embed('Unpaused'), delete_after=5.0)
 
     @slash_command(name='unshuffle')
     @application_checks.check(check_mutual_voice)
-    async def unshuffle(self, itx: Interaction):
+    async def unshuffle(self, itx: Interaction, quiet: bool = False):
         """
         Unshuffle the current playlist.
         """
+        if not quiet:
+            await itx.response.defer()
+
         # Dispatch to jockey
-        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         if jockey.is_shuffling:
             jockey.shuffle_indices = []
-            return await itx.followup.send(embed=create_success_embed('Unshuffled'))
-        await itx.followup.send(embed=create_error_embed('Current queue is not shuffled'))
-    
+            if not quiet:
+                return await itx.followup.send(embed=create_success_embed('Unshuffled'))
+
+        if not quiet:
+            return await itx.followup.send(
+                embed=create_error_embed('Current queue is not shuffled')
+            )
+
     @slash_command(name='volume')
     @application_checks.check(check_mutual_voice)
     async def volume(
@@ -501,7 +581,10 @@ class PlayerCog(Cog):
         # Is the volume argument empty?
         if not volume:
             # Print current volume
-            return await itx.response.send_message(f'The volume is set to {jockey.volume}.', ephemeral=True)
+            return await itx.response.send_message(
+                f'The volume is set to {jockey.volume}.',
+                ephemeral=True
+            )
 
         # Dispatch to jockey
         await itx.response.defer()

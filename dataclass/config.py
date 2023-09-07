@@ -1,10 +1,17 @@
+"""
+Dataclasses for storing Blanco's configuration objects.
+"""
+
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 
 @dataclass
 class LavalinkNode:
-    id: str
+    """
+    Dataclass for storing Lavalink node information.
+    """
+    id: str # pylint: disable=invalid-name
     password: str
     host: str
     port: int
@@ -21,15 +28,15 @@ class LavalinkNode:
             raise TypeError('password must be a string')
         if not isinstance(self.id, str):
             raise TypeError('id must be a string')
-        
+
         # Check if port is an int
         if not isinstance(self.port, int):
             raise TypeError('port must be an int')
-        
+
         # Check if ssl is a bool
         if not isinstance(self.secure, bool):
             raise TypeError('ssl must be a bool')
-        
+
         # Check if deezer is a bool
         if not isinstance(self.deezer, bool):
             raise TypeError('deezer must be a bool')
@@ -41,6 +48,9 @@ class LavalinkNode:
 
 @dataclass
 class Config:
+    """
+    Dataclass for storing Blanco's configuration.
+    """
     # Required
     db_file: str
     discord_token: str

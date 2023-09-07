@@ -1,12 +1,17 @@
-from dataclass.custom_embed import CustomEmbed
-from nextcord import Color, Interaction, slash_command, SlashOption, PartialMessageable
+"""
+DebugCog: Cog for debugging commands.
+"""
+
+from nextcord import (Color, Interaction, PartialMessageable, SlashOption,
+                      slash_command)
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
-from utils.jockey_helpers import create_success_embed
+
+from dataclass.custom_embed import CustomEmbed
 from utils.blanco import BlancoBot
+from utils.jockey_helpers import create_success_embed
 from utils.logger import create_logger
 from utils.paginator import Paginator
-
 
 STATS_FORMAT = """
 ```asciidoc
@@ -21,21 +26,31 @@ Memory  :: {used:.0f} MiB used
 """
 
 class DebugCog(Cog):
+    """
+    Cog for debugging commands.
+    """
     def __init__(self, bot: BlancoBot):
+        """
+        Constructor for DebugCog.
+        """
         self._bot = bot
         self._logger = create_logger(self.__class__.__name__, bot.debug)
-        self._logger.info(f'Loaded cog')
-    
+        self._logger.info('Loaded DebugCog')
+
     @slash_command(name='announce')
     @application_checks.is_owner()
-    async def announce(self, itx: Interaction, message: str = SlashOption(description='The message to announce.', required=True)):
+    async def announce(
+        self,
+        itx: Interaction,
+        message: str = SlashOption(description='The message to announce.', required=True)
+    ):
         """
         Posts an announcement to the system channel in all guilds.
         If there is no system channel, attempt to send to the last channel
         used by the bot for now playing embeds.
         """
         await itx.response.defer()
-        
+
         # Create announcement embed
         embed = CustomEmbed(
             color=Color.yellow(),
@@ -52,19 +67,19 @@ class DebugCog(Cog):
             if system_channel is None:
                 # Attempt to get status channel
                 system_channel = self._bot.get_status_channel(guild.id)
-            
+
             if system_channel is None or (
                 not isinstance(system_channel, PartialMessageable) and
                 not system_channel.permissions_for(guild.me).send_messages
             ):
-                self._logger.error(f'No suitable announcement channel saved for {guild.name}')
+                self._logger.error('No suitable announcement channel saved for %s', guild.name)
             else:
                 # Send message
                 await system_channel.send(embed=embed)
-                self._logger.info(f'Sent announcement to {guild.name}')
+                self._logger.info('Sent announcement to %s', guild.name)
 
         await itx.followup.send(embed=create_success_embed('Announced!'), ephemeral=True)
-    
+
     @slash_command(name='reload')
     @application_checks.is_owner()
     async def reload(self, itx: Interaction):
@@ -78,8 +93,11 @@ class DebugCog(Cog):
         # Resync commands
         await self._bot.sync_all_application_commands()
 
-        await itx.response.send_message(embed=create_success_embed('Reloaded extensions!'), ephemeral=True)
-    
+        await itx.response.send_message(
+            embed=create_success_embed('Reloaded extensions!'),
+            ephemeral=True
+        )
+
     @slash_command(name='stats')
     @application_checks.is_owner()
     async def stats(self, itx: Interaction):
