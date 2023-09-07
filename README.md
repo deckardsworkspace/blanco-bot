@@ -7,7 +7,7 @@ Blanco is a Discord music bot made with [Nextcord](https://nextcord.dev) that su
 
 [![GitHub Releases](https://img.shields.io/github/v/release/jareddantis-bots/blanco-bot)](https://github.com/jareddantis-bots/blanco-bot/releases/latest)
 [![Docker Image CI](https://github.com/jareddantis/blanco-bot/actions/workflows/build.yml/badge.svg)](https://github.com/jareddantis/blanco-bot/actions/workflows/build.yml)
-![Docker Pulls](https://img.shields.io/docker/pulls/jareddantis/blanco-bot)
+[![Docker Pulls](https://img.shields.io/docker/pulls/jareddantis/blanco-bot)](https://hub.docker.com/r/jareddantis/blanco-bot)
 
 The bot stores data in a local SQLite database. This database is populated automatically on first run, and the data it will contain include authentication tokens, Lavalink session IDs, volume levels, and queue repeat preferences per guild.
 
