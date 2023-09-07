@@ -22,7 +22,7 @@ The bot stores data in a local SQLite database. This database is populated autom
 >
 > At best, Discord will reject your application for verification, and at worst, your developer account will get banned.
 
-Head over to the [wiki](https://github.com/jareddantis-bots/blanco-bot/wiki/Deployment) to get started.
+Head over to the [wiki](https://github.com/jareddantis-bots/blanco-bot/wiki) to get started.
 
 ## Debugging mode
 
