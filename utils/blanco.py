@@ -191,7 +191,7 @@ class BlancoBot(Bot):
         if user_id not in self._spotify_clients:
             self._spotify_clients[user_id] = PrivateSpotify(
                 config=self._config,
-                db=self._db,
+                database=self._db,
                 credentials=creds
             )
             self._logger.debug(f'Created Spotify client for user {user_id}')
@@ -210,6 +210,9 @@ class BlancoBot(Bot):
             self._logger.warn(f'Failed to save status channel for guild {guild_id} in DB')
         
     def get_status_channel(self, guild_id: int) -> Optional['StatusChannel']:
+        """
+        Gets the status channel for the specified guild.
+        """
         # Check if status channel is cached
         if guild_id in self._status_channels:
             return self._status_channels[guild_id]

@@ -1,8 +1,12 @@
+"""
+Main bot file.
+"""
+
 from nextcord import Intents
+
 from utils.blanco import BlancoBot
 from utils.config import config
 from utils.logger import create_logger
-
 
 # Create bot instance
 intents = Intents.default()

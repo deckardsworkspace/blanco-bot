@@ -1,3 +1,7 @@
+"""
+This module imports all the views for the server.
+"""
+
 from .dashboard import dashboard
 from .deleteaccount import delete_account
 from .discordoauth import discordoauth

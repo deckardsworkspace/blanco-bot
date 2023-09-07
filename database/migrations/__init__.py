@@ -1,6 +1,13 @@
+"""
+Database migrations module for Blanco.
+Handles automatic adjustment of the SQLite database schema
+across updates of the bot.
+"""
+
 from importlib import import_module
 from os import listdir, path
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from logging import Logger
     from sqlite3 import Connection

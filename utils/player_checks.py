@@ -1,6 +1,14 @@
-from nextcord import Interaction, Member
+"""
+Check functions for the music player. These are called before
+the player is instantiated, and are used to check if the bot
+can connect and play music in a channel.
+"""
 from typing import TYPE_CHECKING
+
+from nextcord import Interaction, Member
+
 from .exceptions import VoiceCommandError
+
 if TYPE_CHECKING:
     from .jockey import Jockey
 
@@ -33,22 +41,22 @@ def check_mutual_voice(itx: Interaction, slash: bool = True) -> bool:
             return True
         raise VoiceCommandError('Please `/play` something first before using this command.')
 
-    vc = itx.user.voice.channel
+    voice_channel = itx.user.voice.channel
     if not player.is_connected():
         # Bot needs to already be in voice channel to pause, unpause, skip etc.
         if itx.application_command is not None and itx.application_command.name != 'play':
             raise VoiceCommandError('I\'m not connected to voice.')
 
         # Bot needs to have permissions to connect to voice.
-        permissions = vc.permissions_for(itx.guild.me)
+        permissions = voice_channel.permissions_for(itx.guild.me)
         if not permissions.connect or not permissions.speak:
             raise VoiceCommandError('I need the `CONNECT` and `SPEAK` permissions to play music.')
 
         # Bot needs to connect to a channel that isn't full.
-        if vc.user_limit and vc.user_limit <= len(vc.members):
+        if voice_channel.user_limit and voice_channel.user_limit <= len(voice_channel.members):
             raise VoiceCommandError('Your voice channel is full.')
     else:
-        if int(player.channel.id) != vc.id: # type: ignore
+        if int(player.channel.id) != voice_channel.id: # type: ignore
             raise VoiceCommandError('You need to be in my voice channel.')
-    
+
     return True

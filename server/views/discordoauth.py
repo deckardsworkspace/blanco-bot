@@ -1,12 +1,22 @@
+"""
+Discord OAuth2 token view. Displayed on redirect from Discord auth flow.
+"""
+
+from time import time
+
+import requests
 from aiohttp import web
 from aiohttp_session import get_session
+from requests.exceptions import HTTPError, Timeout
+
 from dataclass.oauth import OAuth
-from time import time
 from utils.constants import DISCORD_API_BASE_URL, USER_AGENT
-import requests
 
 
 async def discordoauth(request: web.Request):
+    """
+    Exchange the code for an access token and store it in the database.
+    """
     # Get session
     session = await get_session(request)
 
@@ -14,7 +24,7 @@ async def discordoauth(request: web.Request):
     if 'state' not in session:
         return web.HTTPBadRequest(text='Missing state, try logging in again.')
     state = session['state']
-    
+
     # Get OAuth ID, secret, and base URL
     oauth_id = request.app['config'].discord_oauth_id
     oauth_secret = request.app['config'].discord_oauth_secret
@@ -24,13 +34,13 @@ async def discordoauth(request: web.Request):
     try:
         code = request.query['code']
         state = request.query['state']
-    except KeyError as e:
-        return web.HTTPBadRequest(text=f'Missing parameter: {e.args[0]}')
+    except KeyError as err:
+        return web.HTTPBadRequest(text=f'Missing parameter: {err.args[0]}')
 
     # Check state
     if state != session['state']:
         return web.HTTPBadRequest(text='Invalid state, try logging in again.')
-    
+
     # Get access token
     response = requests.post(
         str(DISCORD_API_BASE_URL / 'oauth2/token'),
@@ -44,12 +54,15 @@ async def discordoauth(request: web.Request):
         headers={
             'Content-Type': 'application/x-www-form-urlencoded',
             'User-Agent': USER_AGENT
-        }
+        },
+        timeout=5
     )
     try:
         response.raise_for_status()
-    except Exception as e:
-        return web.HTTPBadRequest(text=f'Error getting access token: {e}')
+    except HTTPError as err:
+        return web.HTTPBadRequest(text=f'Error getting access token: {err}')
+    except Timeout:
+        return web.HTTPBadRequest(text='Timed out while requesting access token')
 
     # Get user info
     parsed = response.json()
@@ -58,20 +71,23 @@ async def discordoauth(request: web.Request):
         headers={
             'Authorization': f'Bearer {parsed["access_token"]}',
             'User-Agent': USER_AGENT
-        }
+        },
+        timeout=5
     )
     try:
         user_info.raise_for_status()
-    except Exception as e:
-        return web.HTTPBadRequest(text=f'Error getting user info: {e}')
-    
+    except HTTPError as err:
+        return web.HTTPBadRequest(text=f'Error getting user info: {err}')
+    except Timeout:
+        return web.HTTPBadRequest(text='Timed out while requesting user info')
+
     # Calculate expiry timestamp
     user_parsed = user_info.json()
     expires_at = int(time()) + parsed['expires_in']
 
     # Store user info in DB
-    db = request.app['db']
-    db.set_oauth('discord', OAuth(
+    database = request.app['db']
+    database.set_oauth('discord', OAuth(
         user_id=user_parsed['id'],
         username=user_parsed['username'],
         access_token=parsed['access_token'],

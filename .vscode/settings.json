@@ -4,5 +4,12 @@
         "**/__pycache__": true
     },
     "editor.tabSize": 4,
-    "css.lint.unknownAtRules": "ignore"
+    "css.lint.unknownAtRules": "ignore",
+    "pylint.args": [
+        "--disable=too-many-instance-attributes",
+        "--disable=too-many-locals",
+        "--disable=too-few-public-methods",
+        "--disable=too-many-return-statements",
+        "--disable=too-many-branches"
+    ]
 }

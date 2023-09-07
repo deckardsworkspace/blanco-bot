@@ -1,3 +1,7 @@
+"""
+Constants used for API requests.
+"""
+
 from yarl import URL
 
 

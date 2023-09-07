@@ -1,19 +1,32 @@
+"""
+Music player class for Blanco. Subclass of mafic.Player.
+"""
+
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
-from mafic import Player, PlayerNotConnected
-from nextcord import Message, StageChannel, VoiceChannel
 from random import shuffle
 from time import time
-from typing import Deque, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Deque, List, Optional, Tuple
+
+from mafic import Player, PlayerNotConnected
+from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
+                      StageChannel, VoiceChannel)
+
 from views.now_playing import NowPlayingView
-from .exceptions import *
-from .jockey_helpers import *
-from .string_util import human_readable_time
+
+from .exceptions import (EndOfQueueError, JockeyError, JockeyException,
+                         LavalinkSearchError)
+from .jockey_helpers import CustomEmbed, create_error_embed, parse_query
+from .lavalink_client import get_deezer_track, get_youtube_matches
+from .time_util import human_readable_time
+
 if TYPE_CHECKING:
-    from dataclass.queue_item import QueueItem
     from mafic import Track
-    from nextcord import Embed, Message
+    from nextcord import Embed
     from nextcord.abc import Connectable, Messageable
+
+    from dataclass.queue_item import QueueItem
+
     from .blanco import BlancoBot
 
 
@@ -58,67 +71,135 @@ class Jockey(Player['BlancoBot']):
 
     @property
     def current_index(self) -> int:
+        """
+        Returns the index of the current track in the queue.
+        """
         return self._queue_i
-    
+
     @property
     def is_looping(self) -> bool:
+        """
+        Returns whether the player is looping the current track.
+        """
         return self._loop
-    
+
     @is_looping.setter
     def is_looping(self, value: bool):
+        """
+        Sets whether the player will loop the current track.
+        """
         self._loop = value
-    
+
     @property
     def is_looping_all(self) -> bool:
+        """
+        Returns whether the player is looping the entire queue.
+        """
         return self._loop_whole
-    
+
     @is_looping_all.setter
     def is_looping_all(self, value: bool):
+        """
+        Sets whether the player will loop the entire queue.
+        """
         self._loop_whole = value
-    
+
     @property
     def is_shuffling(self) -> bool:
+        """
+        Returns whether the player is shuffling the queue.
+        """
         return len(self._shuffle_indices) > 0
 
     @property
     def playing(self) -> bool:
+        """
+        Returns whether the player is currently playing a track.
+        """
         return self.current is not None
 
     @property
     def queue(self) -> Deque['QueueItem']:
+        """
+        Returns the player queue.
+        """
         return self._queue
-    
+
     @property
     def queue_size(self) -> int:
+        """
+        Returns the size of the player queue.
+        """
         return len(self._queue)
-    
+
     @property
     def shuffle_indices(self) -> List[int]:
+        """
+        Returns the list of shuffle indices.
+
+        Blanco uses a list of indices to keep track of the
+        shuffled queue, so that it can be restored later if
+        the user chooses to unshuffle.
+        """
         return self._shuffle_indices
-    
+
     @shuffle_indices.setter
     def shuffle_indices(self, value: List[int]):
+        """
+        Sets the list of shuffle indices.
+        """
         self._shuffle_indices = value
-    
+
     @property
     def status_channel(self) -> 'Messageable':
+        """
+        Returns the status channel for the player.
+        """
         channel = self._bot.get_status_channel(self.guild.id)
         if channel is None:
             raise ValueError('Status channel has not been set')
         return channel
-    
+
     @property
     def volume(self) -> int:
+        """
+        Returns the player volume.
+        """
         return self._volume
-    
+
     @volume.setter
     def volume(self, value: int):
+        """
+        Sets the player volume and saves it to the database.
+        """
         self._volume = value
         self._db.set_volume(self.guild.id, value)
-    
+
+    async def _edit_np_controls(self, show_controls: bool = True):
+        """
+        Edits the now playing message to show or hide controls.
+        """
+        view = None
+        if show_controls:
+            view = NowPlayingView(self._bot, self)
+
+        np_msg = await self._get_now_playing()
+        if isinstance(np_msg, Message):
+            try:
+                await np_msg.edit(view=view)
+            except (HTTPException, Forbidden) as exc:
+                self._logger.warning(
+                    'Could not edit now playing message for %s: exc',
+                    self.guild.name,
+                    exc
+                )
+
     async def _enqueue(self, index: int, auto: bool = True) -> bool:
         """
         Attempt to enqueue a track, for use with the skip() method.
+
+        :param index: The index of the track to enqueue.
+        :param auto: Whether this is an automatic enqueue, i.e. not part of a user's command.
         """
         track_index = self._shuffle_indices[index] if self.is_shuffling else index
         track = self._queue[track_index]
@@ -131,36 +212,41 @@ class Jockey(Player['BlancoBot']):
         except PlayerNotConnected:
             if not auto:
                 await self.status_channel.send(embed=create_error_embed(
-                    f'Attempted to skip while disconnected'
+                    'Attempted to skip while disconnected'
                 ))
             return False
-        except Exception as e:
+        except Exception as exc: # pylint: disable=broad-exception-caught
+            self._logger.error('Failed to play next track: %s', exc)
             if auto:
                 await self.status_channel.send(embed=create_error_embed(
-                    f'Unable to play next track: {e}'
+                    f'Unable to play next track: {exc}'
                 ))
-            
+
             # Restore current index
             self._queue_i = current
             return False
-        else:
-            # Scrobble if possible
-            await self._scrobble(self._queue[current])
-            
-            return result
-    
+
+        # Scrobble if possible
+        await self._scrobble(self._queue[current])
+
+        return result
+
     async def _get_now_playing(self) -> Optional[Message]:
         np_msg_id = self._db.get_now_playing(self.guild.id)
         if np_msg_id != -1:
             try:
                 np_msg = await self.status_channel.fetch_message(np_msg_id)
                 return np_msg
-            except:
-                pass
-        
+            except (Forbidden, HTTPException, NotFound) as exc:
+                self._logger.warning(
+                    'Failed to fetch now playing message for %s: %s',
+                    self.guild.name,
+                    exc
+                )
+
         return None
 
-    async def _play(self, item: QueueItem) -> bool:
+    async def _play(self, item: 'QueueItem') -> bool:
         results = []
 
         if item.lavalink_track is None:
@@ -171,31 +257,39 @@ class Jockey(Player['BlancoBot']):
                 if self._bot.config.lavalink_nodes[self.node.label].deezer:
                     try:
                         result = await get_deezer_track(self.node, item.isrc)
-                    except:
+                    except LavalinkSearchError:
                         self._logger.debug(f'No Deezer match for ISRC {item.isrc} ({item.title})')
                     else:
                         results.append(result)
                         self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on Deezer')
-                
+
                 # Try to match ISRC on YouTube
-                if not len(results):
+                if len(results) == 0:
                     try:
-                        results = await get_youtube_matches(self.node, f'"{item.isrc}"', desired_duration_ms=item.duration)
-                    except:
+                        results = await get_youtube_matches(
+                            self.node,
+                            f'"{item.isrc}"',
+                            desired_duration_ms=item.duration
+                        )
+                    except LavalinkSearchError:
                         self._logger.debug(f'No YouTube match for ISRC {item.isrc} ({item.title})')
                     else:
                         self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on YouTube')
-            
+
             # Fallback to metadata search
-            if not len(results):
+            if len(results) == 0:
                 self._logger.warn(f'No ISRC match for `{item.title}\'')
                 item.is_imperfect = True
 
                 try:
-                    results = await get_youtube_matches(self.node, f'{item.title} {item.artist}', desired_duration_ms=item.duration)
-                except LavalinkSearchError as e:
-                    self._logger.critical(f'Failed to play `{item.title}\'.')
-                    self._logger.error(f'{e.message}')
+                    results = await get_youtube_matches(
+                        self.node,
+                        f'{item.title} {item.artist}',
+                        desired_duration_ms=item.duration
+                    )
+                except LavalinkSearchError as err:
+                    self._logger.critical('Failed to play `%s\'.', item.title)
+                    self._logger.error(err.message)
                     return False
 
             # Save Lavalink result
@@ -214,15 +308,15 @@ class Jockey(Player['BlancoBot']):
 
         return True
 
-    async def _scrobble(self, item: QueueItem):
+    async def _scrobble(self, item: 'QueueItem'):
         if not isinstance(self.channel, VoiceChannel):
             return
-        
+
         # Check if scrobbling is enabled
         assert self._bot.config is not None
         if not self._bot.config.lastfm_api_key or not self._bot.config.lastfm_shared_secret:
             return
-        
+
         # Check if track can be scrobbled
         time_now = int(time())
         try:
@@ -242,8 +336,8 @@ class Jockey(Player['BlancoBot']):
             else:
                 # Default to current time for timestamp
                 item.start_time = time_now
-        except ValueError as e:
-            self._logger.warning(f'Failed to scrobble `{item.title}\': {e.args[0]}')
+        except ValueError as err:
+            self._logger.warning('Failed to scrobble `%s\': %s', item.title, err.args[0])
 
         # Scrobble for every user
         for member in self.channel.members:
@@ -262,9 +356,12 @@ class Jockey(Player['BlancoBot']):
         if np_msg is not None:
             try:
                 await np_msg.edit(view=None)
-            except:
-                pass
-        
+            except (HTTPException, Forbidden):
+                self._logger.warning(
+                    'Failed to remove now playing message for %s',
+                    self.guild.name
+                )
+
         # Disconnect
         await super().disconnect(force=force)
 
@@ -278,17 +375,17 @@ class Jockey(Player['BlancoBot']):
             if self.current is None:
                 raise EndOfQueueError('No track is currently playing')
             current = self.current
-        
+
         # Construct Spotify URL if it exists
         track = self._queue[self._queue_i]
         uri = current.uri
         if track.spotify_id is not None:
             uri = f'https://open.spotify.com/track/{track.spotify_id}'
-        
+
         # Get track duration
         duration = ''
         if isinstance(track.duration, int):
-            h, m, s = human_readable_time(track.duration)
+            h, m, s = human_readable_time(track.duration) # pylint: disable=invalid-name
             duration = f'{s} sec'
             if m > 0:
                 duration = f'{m} min {duration}'
@@ -298,15 +395,8 @@ class Jockey(Player['BlancoBot']):
         is_stream = False
         if track.lavalink_track is not None:
             is_stream = track.lavalink_track.stream
-        
-        # Check if the web server and Last.fm integration are enabled
-        assert self._bot.config is not None
-        server_enabled = self._bot.config.enable_server
-        lastfm_enabled = False
-        if server_enabled:
-            assert self._bot.config.base_url is not None
-            lastfm_enabled = self._bot.config.lastfm_api_key and self._bot.config.lastfm_shared_secret
-        
+
+        imperfect_msg = ':warning: Playing the [closest match]({current.uri}).'
         embed = CustomEmbed(
             title='Now streaming' if is_stream else 'Now playing',
             description=[
@@ -314,12 +404,10 @@ class Jockey(Player['BlancoBot']):
                 f'{track.artist}',
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
-                ':warning: Could not find a perfect match for this track.' if track.is_imperfect else '',
-                f'Playing the [closest match]({current.uri}) instead.' if track.is_imperfect else '',
-                f':sparkles: [Link your Last.fm account]({self._bot.config.base_url}) to scrobble as you listen' if lastfm_enabled else ''
+                imperfect_msg if track.is_imperfect else ''
             ],
             footer=f'Track {self.current_index + 1} of {len(self._queue)}',
-            color=Color.teal(),
+            color=Colour.teal(),
             thumbnail_url=track.artwork,
             timestamp_now=True
         )
@@ -343,11 +431,11 @@ class Jockey(Player['BlancoBot']):
             )
         except JockeyException:
             raise
-        except Exception as e:
+        except Exception as exc:
             if self.playing:
-                raise JockeyException(str(e))
-            raise JockeyError(str(e))
-        
+                raise JockeyException(str(exc)) from exc
+            raise JockeyError(str(exc)) from exc
+
         # Add new tracks to queue
         old_size = len(self._queue)
         self._queue.extend(new_tracks)
@@ -379,6 +467,9 @@ class Jockey(Player['BlancoBot']):
         return first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
 
     async def remove(self, index: int) -> Tuple[str | None, str | None]:
+        """
+        Removes a track from the queue.
+        """
         # Translate index if shuffling
         actual_index = index
         if self.is_shuffling:
@@ -389,27 +480,34 @@ class Jockey(Player['BlancoBot']):
         del self._queue[actual_index]
         if self.is_shuffling:
             del self._shuffle_indices[index]
-        
+
             # Decrement future shuffle indices by 1
-            self._shuffle_indices = [i - 1 if i > actual_index else i for i in self._shuffle_indices]
-        
+            self._shuffle_indices = [
+                i - 1
+                if i > actual_index else i
+                for i in self._shuffle_indices
+            ]
+
         # Adjust current index
         if self._queue_i > actual_index:
             self._queue_i -= 1
-        
+
         # Return removed track details
         return removed_track.title, removed_track.artist
 
-    async def set_volume(self, volume: int):
+    async def set_volume(self, volume: int, /):
+        """
+        Sets the player volume.
+        """
         await super().set_volume(volume)
         self.volume = volume
-    
+
     async def shuffle(self):
-        if not len(self._queue):
+        """
+        Generates a random permutation of the queue indices for shuffling.
+        """
+        if len(self._queue) == 0:
             raise EndOfQueueError('Queue is empty, nothing to shuffle')
-        
-        # Are we already shuffling?
-        action = 'reshuffled' if self.is_shuffling else 'shuffled'
 
         # Shuffle indices
         indices = [i for i in range(len(self._queue)) if i != self._queue_i]
@@ -425,29 +523,15 @@ class Jockey(Player['BlancoBot']):
         """
         Skips the current track and plays the next one in the queue.
         """
-        async def restore_controls():
-            # Restore now playing message controls
-            view = NowPlayingView(self._bot, self)
-            if isinstance(np_msg, Message):
-                try:
-                    await np_msg.edit(view=view)
-                except:
-                    pass
-        
         # It takes a while for the player to skip,
         # so let's remove the player controls while we wait
         # to prevent the user from spamming them.
-        np_msg = await self._get_now_playing()
-        if np_msg is not None:
-            try:
-                await np_msg.edit(view=None)
-            except:
-                pass
-        
+        await self._edit_np_controls(show_controls=False)
+
         # If index is specified, use that instead
         if index != -1:
             if not await self._enqueue(index, auto=auto):
-                await restore_controls()
+                await self._edit_np_controls(show_controls=True)
             return
 
         # Is this autoskipping?
@@ -458,36 +542,33 @@ class Jockey(Player['BlancoBot']):
                 await self._enqueue(self._queue_i, auto=auto)
                 return
 
-        # Queue up the next valid track, if any
-        if isinstance(self._queue_i, int):
-            # Set initial index
-            next_i = self._shuffle_indices.index(self._queue_i) if self.is_shuffling else self._queue_i
-            while next_i < self.queue_size and next_i >= 0:
-                # Have we reached an end of the queue?
-                if (next_i == self.queue_size - 1 and forward) or (
-                    next_i == 0 and not forward):
-                    # Reached an end of the queue, are we looping?
-                    if self.is_looping_all:
-                        next_i = 0 if forward else self.queue_size - 1
-                    else:
-                        if not auto:
-                            # If we reached this point,
-                            # we are at one of either ends of the queue,
-                            # and the user was expecting to skip past it.
-                            await restore_controls()
-                            if forward:
-                                raise EndOfQueueError('Reached the end of the queue')
-                            raise EndOfQueueError('Reached the beginning of the queue')
-                        else:
-                            # Queue likely finished on its own. Scrobble last track.
-                            await self._scrobble(self._queue[self._queue_i])
-                        
-                        return
+        # Set initial index
+        next_i = self._shuffle_indices.index(self._queue_i) if self.is_shuffling else self._queue_i
+        while 0 <= next_i < self.queue_size:
+            # Have we reached an end of the queue?
+            if (next_i == self.queue_size - 1 and forward) or (
+                next_i == 0 and not forward):
+                # Reached an end of the queue, are we looping?
+                if self.is_looping_all:
+                    next_i = 0 if forward else self.queue_size - 1
                 else:
-                    next_i += 1 if forward else -1
-                
-                # Try to enqueue the next track
-                if not await self._enqueue(next_i, auto=auto):
-                    await restore_controls()
-                else:
+                    if not auto:
+                        # If we reached this point,
+                        # we are at one of either ends of the queue,
+                        # and the user was expecting to skip past it.
+                        await self._edit_np_controls(show_controls=True)
+                        if forward:
+                            raise EndOfQueueError('Reached the end of the queue')
+                        raise EndOfQueueError('Reached the beginning of the queue')
+
+                    # Queue likely finished on its own. Scrobble last track.
+                    await self._scrobble(self._queue[self._queue_i])
                     return
+            else:
+                next_i += 1 if forward else -1
+
+            # Try to enqueue the next track
+            if not await self._enqueue(next_i, auto=auto):
+                await self._edit_np_controls(show_controls=True)
+            else:
+                return

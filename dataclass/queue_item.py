@@ -1,12 +1,21 @@
+"""
+Dataclass for storing a track in the player queue.
+"""
+
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Tuple
+
 if TYPE_CHECKING:
     from mafic import Track
 
 
 @dataclass
 class QueueItem:
+    """
+    Dataclass for storing a track in the player queue.
+    """
     # Who requested the track (required)
     requester: int
 
@@ -36,6 +45,9 @@ class QueueItem:
 
     # Get title and artist
     def get_details(self) -> Tuple[str, str]:
+        """
+        Get a string of the form `title - artist` for the track.
+        """
         if self.title is not None:
             title = self.title
             if self.artist is not None:

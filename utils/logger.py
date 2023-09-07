@@ -1,6 +1,9 @@
-from typing import Optional
-import logging
+"""
+Custom logger module that supports ANSI color codes.
+"""
 
+import logging
+from typing import Optional
 
 # Log line format
 LOG_FMT_STR = '{0}%(asctime)s {1}[%(levelname)s]{2} %(message)s (%(filename)s:%(lineno)d)'
@@ -45,7 +48,7 @@ def create_logger(name: str, debug: bool = False) -> logging.Logger:
     :return: Logger object
     """
     logger = logging.getLogger(name)
-    if (logger.hasHandlers()):
+    if logger.hasHandlers():
         logger.handlers.clear()
 
     # Set level
@@ -56,5 +59,5 @@ def create_logger(name: str, debug: bool = False) -> logging.Logger:
     color_handler = logging.StreamHandler()
     color_handler.setFormatter(ColorFormatter())
     logger.addHandler(color_handler)
-    
+
     return logger

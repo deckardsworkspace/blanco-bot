@@ -1,28 +1,30 @@
-from dataclass.spotify_track import SpotifyTrack
+"""
+Wrapper for the spotipy Spotify client which supports pagination by default.
+"""
+
 from typing import Any, Dict, List, Optional, Tuple
-from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
+
 import spotipy
 
+from dataclass.spotify_track import SpotifyTrack
 
-def get_chunks(lst):
-    # Spotify only allows adding up to 100 tracks at once,
-    # so we have to split particularly large playlists into
-    # multiple requests.
-    for i in range(0, len(lst), 100):
-        yield lst[i:i + 100]
+from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 
 
 def extract_track_info(track_obj: Dict[str, Any], artwork: Optional[str] = None) -> SpotifyTrack:
+    """
+    Extracts track information from the Spotify API and returns a SpotifyTrack object.
+    """
     if 'track' in track_obj.keys():
         # Nested track (playlist track object)
         track_obj = track_obj['track']
-    
+
     # Extract ISRC if present
     isrc = None
     if 'external_ids' in track_obj.keys():
         if 'isrc' in track_obj['external_ids'].keys():
             isrc = track_obj['external_ids']['isrc']
-    
+
     # Extract album artwork if present
     if 'album' in track_obj.keys():
         if 'images' in track_obj['album'].keys():
@@ -40,6 +42,9 @@ def extract_track_info(track_obj: Dict[str, Any], artwork: Optional[str] = None)
 
 
 class Spotify:
+    """
+    Wrapper for the spotipy Spotify client which supports pagination by default.
+    """
     def __init__(self, client_id: str, client_secret: str):
         self._client = spotipy.Spotify(
             auth_manager=spotipy.oauth2.SpotifyClientCredentials(
@@ -50,44 +55,43 @@ class Spotify:
 
     @property
     def client(self):
+        """
+        Returns the internal spotipy client.
+        """
         return self._client
-    
+
     def __get_art(self, art: List[Dict[str, str]], default='') -> str:
-        if not len(art):
+        """
+        Returns the first image URL from a list of artwork images,
+        or a specified default if the list is empty.
+        """
+        if len(art) == 0:
             return default
         return art[0]['url']
-    
-    def get_album_art(self, album_id: str) -> str:
-        result = self._client.album(album_id)
-        if result is None:
-            raise SpotifyInvalidURLError(f'spotify:album:{album_id}')
-        return self.__get_art(result['images'])
-    
-    def get_artist_image(self, artist_id: str) -> str:
-        result = self._client.artist(artist_id)
-        if result is None:
-            raise SpotifyInvalidURLError(f'spotify:artist:{artist_id}')
-        return self.__get_art(result['images'])
-
-    def get_playlist_cover(self, playlist_id: str, default: str) -> str:
-        images = self._client.playlist_cover_image(playlist_id)
-        if images is None:
-            images = []
-        return self.__get_art(images, default=default)
 
     def get_track_art(self, track_id: str) -> str:
+        """
+        Returns the track artwork for a given track ID.
+        """
         result = self._client.track(track_id)
         if result is None:
             raise SpotifyInvalidURLError(f'spotify:track:{track_id}')
         return self.__get_art(result['album']['images'])
 
     def get_track(self, track_id: str) -> SpotifyTrack:
+        """
+        Returns a SpotifyTrack object for a given track ID.
+        """
         result = self._client.track(track_id)
         if result is None:
             raise SpotifyInvalidURLError(f'spotify:track:{track_id}')
         return extract_track_info(result)
 
     def get_tracks(self, list_type: str, list_id: str) -> Tuple[str, str, List[SpotifyTrack]]:
+        """
+        Returns a list of SpotifyTrack objects for a given album or playlist ID.
+        May take a long time to complete if the list is large.
+        """
         offset = 0
         tracks = []
 
@@ -97,7 +101,7 @@ class Spotify:
             album_info = self._client.album(list_id)
             if album_info is None:
                 raise SpotifyInvalidURLError(f'spotify:{list_type}:{list_id}')
-            
+
             list_artwork = album_info['images'][0]['url']
             list_name = album_info['name']
             list_author = album_info['artists'][0]['name']
@@ -105,7 +109,7 @@ class Spotify:
             playlist_info = self._client.playlist(list_id, fields='name,owner.display_name')
             if playlist_info is None:
                 raise SpotifyInvalidURLError(f'spotify:{list_type}:{list_id}')
-            
+
             list_name = playlist_info['name']
             list_author = playlist_info['owner']['display_name']
         else:
@@ -137,11 +141,16 @@ class Spotify:
             offset = offset + len(response['items'])
 
         if list_type == 'playlist':
-            return list_name, list_author, [extract_track_info(x) for x in tracks if x['track'] is not None]
-        else:
-            return list_name, list_author, [extract_track_info(x, list_artwork) for x in tracks]
+            return list_name, list_author, [
+                extract_track_info(x)
+                for x in tracks if x['track'] is not None
+            ]
+        return list_name, list_author, [extract_track_info(x, list_artwork) for x in tracks]
 
     def search(self, query, limit: int = 1) -> List[SpotifyTrack]:
+        """
+        Searches Spotify for a given query and returns a list of SpotifyTrack objects.
+        """
         response = self._client.search(query, limit=limit, type='track')
         if response is None or len(response['tracks']['items']) == 0:
             raise SpotifyNoResultsError

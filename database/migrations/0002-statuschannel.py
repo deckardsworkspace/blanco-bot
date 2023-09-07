@@ -1,9 +1,17 @@
+"""
+Add a column to the player_settings table to store the status channel ID.
+"""
+
 from sqlite3 import OperationalError
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from sqlite3 import Connection
 
 def run(con: 'Connection'):
+    """
+    Run the migration.
+    """
     cur = con.cursor()
 
     # There's no built-in way to check if a column exists in SQLite,
@@ -14,5 +22,5 @@ def run(con: 'Connection'):
         ''')
     except OperationalError:
         pass
-    
+
     con.commit()

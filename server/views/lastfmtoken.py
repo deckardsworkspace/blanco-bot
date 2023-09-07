@@ -1,12 +1,22 @@
+"""
+Last.fm token view. Displayed on redirect from Last.fm auth flow.
+"""
+
+from hashlib import md5
+
+import requests
 from aiohttp import web
 from aiohttp_session import get_session
+from requests.exceptions import HTTPError, Timeout
+
 from dataclass.oauth import LastfmAuth
-from hashlib import md5
 from utils.constants import LASTFM_API_BASE_URL, USER_AGENT
-import requests
 
 
 async def lastfm_token(request: web.Request):
+    """
+    Exchange the token for a session key and store it in the database.
+    """
     # Get session
     session = await get_session(request)
 
@@ -24,7 +34,7 @@ async def lastfm_token(request: web.Request):
         token = request.query['token']
     except KeyError:
         return web.HTTPBadRequest(text='Missing token, try logging in again.')
-    
+
     # Create signature
     signature = ''.join([
         'api_key',
@@ -51,24 +61,27 @@ async def lastfm_token(request: web.Request):
         str(url),
         headers={
             'User-Agent': USER_AGENT
-        }
+        },
+        timeout=5
     )
     try:
         response.raise_for_status()
-    except requests.HTTPError as e:
-        return web.HTTPBadRequest(text=f'Error logging into Last.fm: {e}')
-    
+    except HTTPError as err:
+        return web.HTTPBadRequest(text=f'Error logging into Last.fm: {err}')
+    except Timeout:
+        return web.HTTPBadRequest(text='Timed out while requesting session key')
+
     # Get JSON
     json = response.json()
     try:
         session_key = json['session']['key']
         username = json['session']['name']
-    except KeyError as e:
-        return web.HTTPBadRequest(text=f'Error logging into Last.fm: missing {e.args[0]}')
-    
+    except KeyError as err:
+        return web.HTTPBadRequest(text=f'Error logging into Last.fm: missing {err.args[0]}')
+
     # Store user info in DB
-    db = request.app['db']
-    db.set_lastfm_credentials(LastfmAuth(
+    database = request.app['db']
+    database.set_lastfm_credentials(LastfmAuth(
         user_id=user_id,
         username=username,
         session_key=session_key

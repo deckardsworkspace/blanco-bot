@@ -1,3 +1,7 @@
+"""
+Utility methods for converting between human and machine readable time formats.
+"""
+
 from math import floor
 from typing import Tuple, Union
 
