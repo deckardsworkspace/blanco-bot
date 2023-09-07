@@ -116,13 +116,18 @@ class NowPlayingView(View):
         # Send response
         return await interaction.followup.send('Added to your Liked Songs.')
 
-    @button(label='Toggle shuffle', style=ButtonStyle.grey)
-    async def shuffle(self, _: 'Button', interaction: 'Interaction'):
+    @button(label='Shuffle', style=ButtonStyle.grey)
+    async def shuffle(self, btn: 'Button', interaction: 'Interaction'):
         """
         Toggle shuffle on the current queue.
         """
         if await self._check_mutual_voice(interaction):
             status = self._player.is_shuffling
             if status:
-                return await self._cog.unshuffle(interaction)
-            return await self._cog.shuffle(interaction)
+                btn.label = 'Shuffle'
+                await interaction.response.edit_message(view=self)
+                return await self._cog.unshuffle(interaction, quiet=True)
+
+            btn.label = 'Unshuffle'
+            await interaction.response.edit_message(view=self)
+            return await self._cog.shuffle(interaction, quiet=True)

@@ -445,22 +445,26 @@ class PlayerCog(Cog):
 
     @slash_command(name='shuffle')
     @application_checks.check(check_mutual_voice)
-    async def shuffle(self, itx: Interaction):
+    async def shuffle(self, itx: Interaction, quiet: bool = False):
         """
         Shuffle the current playlist.
         If you want to unshuffle the current queue, use /unshuffle instead.
         """
+        if not quiet:
+            await itx.response.defer()
+
         # Dispatch to jockey
-        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         try:
             await jockey.shuffle()
         except EndOfQueueError as err:
-            await itx.followup.send(embed=create_error_embed(str(err.args[0])))
+            if not quiet:
+                await itx.followup.send(embed=create_error_embed(str(err.args[0])))
         else:
-            await itx.followup.send(
-                embed=create_success_embed(f'{len(jockey.queue)} tracks shuffled')
-            )
+            if not quiet:
+                await itx.followup.send(
+                    embed=create_success_embed(f'{len(jockey.queue)} tracks shuffled')
+                )
 
     @slash_command(name='skip')
     @application_checks.check(check_mutual_voice)
@@ -530,17 +534,24 @@ class PlayerCog(Cog):
 
     @slash_command(name='unshuffle')
     @application_checks.check(check_mutual_voice)
-    async def unshuffle(self, itx: Interaction):
+    async def unshuffle(self, itx: Interaction, quiet: bool = False):
         """
         Unshuffle the current playlist.
         """
+        if not quiet:
+            await itx.response.defer()
+
         # Dispatch to jockey
-        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         if jockey.is_shuffling:
             jockey.shuffle_indices = []
-            return await itx.followup.send(embed=create_success_embed('Unshuffled'))
-        await itx.followup.send(embed=create_error_embed('Current queue is not shuffled'))
+            if not quiet:
+                return await itx.followup.send(embed=create_success_embed('Unshuffled'))
+
+        if not quiet:
+            return await itx.followup.send(
+                embed=create_error_embed('Current queue is not shuffled')
+            )
 
     @slash_command(name='volume')
     @application_checks.check(check_mutual_voice)
