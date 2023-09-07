@@ -170,14 +170,18 @@ class BlancoBot(Bot):
         """
         Gets a Spotify client instance for the specified user.
         """
-        if user_id not in self._spotify_clients:
-            assert self._config is not None and self._db is not None
-
-            # Try to get credentials
-            creds = self._db.get_oauth('spotify', user_id)
-            if creds is None:
-                raise ValueError(f'Please link your Spotify account [here.]({self._config.base_url})')
+        assert self._config is not None and self._db is not None
+        # Try to get credentials
+        creds = self._db.get_oauth('spotify', user_id)
+        if creds is None:
+            # Check if there is a cached client for this user
+            if user_id in self._spotify_clients:
+                # User must have unlinked their account, so delete the cached client
+                del self._spotify_clients[user_id]
             
+            raise ValueError(f'Please link your Spotify account [here.]({self._config.base_url})')
+        
+        if user_id not in self._spotify_clients:
             self._spotify_clients[user_id] = PrivateSpotify(
                 config=self._config,
                 db=self._db,
