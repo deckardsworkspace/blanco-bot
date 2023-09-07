@@ -63,15 +63,20 @@ class NowPlayingView(View):
         if await self._check_mutual_voice(interaction):
             return await self._cog.previous(interaction)
 
-    @button(label='⏯️', style=ButtonStyle.blurple)
-    async def toggle_pause(self, _: 'Button', interaction: 'Interaction'):
+    @button(label='⏸️', style=ButtonStyle.blurple)
+    async def toggle_pause(self, btn: 'Button', interaction: 'Interaction'):
         """
         Toggle pause on the current track.
         """
         if await self._check_mutual_voice(interaction):
             if self._player.paused:
-                return await self._cog.unpause(interaction)
-            return await self._cog.pause(interaction)
+                btn.label = '⏸️'
+                await interaction.response.edit_message(view=self)
+                return await self._cog.unpause(interaction, quiet=True)
+            
+            btn.label = '▶️'
+            await interaction.response.edit_message(view=self)
+            return await self._cog.pause(interaction, quiet=True)
 
     @button(label='⏭️', style=ButtonStyle.grey)
     async def skip_forward(self, _: 'Button', interaction: 'Interaction'):

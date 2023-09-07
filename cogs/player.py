@@ -205,15 +205,19 @@ class PlayerCog(Cog):
 
     @slash_command(name='pause')
     @application_checks.check(check_mutual_voice)
-    async def pause(self, itx: Interaction):
+    async def pause(self, itx: Interaction, quiet: bool = False):
         """
         Pauses the current track.
         """
+        if not quiet:
+            await itx.response.defer()
+
         # Dispatch to jockey
-        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         await jockey.pause()
-        await itx.followup.send(embed=create_success_embed('Paused'), delete_after=5.0)
+
+        if not quiet:
+            await itx.followup.send(embed=create_success_embed('Paused'), delete_after=5.0)
 
     @slash_command(name='play')
     @application_checks.check(check_mutual_voice)
@@ -522,15 +526,19 @@ class PlayerCog(Cog):
 
     @slash_command(name='unpause')
     @application_checks.check(check_mutual_voice)
-    async def unpause(self, itx: Interaction):
+    async def unpause(self, itx: Interaction, quiet: bool = False):
         """
         Unpauses the current track.
         """
+        if not quiet:
+            await itx.response.defer()
+
         # Dispatch to jockey
-        await itx.response.defer()
         jockey = await self._get_jockey(itx)
         await jockey.resume()
-        await itx.followup.send(embed=create_success_embed('Unpaused'), delete_after=5.0)
+
+        if not quiet:
+            await itx.followup.send(embed=create_success_embed('Unpaused'), delete_after=5.0)
 
     @slash_command(name='unshuffle')
     @application_checks.check(check_mutual_voice)
