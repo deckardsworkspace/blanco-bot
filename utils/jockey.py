@@ -406,9 +406,14 @@ class Jockey(Player['BlancoBot']):
             uri = f'https://open.spotify.com/track/{track.spotify_id}'
 
         # Get track duration
+        duration_ms = track.duration
+        if track.lavalink_track is not None:
+            duration_ms = track.lavalink_track.length
+
+        # Build track duration string
         duration = ''
-        if isinstance(track.duration, int):
-            h, m, s = human_readable_time(track.duration) # pylint: disable=invalid-name
+        if isinstance(duration_ms, int):
+            h, m, s = human_readable_time(duration_ms) # pylint: disable=invalid-name
             duration = f'{s} sec'
             if m > 0:
                 duration = f'{m} min {duration}'
