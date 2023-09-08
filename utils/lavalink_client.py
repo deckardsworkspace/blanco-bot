@@ -168,6 +168,10 @@ async def get_youtube_matches(
         if valid:
             results.append(parse_result(result))
 
+    # Are there valid results?
+    if len(results) == 0:
+        raise LavalinkSearchError(query, reason='No valid results found')
+
     # Sort by descending similarity
     if desired_duration_ms is not None:
         results.sort(
