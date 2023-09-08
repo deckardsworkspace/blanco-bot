@@ -96,7 +96,7 @@ async def get_tracks(
     except TrackLoadException as exc:
         raise LavalinkSearchError(
             query,
-            reason=f'Could not get tracks for "{query}" ({exc})'
+            reason=f'Could not get tracks for "{query}": {exc.cause}'
         ) from exc
 
     if result is None:
@@ -111,7 +111,13 @@ async def get_deezer_track(node: 'Node', isrc: str) -> LavalinkResult:
     """
     Gets a Deezer track from Lavalink, and returns a LavalinkResult object.
     """
-    search = await node.fetch_tracks(isrc, search_type=SearchType.DEEZER_ISRC.value)
+    try:
+        search = await node.fetch_tracks(isrc, search_type=SearchType.DEEZER_ISRC.value)
+    except TrackLoadException as exc:
+        raise LavalinkSearchError(
+            isrc,
+            reason=f'Could not get track: {exc.cause}'
+        ) from exc
 
     if (isinstance(search, list) and len(search) == 0) or search is None:
         raise LavalinkSearchError(isrc, reason='No results found')
@@ -131,7 +137,14 @@ async def get_youtube_matches(
     """
     results: List[LavalinkResult] = []
 
-    search = await node.fetch_tracks(query, search_type=SearchType.YOUTUBE.value)
+    try:
+        search = await node.fetch_tracks(query, search_type=SearchType.YOUTUBE.value)
+    except TrackLoadException as exc:
+        raise LavalinkSearchError(
+            query,
+            reason=f'Could not get track: {exc.cause}'
+        ) from exc
+
     if isinstance(search, Playlist) and len(search.tracks) == 0:
         raise LavalinkSearchError(query, reason='Playlist is empty')
     if (isinstance(search, list) and len(search) == 0) or search is None:
