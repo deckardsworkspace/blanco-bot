@@ -363,6 +363,7 @@ class Jockey(Player['BlancoBot']):
             self._logger.warning('Failed to scrobble `%s\': %s', item.title, err.args[0])
 
         # Scrobble for every user
+        self._logger.info('Scrobbling `%s\'', item.title)
         for member in self.channel.members:
             if not member.bot:
                 scrobbler = self._bot.get_scrobbler(member.id)

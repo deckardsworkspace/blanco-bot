@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 import pylast
 
 if TYPE_CHECKING:
+    from logging import Logger
+
     from dataclass.config import Config
     from dataclass.oauth import LastfmAuth
     from dataclass.queue_item import QueueItem
@@ -19,9 +21,10 @@ class Scrobbler:
     Scrobbler class for scrobbling songs to Last.fm.
     Meant for single use, i.e., one instance per user per listening session.
     """
-    def __init__(self, config: 'Config', creds: 'LastfmAuth'):
+    def __init__(self, config: 'Config', creds: 'LastfmAuth', logger: 'Logger'):
         if config.lastfm_api_key is None or config.lastfm_shared_secret is None:
             raise ValueError('Last.fm API key and/or shared secret not set.')
+        self._user_id = creds.user_id
 
         # Create Network object
         self._net = pylast.LastFMNetwork(
@@ -31,6 +34,10 @@ class Scrobbler:
 
         # Set session key
         self._net.session_key = creds.session_key
+
+        # Logger
+        self._logger = logger
+        self._logger.debug('Created scrobbler for user %d', creds.user_id)
 
     def scrobble(self, track: 'QueueItem'):
         """
@@ -44,9 +51,18 @@ class Scrobbler:
         if track.duration is not None:
             duration = track.duration // 1000
 
-        self._net.scrobble(
-            artist=track.artist,
-            title=track.title,
-            timestamp=timestamp,
-            duration=duration
-        )
+        try:
+            self._net.scrobble(
+                artist=track.artist,
+                title=track.title,
+                timestamp=timestamp,
+                duration=duration
+            )
+        except pylast.PyLastError as err:
+            self._logger.error(
+                'Error scrobbling `%s\' for user %d: %s',
+                track.title,
+                self._user_id,
+                err
+            )
+            raise

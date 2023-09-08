@@ -60,6 +60,7 @@ class BlancoBot(Bot):
 
         # Scrobblers and private Spotify clients per user
         self._scrobblers: Dict[int, 'Scrobbler'] = {}
+        self._scrobbler_logger = create_logger('scrobbler', debug=True)
         self._spotify_clients: Dict[int, PrivateSpotify] = {}
 
     @property
@@ -256,8 +257,7 @@ class BlancoBot(Bot):
         # Check if a scrobbler already exists
         if user_id not in self._scrobblers:
             # Create scrobbler
-            self._scrobblers[user_id] = Scrobbler(self._config, creds)
-            self._logger.debug('Created scrobbler for user %d', user_id)
+            self._scrobblers[user_id] = Scrobbler(self._config, creds, self._scrobbler_logger)
 
         return self._scrobblers[user_id]
 
@@ -347,6 +347,7 @@ class BlancoBot(Bot):
         if not self.debug:
             self._logger.setLevel(INFO)
             self._jockey_logger.setLevel(INFO)
+            self._scrobbler_logger.setLevel(INFO)
 
         self._db = Database(config.db_file)
         self._spotify_client = Spotify(
