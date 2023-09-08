@@ -12,4 +12,4 @@ def setup(bot: 'BlancoBot'):
     Run the web server as an async task.
     """
     assert bot.config is not None
-    bot.loop.create_task(run_app(bot.db, bot.config))
+    bot.loop.create_task(run_app(bot.database, bot.config))

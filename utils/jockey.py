@@ -45,22 +45,22 @@ class Jockey(Player['BlancoBot']):
             raise TypeError(f'Channel must be a voice channel, not {type(channel)}')
 
         # Database
-        self._db = client.db
-        client.db.init_guild(channel.guild.id)
+        self._db = client.database
+        client.database.init_guild(channel.guild.id)
 
         # Queue
         self._queue: Deque['QueueItem'] = deque()
         self._queue_i = -1
 
         # Repeat
-        self._loop = client.db.get_loop(channel.guild.id)
+        self._loop = client.database.get_loop(channel.guild.id)
         self._loop_whole = False
 
         # Shuffle indices
         self._shuffle_indices = []
 
         # Volume
-        self._volume = client.db.get_volume(channel.guild.id)
+        self._volume = client.database.get_volume(channel.guild.id)
 
         # Scrobble executor
         self._executor = ThreadPoolExecutor(max_workers=1)
@@ -189,7 +189,7 @@ class Jockey(Player['BlancoBot']):
                 await np_msg.edit(view=view)
             except (HTTPException, Forbidden) as exc:
                 self._logger.warning(
-                    'Could not edit now playing message for %s: exc',
+                    'Could not edit now playing message for %s: %s',
                     self.guild.name,
                     exc
                 )
