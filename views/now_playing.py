@@ -109,6 +109,8 @@ class NowPlayingView(View):
         # Get Spotify client
         try:
             spotify = self._bot.get_spotify_client(interaction.user.id)
+            if spotify is None:
+                raise ValueError('Spotify client not initialized')
         except ValueError as err:
             return await interaction.followup.send(err.args[0])
 
