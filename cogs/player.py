@@ -298,6 +298,8 @@ class PlayerCog(Cog):
         # Get Spotify client
         try:
             spotify = self._bot.get_spotify_client(itx.user.id)
+            if spotify is None:
+                raise ValueError('You are not connected to Spotify.')
         except ValueError as err:
             return await itx.followup.send(
                 embed=create_error_embed(err.args[0]),
