@@ -9,6 +9,7 @@ from nextcord.ui import View, button
 from requests.exceptions import HTTPError, Timeout
 
 from utils.exceptions import VoiceCommandError
+from utils.jockey_helpers import create_error_embed, create_success_embed
 from utils.player_checks import check_mutual_voice
 
 if TYPE_CHECKING:
@@ -104,7 +105,10 @@ class NowPlayingView(View):
 
         await interaction.response.defer(ephemeral=True)
         if self._spotify_id is None:
-            return await interaction.followup.send('This track does not have a Spotify ID.')
+            return await interaction.followup.send(
+                embed=create_error_embed('This track does not have a Spotify ID.'),
+                ephemeral=True
+            )
 
         # Get Spotify client
         try:
@@ -118,10 +122,16 @@ class NowPlayingView(View):
         try:
             spotify.save_track(self._spotify_id)
         except (HTTPError, Timeout) as err:
-            return await interaction.followup.send(f'Error liking track: {err}')
+            return await interaction.followup.send(
+                embed=create_error_embed(f'Could not Like track: {err}'),
+                ephemeral=True
+            )
 
         # Send response
-        return await interaction.followup.send('Added to your Liked Songs.')
+        return await interaction.followup.send(
+            embed=create_success_embed('Added to your Liked Songs.'),
+            ephemeral=True
+        )
 
     @button(label='Shuffle', style=ButtonStyle.grey)
     async def shuffle(self, btn: 'Button', interaction: 'Interaction'):

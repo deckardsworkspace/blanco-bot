@@ -54,16 +54,19 @@ class PlayerCog(Cog):
         jockey: Jockey = member.guild.voice_client # type: ignore
         if jockey is not None:
             # Stop playing if we're left alone
-            if len(jockey.channel.members) == 1 and after.channel is None: # type: ignore
+            if (hasattr(jockey.channel, 'members') and
+                len(jockey.channel.members) == 1 and
+                jockey.channel.members[0].id == member.guild.me.id and
+                after.channel is None): # type: ignore
                 return await self._disconnect(jockey=jockey, reason='You left me alone :(')
-            else:
-                # Did we get server undeafened?
-                if member.id == member.guild.me.id and before.deaf and not after.deaf:
-                    await self._deafen(
-                        member.guild.me,
-                        was_deafened=True,
-                        channel=jockey.status_channel
-                    )
+
+            # Did we get server undeafened?
+            if member.id == member.guild.me.id and before.deaf and not after.deaf:
+                await self._deafen(
+                    member.guild.me,
+                    was_deafened=True,
+                    channel=jockey.status_channel
+                )
 
     async def _get_jockey(self, itx: Interaction) -> Jockey:
         """
