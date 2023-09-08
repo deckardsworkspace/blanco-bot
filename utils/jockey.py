@@ -414,7 +414,8 @@ class Jockey(Player['BlancoBot']):
         duration = ''
         if isinstance(duration_ms, int):
             h, m, s = human_readable_time(duration_ms) # pylint: disable=invalid-name
-            duration = f'{s} sec'
+            if s > 0:
+                duration = f'{s} sec'
             if m > 0:
                 duration = f'{m} min {duration}'
             if h > 0:
