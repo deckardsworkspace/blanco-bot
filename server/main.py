@@ -59,4 +59,4 @@ async def run_app(database: 'Database', config: 'Config'):
     site = web.TCPSite(runner, port=config.server_port)
     await site.start()
 
-    logger.info('Web server started')
+    logger.info('Web server listening on %s', config.base_url)
