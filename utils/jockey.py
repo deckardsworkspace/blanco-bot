@@ -262,7 +262,7 @@ class Jockey(Player['BlancoBot']):
                     try:
                         result = await get_deezer_track(self.node, item.isrc)
                     except LavalinkSearchError:
-                        self._logger.error(
+                        self._logger.warning(
                             'No Deezer match for ISRC %s `%s\'',
                             item.isrc,
                             item.title
@@ -284,7 +284,7 @@ class Jockey(Player['BlancoBot']):
                             desired_duration_ms=item.duration
                         )
                     except LavalinkSearchError:
-                        self._logger.error(
+                        self._logger.warning(
                             'No YouTube match for ISRC %s `%s\'',
                             item.isrc,
                             item.title
@@ -298,7 +298,10 @@ class Jockey(Player['BlancoBot']):
 
             # Fallback to metadata search
             if len(results) == 0:
-                self._logger.warn('No ISRC match for `%s\'', item.title)
+                self._logger.error(
+                    'No ISRC match for `%s\'. Falling back to metadata search.',
+                    item.title
+                )
                 item.is_imperfect = True
 
                 try:
@@ -416,7 +419,7 @@ class Jockey(Player['BlancoBot']):
         if track.lavalink_track is not None:
             is_stream = track.lavalink_track.stream
 
-        imperfect_msg = ':warning: Playing the [closest match]({current.uri}).'
+        imperfect_msg = ':warning: Playing the [**closest match**]({})'
         embed = CustomEmbed(
             title='Now streaming' if is_stream else 'Now playing',
             description=[
@@ -424,7 +427,7 @@ class Jockey(Player['BlancoBot']):
                 f'{track.artist}',
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
-                imperfect_msg if track.is_imperfect else ''
+                imperfect_msg.format(current.uri) if track.is_imperfect else ''
             ],
             footer=f'Track {self.current_index + 1} of {len(self._queue)}',
             color=Colour.teal(),
