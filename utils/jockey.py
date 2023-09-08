@@ -45,29 +45,33 @@ class Jockey(Player['BlancoBot']):
             raise TypeError(f'Channel must be a voice channel, not {type(channel)}')
 
         # Database
-        self._db = client.db
-        client.db.init_guild(channel.guild.id)
+        self._db = client.database
+        client.database.init_guild(channel.guild.id)
 
         # Queue
         self._queue: Deque['QueueItem'] = deque()
         self._queue_i = -1
 
         # Repeat
-        self._loop = client.db.get_loop(channel.guild.id)
+        self._loop = client.database.get_loop(channel.guild.id)
         self._loop_whole = False
 
         # Shuffle indices
         self._shuffle_indices = []
 
         # Volume
-        self._volume = client.db.get_volume(channel.guild.id)
+        self._volume = client.database.get_volume(channel.guild.id)
 
         # Scrobble executor
         self._executor = ThreadPoolExecutor(max_workers=1)
 
         # Logger
         self._logger = client.jockey_logger
-        self._logger.info(f'Using node `{self.node.label}\' for {channel.guild.name}')
+        self._logger.info(
+            'Using node `%s\' for %s',
+            self.node.label,
+            channel.guild.name
+        )
 
     @property
     def current_index(self) -> int:
@@ -189,7 +193,7 @@ class Jockey(Player['BlancoBot']):
                 await np_msg.edit(view=view)
             except (HTTPException, Forbidden) as exc:
                 self._logger.warning(
-                    'Could not edit now playing message for %s: exc',
+                    'Could not edit now playing message for %s: %s',
                     self.guild.name,
                     exc
                 )
@@ -258,10 +262,18 @@ class Jockey(Player['BlancoBot']):
                     try:
                         result = await get_deezer_track(self.node, item.isrc)
                     except LavalinkSearchError:
-                        self._logger.debug(f'No Deezer match for ISRC {item.isrc} ({item.title})')
+                        self._logger.warning(
+                            'No Deezer match for ISRC %s `%s\'',
+                            item.isrc,
+                            item.title
+                        )
                     else:
                         results.append(result)
-                        self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on Deezer')
+                        self._logger.debug(
+                            'Matched ISRC %s `%s\' on Deezer',
+                            item.isrc,
+                            item.title
+                        )
 
                 # Try to match ISRC on YouTube
                 if len(results) == 0:
@@ -272,13 +284,24 @@ class Jockey(Player['BlancoBot']):
                             desired_duration_ms=item.duration
                         )
                     except LavalinkSearchError:
-                        self._logger.debug(f'No YouTube match for ISRC {item.isrc} ({item.title})')
+                        self._logger.warning(
+                            'No YouTube match for ISRC %s `%s\'',
+                            item.isrc,
+                            item.title
+                        )
                     else:
-                        self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on YouTube')
+                        self._logger.debug(
+                            'Matched ISRC %s `%s\' on YouTube',
+                            item.isrc,
+                            item.title
+                        )
 
             # Fallback to metadata search
             if len(results) == 0:
-                self._logger.warn(f'No ISRC match for `{item.title}\'')
+                self._logger.error(
+                    'No ISRC match for `%s\'. Falling back to metadata search.',
+                    item.title
+                )
                 item.is_imperfect = True
 
                 try:
@@ -344,7 +367,7 @@ class Jockey(Player['BlancoBot']):
             if not member.bot:
                 scrobbler = self._bot.get_scrobbler(member.id)
                 if scrobbler is not None:
-                    self._logger.debug(f'Scrobbling `{item.title}\' for {member.display_name}')
+                    self._logger.debug('Scrobbling `%s\' for %s', item.title, member.display_name)
                     await self._bot.loop.run_in_executor(self._executor, scrobbler.scrobble, item)
 
     async def disconnect(self, *, force: bool = False):
@@ -383,10 +406,16 @@ class Jockey(Player['BlancoBot']):
             uri = f'https://open.spotify.com/track/{track.spotify_id}'
 
         # Get track duration
+        duration_ms = track.duration
+        if track.lavalink_track is not None:
+            duration_ms = track.lavalink_track.length
+
+        # Build track duration string
         duration = ''
-        if isinstance(track.duration, int):
-            h, m, s = human_readable_time(track.duration) # pylint: disable=invalid-name
-            duration = f'{s} sec'
+        if isinstance(duration_ms, int):
+            h, m, s = human_readable_time(duration_ms) # pylint: disable=invalid-name
+            if s > 0:
+                duration = f'{s} sec'
             if m > 0:
                 duration = f'{m} min {duration}'
             if h > 0:
@@ -396,7 +425,7 @@ class Jockey(Player['BlancoBot']):
         if track.lavalink_track is not None:
             is_stream = track.lavalink_track.stream
 
-        imperfect_msg = ':warning: Playing the [closest match]({current.uri}).'
+        imperfect_msg = ':warning: Playing the [**closest match**]({})'
         embed = CustomEmbed(
             title='Now streaming' if is_stream else 'Now playing',
             description=[
@@ -404,7 +433,7 @@ class Jockey(Player['BlancoBot']):
                 f'{track.artist}',
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
-                imperfect_msg if track.is_imperfect else ''
+                imperfect_msg.format(current.uri) if track.is_imperfect else ''
             ],
             footer=f'Track {self.current_index + 1} of {len(self._queue)}',
             color=Colour.teal(),

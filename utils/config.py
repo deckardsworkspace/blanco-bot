@@ -171,8 +171,8 @@ if DEBUG_ENABLED:
         assert DISCORD_OAUTH_SECRET is not None
         logger.debug('    - Listening on port %d', SERVER_PORT)
         logger.debug('    - Base URL: %s', SERVER_BASE_URL)
-        logger.debug('    - OAuth ID: %s', str(DISCORD_OAUTH_ID)[:3])
-        logger.debug('    - OAuth secret: %s', DISCORD_OAUTH_SECRET[:3])
+        logger.debug('    - OAuth ID: %s...', str(DISCORD_OAUTH_ID)[:3])
+        logger.debug('    - OAuth secret: %s...', DISCORD_OAUTH_SECRET[:3])
 
     logger.debug('  Lavalink nodes:')
     for node in LAVALINK_NODES.values():
