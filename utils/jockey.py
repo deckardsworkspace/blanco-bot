@@ -67,7 +67,11 @@ class Jockey(Player['BlancoBot']):
 
         # Logger
         self._logger = client.jockey_logger
-        self._logger.info(f'Using node `{self.node.label}\' for {channel.guild.name}')
+        self._logger.info(
+            'Using node `%s\' for %s',
+            self.node.label,
+            channel.guild.name
+        )
 
     @property
     def current_index(self) -> int:
@@ -258,10 +262,18 @@ class Jockey(Player['BlancoBot']):
                     try:
                         result = await get_deezer_track(self.node, item.isrc)
                     except LavalinkSearchError:
-                        self._logger.debug(f'No Deezer match for ISRC {item.isrc} ({item.title})')
+                        self._logger.error(
+                            'No Deezer match for ISRC %s `%s\'',
+                            item.isrc,
+                            item.title
+                        )
                     else:
                         results.append(result)
-                        self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on Deezer')
+                        self._logger.debug(
+                            'Matched ISRC %s `%s\' on Deezer',
+                            item.isrc,
+                            item.title
+                        )
 
                 # Try to match ISRC on YouTube
                 if len(results) == 0:
@@ -272,13 +284,21 @@ class Jockey(Player['BlancoBot']):
                             desired_duration_ms=item.duration
                         )
                     except LavalinkSearchError:
-                        self._logger.debug(f'No YouTube match for ISRC {item.isrc} ({item.title})')
+                        self._logger.error(
+                            'No YouTube match for ISRC %s `%s\'',
+                            item.isrc,
+                            item.title
+                        )
                     else:
-                        self._logger.debug(f'Matched ISRC {item.isrc} ({item.title}) on YouTube')
+                        self._logger.debug(
+                            'Matched ISRC %s `%s\' on YouTube',
+                            item.isrc,
+                            item.title
+                        )
 
             # Fallback to metadata search
             if len(results) == 0:
-                self._logger.warn(f'No ISRC match for `{item.title}\'')
+                self._logger.warn('No ISRC match for `%s\'', item.title)
                 item.is_imperfect = True
 
                 try:
@@ -344,7 +364,7 @@ class Jockey(Player['BlancoBot']):
             if not member.bot:
                 scrobbler = self._bot.get_scrobbler(member.id)
                 if scrobbler is not None:
-                    self._logger.debug(f'Scrobbling `{item.title}\' for {member.display_name}')
+                    self._logger.debug('Scrobbling `%s\' for %s', item.title, member.display_name)
                     await self._bot.loop.run_in_executor(self._executor, scrobbler.scrobble, item)
 
     async def disconnect(self, *, force: bool = False):
