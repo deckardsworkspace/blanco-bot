@@ -55,3 +55,10 @@ jobs:
             - Bug one
           draft: true
           prerelease: false
+      - name: Prune untagged images
+        uses: actions/delete-package-versions@v4
+        with: 
+          package-name: 'blanco-bot'
+          package-type: 'container'
+          min-versions-to-keep: 3
+          delete-only-untagged-versions: 'true'
