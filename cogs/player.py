@@ -5,6 +5,7 @@ PlayerCog: Cog for controlling the music player.
 from asyncio import TimeoutError as AsyncioTimeoutError
 from typing import TYPE_CHECKING, Optional
 
+from mafic import PlayerNotConnected
 from nextcord import (Color, Forbidden, Guild, HTTPException, Interaction,
                       Member, SlashOption, VoiceState, slash_command)
 from nextcord.abc import Messageable
@@ -127,7 +128,11 @@ class PlayerCog(Cog):
             if itx is None:
                 raise ValueError('[player::_disconnect] Either jockey or itx must be specified')
             jockey = await self._get_jockey(itx)
-        await jockey.stop()
+       
+        try:
+            await jockey.stop()
+        except PlayerNotConnected:
+            self._logger.warning('Attempted to disconnect disconnected Jockey')
         await jockey.disconnect()
 
         # Send disconnection message
@@ -269,25 +274,27 @@ class PlayerCog(Cog):
         except JockeyError as err:
             # Disconnect if we're not playing anything
             if not jockey.playing:
-                await self._disconnect(itx=itx, reason=str(err))
-        except JockeyException as err:
-            await itx.followup.send(embed=create_error_embed(str(err)))
-        else:
-            body = [track_name]
+                return await self._disconnect(itx=itx, reason=str(err))
 
-            # Add Last.fm integration promo if enabled
-            assert self._bot.config is not None
-            server_enabled = self._bot.config.enable_server
-            if (server_enabled and self._bot.config.base_url is not None and
-                self._bot.config.lastfm_api_key is not None and
-                self._bot.config.lastfm_shared_secret is not None):
-                template = ':sparkles: [Link Last.fm]({}) to scrobble as you listen'
-                body.append(template.format(self._bot.config.base_url))
+            return await itx.followup.send(embed=create_error_embed(str(err)))
+        except JockeyException as exc:
+            return await itx.followup.send(embed=create_error_embed(str(exc)))
 
-            return await itx.followup.send(embed=create_success_embed(
-                title='Added to queue',
-                body='\n\n'.join(body)
-            ))
+        body = [track_name]
+
+        # Add Last.fm integration promo if enabled
+        assert self._bot.config is not None
+        server_enabled = self._bot.config.enable_server
+        if (server_enabled and self._bot.config.base_url is not None and
+            self._bot.config.lastfm_api_key is not None and
+            self._bot.config.lastfm_shared_secret is not None):
+            template = ':sparkles: [Link Last.fm]({}) to scrobble as you listen'
+            body.append(template.format(self._bot.config.base_url))
+
+        return await itx.followup.send(embed=create_success_embed(
+            title='Added to queue',
+            body='\n\n'.join(body)
+        ))
 
     @slash_command(name='playlists')
     async def playlist(self, itx: Interaction):

@@ -15,7 +15,7 @@ from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
 from views.now_playing import NowPlayingView
 
 from .exceptions import (EndOfQueueError, JockeyError, JockeyException,
-                         LavalinkSearchError)
+                         LavalinkSearchError, SpotifyNoResultsError)
 from .jockey_helpers import CustomEmbed, create_error_embed, parse_query
 from .lavalink_client import get_deezer_track, get_youtube_matches
 from .time_util import human_readable_time
@@ -461,6 +461,8 @@ class Jockey(Player['BlancoBot']):
             )
         except JockeyException:
             raise
+        except SpotifyNoResultsError as err:
+            raise JockeyError(err.args[0]) from err
         except Exception as exc:
             if self.playing:
                 raise JockeyException(str(exc)) from exc
