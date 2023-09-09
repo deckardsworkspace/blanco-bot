@@ -8,6 +8,7 @@ from nextcord import ButtonStyle
 from nextcord.ui import View, button
 from requests.exceptions import HTTPError, Timeout
 
+from utils.constants import SPOTIFY_403_ERR_MSG
 from utils.exceptions import VoiceCommandError
 from utils.jockey_helpers import create_error_embed, create_success_embed
 from utils.player_checks import check_mutual_voice
@@ -121,9 +122,27 @@ class NowPlayingView(View):
         # Save track
         try:
             spotify.save_track(self._spotify_id)
-        except (HTTPError, Timeout) as err:
+        except HTTPError as err:
+            if err.response.status_code == 403:
+                message = SPOTIFY_403_ERR_MSG.format('Like this track')
+            else:
+                message = ''.join([
+                    f'**Error {err.response.status_code}** while trying to Like this track.',
+                    'Please try again later.\n',
+                    f'```\n{err}```'
+                ])
+
             return await interaction.followup.send(
-                embed=create_error_embed(f'Could not Like track: {err}'),
+                embed=create_error_embed(message),
+                ephemeral=True
+            )
+        except Timeout as err:
+            return await interaction.followup.send(
+                embed=create_error_embed('\n'.join([
+                    'Timed out while trying to Like this track.',
+                    'Please try again later.\n',
+                    f'```{err}```'
+                ])),
                 ephemeral=True
             )
 

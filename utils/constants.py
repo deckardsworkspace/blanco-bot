@@ -30,3 +30,11 @@ SPOTIFY_API_BASE_URL = URL.build(
     host='api.spotify.com',
     path='/v1'
 )
+
+SPOTIFY_403_ERR_MSG = ''.join([
+    '**Error 403** encountered while trying to {}.\n',
+    'This is likely because this instance of Blanco uses Spotify API credentials ',
+    'that are in **development mode.** ',
+    'See [this page](https://github.com/jareddantis-bots/blanco-bot/wiki/Prerequisites#a-note-on-development-mode) ', # pylint: disable=line-too-long
+    'for more information.'
+])

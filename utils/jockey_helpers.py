@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Generator, List, Optional
 
 from mafic import SearchType
 from nextcord import Color, Embed
+from spotipy.exceptions import SpotifyException
 
 from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
@@ -174,16 +175,29 @@ async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> L
 
     new_tracks = []
     track_queue: List['SpotifyTrack']
-    if sp_type == 'track':
-        # Get track details from Spotify
-        track_queue = [spotify.get_track(sp_id)]
-    else:
-        # Get playlist or album tracks from Spotify
-        track_queue = spotify.get_tracks(sp_type, sp_id)[2]
+    try:
+        if sp_type == 'track':
+            # Get track details from Spotify
+            track_queue = [spotify.get_track(sp_id)]
+        else:
+            # Get playlist or album tracks from Spotify
+            track_queue = spotify.get_tracks(sp_type, sp_id)[2]
+    except SpotifyException as exc:
+        if exc.http_status == 404:
+            # No tracks.
+            raise SpotifyNoResultsError(
+                f'The {sp_type} does not exist or is private.'
+            ) from exc
+
+        raise SpotifyNoResultsError(
+            f'An error occurred while fetching the playlist: {exc.msg}'
+        ) from exc
 
     if len(track_queue) < 1:
-        # No tracks.
-        raise SpotifyNoResultsError
+        if sp_type == 'track':
+            # No tracks.
+            raise SpotifyNoResultsError('Track does not exist or is private.')
+        raise SpotifyNoResultsError('Playlist is empty.')
 
     # At least one track.
     for track in track_queue:
