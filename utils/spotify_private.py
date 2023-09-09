@@ -118,11 +118,12 @@ class PrivateSpotify:
             response.raise_for_status()
         except HTTPError as err:
             self._logger.error(
-                'Error getting Spotify playlists for user %d: %s',
+                'Error %d getting Spotify playlists for user %d.\n%s',
+                err.response.status_code,
                 self._credentials.user_id,
                 err
             )
-            return {}
+            raise
         except Timeout:
             self._logger.error(
                 'Timed out while getting Spotify playlists for user %d',
@@ -158,7 +159,8 @@ class PrivateSpotify:
             response.raise_for_status()
         except HTTPError as err:
             self._logger.error(
-                'Could not like track %s: %s',
+                'Error %d while trying to Like track %s.\n%s',
+                err.response.status_code,
                 spotify_id,
                 err
             )

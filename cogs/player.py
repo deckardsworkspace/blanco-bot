@@ -11,9 +11,11 @@ from nextcord import (Color, Forbidden, Guild, HTTPException, Interaction,
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
+from requests import HTTPError
 
 from dataclass.custom_embed import CustomEmbed
 from utils.blanco import BlancoBot
+from utils.constants import SPOTIFY_403_ERR_MSG
 from utils.exceptions import EndOfQueueError, JockeyError, JockeyException
 from utils.jockey import Jockey
 from utils.jockey_helpers import (create_error_embed, create_success_embed,
@@ -317,7 +319,14 @@ class PlayerCog(Cog):
             )
 
         # Get the user's playlists
-        playlists = spotify.get_user_playlists()
+        try:
+            playlists = spotify.get_user_playlists()
+        except HTTPError as err:
+            if err.response.status_code == 403:
+                return await itx.followup.send(embed=create_error_embed(
+                    message=SPOTIFY_403_ERR_MSG.format('get your playlists')
+                ), ephemeral=True)
+            raise
         if len(playlists) == 0:
             return await itx.followup.send(embed=create_error_embed(
                 message='You have no playlists.'
