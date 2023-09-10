@@ -1,6 +1,7 @@
 """
 Create tables for storing authentication data for Discord, Spotify and Last.fm.
 """
+# pylint: disable=invalid-name
 
 from typing import TYPE_CHECKING
 
