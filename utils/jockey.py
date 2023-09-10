@@ -314,6 +314,13 @@ class Jockey(Player['BlancoBot']):
                     self._logger.critical('Failed to play `%s\'.', item.title)
                     self._logger.error(err.message)
                     return False
+                else:
+                    self._logger.warning(
+                        'Using YouTube result `%s\' (%s) for `%s\'',
+                        results[0].lavalink_track.title,
+                        results[0].lavalink_track.identifier,
+                        item.title
+                    )
 
             # Save Lavalink result
             item.lavalink_track = results[0].lavalink_track
