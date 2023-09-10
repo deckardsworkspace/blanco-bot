@@ -64,7 +64,7 @@ def check_similarity(actual: str, candidate: str) -> float:
     """
     actual_words = set(actual.lower().split(' '))
     candidate_words = set(candidate.lower().split(' '))
-    intersection = set(actual_words).intersection(set(candidate_words))
+    intersection = actual_words.intersection(candidate_words)
     difference = actual_words.difference(candidate_words)
 
     # Get words not in intersection
