@@ -282,7 +282,7 @@ class PlayerCog(Cog):
         except JockeyException as exc:
             return await itx.followup.send(embed=create_error_embed(str(exc)))
 
-        body = [track_name]
+        body = [f'{track_name}\n']
 
         # Add Last.fm integration promo if enabled
         assert self._bot.config is not None
@@ -290,12 +290,16 @@ class PlayerCog(Cog):
         if (server_enabled and self._bot.config.base_url is not None and
             self._bot.config.lastfm_api_key is not None and
             self._bot.config.lastfm_shared_secret is not None):
-            template = ':sparkles: [Link Last.fm]({}) to scrobble as you listen'
-            body.append(template.format(self._bot.config.base_url))
+            # Check if the user has connected their Last.fm account
+            if self._bot.database.get_lastfm_credentials(itx.user.id) is not None:
+                body.append(f':handshake: {itx.user.mention} is scrobbling to Last.fm!')
+            body.append(
+                f':sparkles: [Link Last.fm]({self._bot.config.base_url}) to scrobble as you listen'
+            )
 
         return await itx.followup.send(embed=create_success_embed(
             title='Added to queue',
-            body='\n\n'.join(body)
+            body='\n'.join(body)
         ))
 
     @slash_command(name='playlists')
