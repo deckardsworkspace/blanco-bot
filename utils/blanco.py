@@ -203,14 +203,14 @@ class BlancoBot(Bot):
         Called when a track ends.
         """
         if event.reason == EndReason.REPLACED:
-            self._logger.debug(
+            self._logger.warning(
                 'Skipped `%s\' in %s',
                 event.track.title,
                 event.player.guild.name
             )
         elif event.reason == EndReason.FINISHED:
             # Play next track in queue
-            self._logger.debug(
+            self._logger.info(
                 'Finished playing `%s\' in %s',
                 event.track.title,
                 event.player.guild.name

@@ -1,6 +1,7 @@
 """
 Add a column to the player_settings table to store the status channel ID.
 """
+# pylint: disable=invalid-name
 
 from sqlite3 import OperationalError
 from typing import TYPE_CHECKING

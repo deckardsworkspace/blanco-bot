@@ -34,6 +34,7 @@ def extract_track_info(track_obj: Dict[str, Any], artwork: Optional[str] = None)
     return SpotifyTrack(
         title=track_obj['name'],
         artist=track_obj['artists'][0]['name'],
+        artists=', '.join([x['name'] for x in track_obj['artists']]),
         spotify_id=track_obj['id'],
         duration_ms=int(track_obj['duration_ms']),
         artwork=artwork,

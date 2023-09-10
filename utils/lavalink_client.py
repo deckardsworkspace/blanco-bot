@@ -60,15 +60,15 @@ def check_similarity(actual: str, candidate: str) -> float:
 
     :param actual: The actual string.
     :param candidate: The candidate string, i.e. from a search result.
-    :return: A float between 0 and 1, where 1 is a perfect match.
+    :return: A float from 0 to 1, where 1 is a perfect match.
     """
-    actual_words = actual.lower().split(' ')
-    candidate_words = candidate.lower().split(' ')
-    intersection = set(actual_words).intersection(set(candidate_words))
+    actual_words = set(actual.lower().split(' '))
+    candidate_words = set(candidate.lower().split(' '))
+    intersection = actual_words.intersection(candidate_words)
+    difference = actual_words.difference(candidate_words)
 
     # Get words not in intersection
-    unmatched_words = [word for word in actual_words if word not in intersection]
-    for word in unmatched_words:
+    for word in difference:
         # Look for close matches
         close_matches = difflib.get_close_matches(word, candidate_words, cutoff=0.8)
         if len(close_matches) > 0:

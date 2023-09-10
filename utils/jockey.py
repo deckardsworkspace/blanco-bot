@@ -314,6 +314,13 @@ class Jockey(Player['BlancoBot']):
                     self._logger.critical('Failed to play `%s\'.', item.title)
                     self._logger.error(err.message)
                     return False
+                else:
+                    self._logger.warning(
+                        'Using YouTube result `%s\' (%s) for `%s\'',
+                        results[0].lavalink_track.title,
+                        results[0].lavalink_track.identifier,
+                        item.title
+                    )
 
             # Save Lavalink result
             item.lavalink_track = results[0].lavalink_track
@@ -363,13 +370,15 @@ class Jockey(Player['BlancoBot']):
             self._logger.warning('Failed to scrobble `%s\': %s', item.title, err.args[0])
 
         # Scrobble for every user
-        self._logger.info('Scrobbling `%s\'', item.title)
+        scrobbled = 0
         for member in self.channel.members:
             if not member.bot:
                 scrobbler = self._bot.get_scrobbler(member.id)
                 if scrobbler is not None:
-                    self._logger.debug('Scrobbling `%s\' for %s', item.title, member.display_name)
                     await self._bot.loop.run_in_executor(self._executor, scrobbler.scrobble, item)
+                    scrobbled += 1
+
+        self._logger.debug('Scrobbled `%s\' for %d users', item.title, scrobbled)
 
     async def disconnect(self, *, force: bool = False):
         """
