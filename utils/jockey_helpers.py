@@ -8,13 +8,16 @@ from typing import TYPE_CHECKING, Any, Generator, List, Optional
 from mafic import SearchType
 from nextcord import Color, Embed
 from spotipy.exceptions import SpotifyException
+from thefuzz import fuzz
 
 from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
 
+from .config import DEBUG_ENABLED
 from .exceptions import (JockeyException, LavalinkInvalidIdentifierError,
                          SpotifyNoResultsError)
 from .lavalink_client import check_similarity, get_tracks, get_youtube_matches
+from .logger import create_logger
 from .spotify_client import Spotify
 from .url import (check_sc_url, check_spotify_url, check_url,
                   check_youtube_playlist_url, check_youtube_url,
@@ -26,6 +29,35 @@ if TYPE_CHECKING:
     from mafic import Node
 
     from dataclass.spotify_track import SpotifyTrack
+
+
+LOGGER = create_logger('jockey_helpers', debug=DEBUG_ENABLED)
+
+
+def check_similarity_weighted(actual: str, candidate: str, candidate_rank: int) -> int:
+    """
+    Checks the similarity between two strings using a weighted average
+    of a given similarity score and the results of multiple fuzzy string
+    matching algorithms. Meant for refining search results that are
+    already ranked.
+
+    :param actual: The actual string.
+    :param candidate: The candidate string, i.e. from a search result.
+    :param candidate_rank: The rank of the candidate, from 0 to 100.
+    :return: An integer from 0 to 100, where 100 is the closest match.
+    """
+    naive = check_similarity(actual, candidate) * 100
+    tsr = fuzz.token_set_ratio(actual, candidate)
+    tsor = fuzz.token_sort_ratio(actual, candidate)
+    ptsr = fuzz.partial_token_sort_ratio(actual, candidate)
+
+    return int(
+        (naive * 0.7) +
+        (tsr * 0.12) +
+        (candidate_rank * 0.08) +
+        (tsor * 0.06) +
+        (ptsr * 0.04)
+    )
 
 
 def create_error_embed(message: str) -> Embed:
@@ -108,24 +140,32 @@ async def parse_query(
     else:
         # Rank results by similarity to query
         similarities = [
-            check_similarity(query, f'{result.title} {result.artist}')
-            for result in results
+            check_similarity_weighted(query, f'{result.title} {result.artists}', 100 - (i * 10))
+            for i, result in enumerate(results)
         ]
+        ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
 
-        # Check if the top result is similar enough
-        top_similarity = max(similarities)
-        if top_similarity > 0.6:
-            # Return
-            track = results[similarities.index(top_similarity)]
-            return [QueueItem(
-                requester=requester,
-                title=track.title,
-                artist=track.artist,
-                spotify_id=track.spotify_id,
-                duration=track.duration_ms,
-                artwork=track.artwork,
-                isrc=track.isrc
-            )]
+        # Print confidences for debugging
+        LOGGER.debug('Results and confidences for "%s":', query)
+        for result, confidence in ranked:
+            LOGGER.debug(
+                '  %3d  %-20s\t%-25s',
+                confidence,
+                result.artists[:20],
+                result.title[:25]
+            )
+
+        # Return top result
+        track = ranked[0][0]
+        return [QueueItem(
+            requester=requester,
+            title=track.title,
+            artist=track.artist,
+            spotify_id=track.spotify_id,
+            duration=track.duration_ms,
+            artwork=track.artwork,
+            isrc=track.isrc
+        )]
 
     # Play the first matching track on YouTube
     results = await get_youtube_matches(node, yt_query, automatic=False)
