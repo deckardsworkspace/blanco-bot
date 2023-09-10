@@ -10,6 +10,7 @@ from utils.logger import create_logger
 
 # Create bot instance
 intents = Intents.default()
+intents.members = True
 client = BlancoBot(intents=intents, default_guild_ids=config.debug_guild_ids)
 client.init_config(config)
 
