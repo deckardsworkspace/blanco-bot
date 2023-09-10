@@ -337,7 +337,7 @@ class PlayerCog(Cog):
         await itx.followup.send(embed=create_success_embed(
             title='Pick a playlist',
             body='Select a playlist from the dropdown below.'
-        ), view=view)
+        ), view=view, delete_after=60.0)
 
     @slash_command(name='previous')
     @application_checks.check(check_mutual_voice)
