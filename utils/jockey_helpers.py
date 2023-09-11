@@ -14,6 +14,7 @@ from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
 
 from .config import DEBUG_ENABLED
+from .constants import SPOTIFY_CONFIDENCE_THRESHOLD
 from .exceptions import (JockeyException, LavalinkInvalidIdentifierError,
                          SpotifyNoResultsError)
 from .lavalink_client import check_similarity, get_tracks, get_youtube_matches
@@ -132,7 +133,6 @@ async def parse_query(
         raise JockeyException('Direct playback from unsupported URLs is deprecated')
 
     # Attempt to look for a matching track on Spotify
-    yt_query = query
     try:
         results = spotify.search(query, limit=10)
     except SpotifyNoResultsError:
@@ -146,7 +146,7 @@ async def parse_query(
         ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
 
         # Print confidences for debugging
-        LOGGER.debug('Results and confidences for "%s":', query)
+        LOGGER.debug('Spotify results and confidences for "%s":', query)
         for result, confidence in ranked:
             LOGGER.debug(
                 '  %3d  %-20s\t%-25s',
@@ -155,21 +155,44 @@ async def parse_query(
                 result.title[:25]
             )
 
-        # Return top result
-        track = ranked[0][0]
-        return [QueueItem(
-            requester=requester,
-            title=track.title,
-            artist=track.artist,
-            spotify_id=track.spotify_id,
-            duration=track.duration_ms,
-            artwork=track.artwork,
-            isrc=track.isrc
-        )]
+        # Return top result if it's good enough
+        if ranked[0][1] >= SPOTIFY_CONFIDENCE_THRESHOLD:
+            track = ranked[0][0]
+            return [QueueItem(
+                requester=requester,
+                title=track.title,
+                artist=track.artist,
+                spotify_id=track.spotify_id,
+                duration=track.duration_ms,
+                artwork=track.artwork,
+                isrc=track.isrc
+            )]
 
-    # Play the first matching track on YouTube
-    results = await get_youtube_matches(node, yt_query, automatic=False)
-    result = results[0]
+    # Get matching tracks from YouTube
+    results = await get_youtube_matches(node, query, automatic=False)
+
+    # Rank results by similarity to query
+    similarities = [
+        check_similarity_weighted(
+            query,
+            f'{result.title} {result.author}',
+            100 - round(i * (100 / len(results))))
+        for i, result in enumerate(results)
+    ]
+    ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
+
+    # Print confidences for debugging
+    LOGGER.debug('YouTube results and confidences for "%s":', query)
+    for result, confidence in ranked:
+        LOGGER.debug(
+            '  %3d  %-20s\t%-25s',
+            confidence,
+            result.author[:20],
+            result.title[:25]
+        )
+
+    # Play top result
+    result = ranked[0][0]
     return [QueueItem(
         title=result.title,
         artist=result.author,
