@@ -347,6 +347,14 @@ class Jockey(Player['BlancoBot']):
         if not self._bot.config.lastfm_api_key or not self._bot.config.lastfm_shared_secret:
             return
 
+        # Check if track has an ISRC
+        if item.isrc is None:
+            self._logger.error(
+                'Refusing to scrobble without ISRC: `%s\'',
+                item.title
+            )
+            return
+
         # Check if track can be scrobbled
         time_now = int(time())
         try:
