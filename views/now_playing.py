@@ -5,7 +5,7 @@ Now Playing view for the player.
 from typing import TYPE_CHECKING, Optional
 
 from nextcord import ButtonStyle
-from nextcord.ui import View, button
+from nextcord.ui import Button, View, button
 from requests.exceptions import HTTPError, Timeout
 
 from utils.constants import SPOTIFY_403_ERR_MSG
@@ -15,11 +15,44 @@ from utils.player_checks import check_mutual_voice
 
 if TYPE_CHECKING:
     from nextcord import Interaction
-    from nextcord.ui import Button
 
     from cogs.player import PlayerCog
     from utils.blanco import BlancoBot
     from utils.jockey import Jockey
+
+
+class ShuffleButton(Button['NowPlayingView']):
+    """
+    Shuffle button for the Now Playing view.
+    """
+    def __init__(self, init_state: bool = False):
+        """
+        Initialize the shuffle button.
+        
+        :param init_state: Initial state of the shuffle button.
+            True if the queue is shuffled, False otherwise.
+        """
+        super().__init__(
+            style=ButtonStyle.grey,
+            label='Unshuffle' if init_state else 'Shuffle'
+        )
+
+    async def callback(self, interaction: 'Interaction'):
+        """
+        Toggle shuffle on the current queue.
+        """
+        assert self.view is not None
+        view: NowPlayingView = self.view
+
+        if await view.check_mutual_voice(interaction):
+            status = view.player.is_shuffling
+            self.label = 'Shuffle' if status else 'Unshuffle'
+            await interaction.response.edit_message(view=view)
+
+            # Shuffle or unshuffle
+            if status:
+                return await view.cog.unshuffle(interaction, quiet=True)
+            return await view.cog.shuffle(interaction, quiet=True)
 
 
 class NowPlayingView(View):
@@ -37,7 +70,24 @@ class NowPlayingView(View):
         self._spotify_id = spotify_id
         self._player = player
 
-    async def _check_mutual_voice(self, interaction: 'Interaction') -> bool:
+        # Add shuffle button
+        self.add_item(ShuffleButton(player.is_shuffling))
+
+    @property
+    def cog(self) -> 'PlayerCog':
+        """
+        Return the PlayerCog that this View was created by.
+        """
+        return self._cog
+
+    @property
+    def player(self) -> 'Jockey':
+        """
+        Return the player that this View is bound to.
+        """
+        return self._player
+
+    async def check_mutual_voice(self, interaction: 'Interaction') -> bool:
         """
         Check if the user is in the same voice channel as the bot.
         """
@@ -54,7 +104,7 @@ class NowPlayingView(View):
         """
         Display the current queue.
         """
-        if await self._check_mutual_voice(interaction):
+        if await self.check_mutual_voice(interaction):
             return await self._cog.queue(interaction)
 
     @button(label='⏮️', style=ButtonStyle.grey)
@@ -62,7 +112,7 @@ class NowPlayingView(View):
         """
         Skip to the previous track.
         """
-        if await self._check_mutual_voice(interaction):
+        if await self.check_mutual_voice(interaction):
             return await self._cog.previous(interaction)
 
     @button(label='⏸️', style=ButtonStyle.blurple)
@@ -70,12 +120,12 @@ class NowPlayingView(View):
         """
         Toggle pause on the current track.
         """
-        if await self._check_mutual_voice(interaction):
+        if await self.check_mutual_voice(interaction):
             if self._player.paused:
                 btn.label = '⏸️'
                 await interaction.response.edit_message(view=self)
                 return await self._cog.unpause(interaction, quiet=True)
-            
+
             btn.label = '▶️'
             await interaction.response.edit_message(view=self)
             return await self._cog.pause(interaction, quiet=True)
@@ -85,7 +135,7 @@ class NowPlayingView(View):
         """
         Skip to the next track.
         """
-        if await self._check_mutual_voice(interaction):
+        if await self.check_mutual_voice(interaction):
             return await self._cog.skip(interaction)
 
     @button(label='⏹️', style=ButtonStyle.red)
@@ -93,7 +143,7 @@ class NowPlayingView(View):
         """
         Stop the player.
         """
-        if await self._check_mutual_voice(interaction):
+        if await self.check_mutual_voice(interaction):
             return await self._cog.stop(interaction)
 
     @button(label='Like on Spotify', style=ButtonStyle.grey)
@@ -151,19 +201,3 @@ class NowPlayingView(View):
             embed=create_success_embed('Added to your Liked Songs.'),
             ephemeral=True
         )
-
-    @button(label='Shuffle', style=ButtonStyle.grey)
-    async def shuffle(self, btn: 'Button', interaction: 'Interaction'):
-        """
-        Toggle shuffle on the current queue.
-        """
-        if await self._check_mutual_voice(interaction):
-            status = self._player.is_shuffling
-            if status:
-                btn.label = 'Shuffle'
-                await interaction.response.edit_message(view=self)
-                return await self._cog.unshuffle(interaction, quiet=True)
-
-            btn.label = 'Unshuffle'
-            await interaction.response.edit_message(view=self)
-            return await self._cog.shuffle(interaction, quiet=True)
