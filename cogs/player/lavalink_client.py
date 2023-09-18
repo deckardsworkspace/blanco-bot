@@ -10,8 +10,7 @@ from typing import TYPE_CHECKING, List, Optional
 from mafic import Playlist, SearchType, TrackLoadException
 
 from dataclass.lavalink_result import LavalinkResult
-
-from .exceptions import LavalinkSearchError
+from utils.exceptions import LavalinkSearchError
 
 if TYPE_CHECKING:
     from mafic import Node, Track

@@ -13,13 +13,13 @@ from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
                       StageChannel, VoiceChannel)
 
 from dataclass.custom_embed import CustomEmbed
+from utils.embeds import create_error_embed
+from utils.exceptions import (EndOfQueueError, JockeyError, JockeyException,
+                              LavalinkSearchError, SpotifyNoResultsError)
+from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
 
-from .embeds import create_error_embed
-from .exceptions import (EndOfQueueError, JockeyError, JockeyException,
-                         LavalinkSearchError, SpotifyNoResultsError)
 from .jockey_helpers import find_lavalink_track, parse_query
-from .time_util import human_readable_time
 
 if TYPE_CHECKING:
     from mafic import Track
@@ -27,8 +27,7 @@ if TYPE_CHECKING:
     from nextcord.abc import Connectable, Messageable
 
     from dataclass.queue_item import QueueItem
-
-    from .blanco import BlancoBot
+    from utils.blanco import BlancoBot
 
 
 class Jockey(Player['BlancoBot']):

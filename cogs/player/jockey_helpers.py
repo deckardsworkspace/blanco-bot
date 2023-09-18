@@ -9,21 +9,21 @@ from spotipy.exceptions import SpotifyException
 from thefuzz import fuzz
 
 from dataclass.queue_item import QueueItem
+from utils.config import DEBUG_ENABLED
+from utils.constants import CONFIDENCE_THRESHOLD
+from utils.exceptions import (JockeyException, LavalinkInvalidIdentifierError,
+                              LavalinkSearchError, SpotifyNoResultsError)
+from utils.logger import create_logger
+from utils.spotify_client import Spotify
+from utils.url import (check_sc_url, check_spotify_url, check_url,
+                       check_youtube_playlist_url, check_youtube_url,
+                       check_ytmusic_playlist_url, check_ytmusic_url,
+                       get_spinfo_from_url, get_ytid_from_url,
+                       get_ytlistid_from_url)
 
-from .config import DEBUG_ENABLED
-from .constants import CONFIDENCE_THRESHOLD
-from .exceptions import (JockeyException, LavalinkInvalidIdentifierError,
-                         LavalinkSearchError, SpotifyNoResultsError)
 from .lavalink_client import (check_similarity, get_deezer_matches,
                               get_deezer_track, get_soundcloud_matches,
                               get_youtube_matches)
-from .logger import create_logger
-from .spotify_client import Spotify
-from .url import (check_sc_url, check_spotify_url, check_url,
-                  check_youtube_playlist_url, check_youtube_url,
-                  check_ytmusic_playlist_url, check_ytmusic_url,
-                  get_spinfo_from_url, get_ytid_from_url,
-                  get_ytlistid_from_url)
 
 if TYPE_CHECKING:
     from mafic import Node, Track

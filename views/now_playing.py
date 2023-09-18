@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     from nextcord import Interaction
 
     from cogs.player import PlayerCog
+    from cogs.player.jockey import Jockey
     from utils.blanco import BlancoBot
-    from utils.jockey import Jockey
 
 
 class ShuffleButton(Button['NowPlayingView']):

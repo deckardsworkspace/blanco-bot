@@ -27,9 +27,8 @@ if TYPE_CHECKING:
 
     from mafic import Node, TrackEndEvent, TrackStartEvent
 
+    from cogs.player.jockey import Jockey
     from dataclass.config import Config
-
-    from .jockey import Jockey
 
 
 StatusChannel = Union[PartialMessageable, VoiceChannel, TextChannel, Thread]

@@ -15,18 +15,19 @@ from nextcord.ext.commands import Cog
 from requests import HTTPError
 
 from dataclass.custom_embed import CustomEmbed
-from utils.blanco import BlancoBot
 from utils.constants import SPOTIFY_403_ERR_MSG
 from utils.embeds import create_error_embed, create_success_embed
 from utils.exceptions import EndOfQueueError, JockeyError, JockeyException
-from utils.jockey import Jockey
 from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import check_mutual_voice
 from views.spotify_dropdown import SpotifyDropdownView
 
+from .jockey import Jockey
+
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
+    from utils.blanco import BlancoBot
 
 
 def list_chunks(data: List[Any]) -> Generator[List[Any], Any, Any]:
@@ -41,7 +42,7 @@ class PlayerCog(Cog):
     """
     Cog for creating, controlling, and destroying music players for guilds.
     """
-    def __init__(self, bot: BlancoBot):
+    def __init__(self, bot: 'BlancoBot'):
         """
         Constructor for PlayerCog.
         """
