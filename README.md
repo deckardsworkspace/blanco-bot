@@ -11,13 +11,6 @@ Blanco is a Discord music bot made with [Nextcord](https://nextcord.dev) that su
 
 The bot stores data in a local SQLite database. This database is populated automatically on first run, and the data it will contain include authentication tokens, Lavalink session IDs, volume levels, and queue repeat preferences per guild.
 
-- [blanco-bot](#blanco-bot)
-- [List of commands](#list-of-commands)
-- [Deployment](#deployment)
-  - [Debugging mode](#debugging-mode)
-
-# List of commands
-
 See the [wiki](https://github.com/jareddantis-bots/blanco-bot/wiki#Command-reference) for a list of commands.
 
 # Deployment
@@ -28,6 +21,10 @@ See the [wiki](https://github.com/jareddantis-bots/blanco-bot/wiki#Command-refer
 > At best, Discord will reject your application for verification, and at worst, your developer account will get banned.
 
 Head over to the [wiki](https://github.com/jareddantis-bots/blanco-bot/wiki#Deployment) to get started.
+
+If you need help, [create a new discussion](https://github.com/jareddantis-bots/blanco-bot/discussions/new/choose) or ask a question in my Discord server:
+
+[![Discord Invite](https://discord.com/api/guilds/879640837028446248/widget.png?style=banner3)](https://discord.gg/njtK9G6QRG)
 
 ## Debugging mode
 
