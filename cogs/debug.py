@@ -2,16 +2,20 @@
 DebugCog: Cog for debugging commands.
 """
 
+from typing import TYPE_CHECKING
+
 from nextcord import (Color, Interaction, PartialMessageable, SlashOption,
                       slash_command)
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
 
 from dataclass.custom_embed import CustomEmbed
-from utils.blanco import BlancoBot
 from utils.embeds import create_success_embed
 from utils.logger import create_logger
 from utils.paginator import Paginator
+
+if TYPE_CHECKING:
+    from utils.blanco import BlancoBot
 
 STATS_FORMAT = """
 ```asciidoc
@@ -29,7 +33,7 @@ class DebugCog(Cog):
     """
     Cog for debugging commands.
     """
-    def __init__(self, bot: BlancoBot):
+    def __init__(self, bot: 'BlancoBot'):
         """
         Constructor for DebugCog.
         """
