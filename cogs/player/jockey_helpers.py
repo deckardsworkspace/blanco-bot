@@ -208,20 +208,20 @@ async def find_lavalink_track(
             except LavalinkSearchError as err:
                 LOGGER.error(err.message)
                 raise
-            else:
-                # Use top result
-                ranked = rank_results(
-                    query,
-                    yt_results,
-                    SearchType.YOUTUBE
-                )
-                LOGGER.warning(
-                    'Using YouTube result `%s\' (%s) for `%s\'',
-                    ranked[0][0].title,
-                    ranked[0][0].lavalink_track.identifier,
-                    item.title
-                )
-                results.append(ranked[0][0])
+
+            # Use top result
+            ranked = rank_results(
+                query,
+                yt_results,
+                SearchType.YOUTUBE
+            )
+            LOGGER.warning(
+                'Using YouTube result `%s\' (%s) for `%s\'',
+                ranked[0][0].title,
+                ranked[0][0].lavalink_track.identifier,
+                item.title
+            )
+            results.append(ranked[0][0])
 
     # Save Lavalink result
     return results[0].lavalink_track

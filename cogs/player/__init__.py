@@ -468,7 +468,7 @@ class PlayerCog(Cog):
             return await itx.response.send_message(embed=create_error_embed(
                 message=f'Specify a number from 1 to {str(jockey.queue_size)}.'
             ), ephemeral=True)
-        elif position - 1 == jockey.current_index:
+        if position - 1 == jockey.current_index:
             return await itx.response.send_message(embed=create_error_embed(
                 message='You cannot remove the currently playing track.'
             ), ephemeral=True)

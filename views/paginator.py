@@ -2,10 +2,10 @@
 View for the Paginator. See utils/paginator.py for more information.
 """
 
+from typing import TYPE_CHECKING
+
 from nextcord import ButtonStyle
 from nextcord.ui import View, button
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from nextcord import Interaction
