@@ -95,7 +95,7 @@ def rank_results(
     LOGGER.debug('%s results and confidences for "%s":', type_name, query)
     for result, confidence in ranked:
         LOGGER.debug(
-            '  %3d  %-20s\t%-25s',
+            '  %3d  %-20s  %-25s',
             confidence,
             result.author[:20], # type: ignore
             result.title[:25]   # type: ignore
