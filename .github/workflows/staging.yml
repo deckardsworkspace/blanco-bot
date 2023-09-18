@@ -1,0 +1,16 @@
+name: Build staging image
+
+on:
+  pull_request:
+    branches:
+      - 'next'
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+    with:
+      IMAGE_FLAVOR: |
+        latest=false
+      ADDITIONAL_TAGS: |
+        type=raw,staging
