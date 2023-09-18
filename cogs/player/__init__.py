@@ -430,7 +430,7 @@ class PlayerCog(Cog):
 
                 # Truncate line if necessary
                 if len(line) > 50:
-                    line = line[:50] + '...'
+                    line = line[:47] + '...'
                 else:
                     line = f'{line:50.50}'
                 chunk_tracks.append(line)
