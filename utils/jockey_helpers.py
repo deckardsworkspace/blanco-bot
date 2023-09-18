@@ -3,8 +3,9 @@ Helper functions for the music player.
 """
 
 from itertools import islice
-from typing import TYPE_CHECKING, Any, Generator, List, Optional
+from typing import TYPE_CHECKING, Any, Generator, List, Optional, Tuple, TypeVar
 
+from mafic import SearchType
 from nextcord import Color, Embed
 from spotipy.exceptions import SpotifyException
 from thefuzz import fuzz
@@ -13,10 +14,11 @@ from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
 
 from .config import DEBUG_ENABLED
-from .constants import SPOTIFY_CONFIDENCE_THRESHOLD
+from .constants import CONFIDENCE_THRESHOLD
 from .exceptions import (JockeyException, LavalinkInvalidIdentifierError,
-                         SpotifyNoResultsError)
-from .lavalink_client import (check_similarity, get_soundcloud_matches,
+                         LavalinkSearchError, SpotifyNoResultsError)
+from .lavalink_client import (check_similarity, get_deezer_matches,
+                              get_deezer_track, get_soundcloud_matches,
                               get_youtube_matches)
 from .logger import create_logger
 from .spotify_client import Spotify
@@ -27,12 +29,13 @@ from .url import (check_sc_url, check_spotify_url, check_url,
                   get_ytlistid_from_url)
 
 if TYPE_CHECKING:
-    from mafic import Node
+    from mafic import Node, Track
 
     from dataclass.spotify_track import SpotifyTrack
 
 
 LOGGER = create_logger('jockey_helpers', debug=DEBUG_ENABLED)
+T = TypeVar('T')
 
 
 def check_similarity_weighted(actual: str, candidate: str, candidate_rank: int) -> int:
@@ -100,6 +103,172 @@ def list_chunks(data: List[Any]) -> Generator[List[Any], Any, Any]:
         yield list(islice(data, i, i + 10))
 
 
+def rank_results(
+    query: str,
+    results: List[T],
+    result_type: SearchType
+) -> List[Tuple[T, int]]:
+    """
+    Ranks search results based on similarity to a fuzzy query.
+    
+    :param query: The query to check against.
+    :param results: The results to rank. Can be mafic.Track, dataclass.SpotifyTrack,
+        or any object with a title and author string attribute.
+    :param result_type: The type of result. See ResultType.
+    :return: A list of tuples containing the result and its similarity to the query.
+    """
+    # Rank results
+    similarities = [
+        check_similarity_weighted(
+            query,
+            f'{result.title} {result.author}',  # type: ignore
+            100 - round(i * (100 / len(results)))
+        )
+        for i, result in enumerate(results)
+    ]
+    ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
+
+    # Print confidences for debugging
+    type_name = 'YouTube'
+    if result_type == SearchType.SPOTIFY_SEARCH:
+        type_name = 'Spotify'
+    elif result_type == SearchType.DEEZER_SEARCH:
+        type_name = 'Deezer'
+    LOGGER.debug('%s results and confidences for "%s":', type_name, query)
+    for result, confidence in ranked:
+        LOGGER.debug(
+            '  %3d  %-20s\t%-25s',
+            confidence,
+            result.author[:20], # type: ignore
+            result.title[:25]   # type: ignore
+        )
+
+    return ranked
+
+
+async def find_lavalink_track(
+    node: 'Node',
+    item: QueueItem,
+    deezer_enabled: bool = False
+) -> 'Track':
+    """
+    Finds a matching playable Lavalink track for a QueueItem.
+    """
+    results = []
+
+    # Use ISRC if present
+    if item.isrc is not None:
+        # Try to match ISRC on Deezer if enabled
+        if deezer_enabled:
+            try:
+                result = await get_deezer_track(node, item.isrc)
+            except LavalinkSearchError:
+                LOGGER.warning(
+                    'No Deezer match for ISRC %s `%s\'',
+                    item.isrc,
+                    item.title
+                )
+            else:
+                results.append(result)
+                LOGGER.debug(
+                    'Matched ISRC %s `%s\' on Deezer',
+                    item.isrc,
+                    item.title
+                )
+
+        # Try to match ISRC on YouTube
+        if len(results) == 0:
+            try:
+                results = await get_youtube_matches(
+                    node,
+                    f'"{item.isrc}"',
+                    desired_duration_ms=item.duration
+                )
+            except LavalinkSearchError:
+                LOGGER.warning(
+                    'No YouTube match for ISRC %s `%s\'',
+                    item.isrc,
+                    item.title
+                )
+            else:
+                LOGGER.debug(
+                    'Matched ISRC %s `%s\' on YouTube',
+                    item.isrc,
+                    item.title
+                )
+
+    # Fallback to metadata search
+    query = f'{item.title} {item.artist}'
+    if len(results) == 0:
+        LOGGER.error(
+            'No ISRC match for `%s\'. Falling back to metadata search.',
+            item.title
+        )
+        item.is_imperfect = True
+
+        # Try to match on Deezer if enabled
+        if deezer_enabled:
+            try:
+                dz_results = await get_deezer_matches(
+                    node,
+                    query,
+                    desired_duration_ms=item.duration
+                )
+            except LavalinkSearchError:
+                LOGGER.warning(
+                    'No Deezer results for `%s\'',
+                    item.title
+                )
+            else:
+                # Use top result if it's good enough
+                ranked = rank_results(
+                    query,
+                    dz_results,
+                    SearchType.DEEZER_SEARCH
+                )
+                if ranked[0][1] >= CONFIDENCE_THRESHOLD:
+                    LOGGER.warning(
+                        'Using Deezer result `%s\' (%s) for `%s\'',
+                        ranked[0][0].title,
+                        ranked[0][0].lavalink_track.identifier,
+                        item.title
+                    )
+                    results.append(ranked[0][0])
+                else:
+                    LOGGER.warning(
+                        'No similar Deezer results for `%s\'',
+                        item.title
+                    )
+
+        if len(results) == 0:
+            try:
+                yt_results = await get_youtube_matches(
+                    node,
+                    query,
+                    desired_duration_ms=item.duration
+                )
+            except LavalinkSearchError as err:
+                LOGGER.error(err.message)
+                raise
+            else:
+                # Use top result
+                ranked = rank_results(
+                    query,
+                    yt_results,
+                    SearchType.YOUTUBE
+                )
+                LOGGER.warning(
+                    'Using YouTube result `%s\' (%s) for `%s\'',
+                    ranked[0][0].title,
+                    ranked[0][0].lavalink_track.identifier,
+                    item.title
+                )
+                results.append(ranked[0][0])
+
+    # Save Lavalink result
+    return results[0].lavalink_track
+
+
 async def parse_query(
     node: 'Node',
     spotify: Spotify,
@@ -138,25 +307,9 @@ async def parse_query(
     except SpotifyNoResultsError:
         pass
     else:
-        # Rank results by similarity to query
-        similarities = [
-            check_similarity_weighted(query, f'{result.title} {result.artists}', 100 - (i * 10))
-            for i, result in enumerate(results)
-        ]
-        ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
-
-        # Print confidences for debugging
-        LOGGER.debug('Spotify results and confidences for "%s":', query)
-        for result, confidence in ranked:
-            LOGGER.debug(
-                '  %3d  %-20s\t%-25s',
-                confidence,
-                result.artists[:20],
-                result.title[:25]
-            )
-
         # Return top result if it's good enough
-        if ranked[0][1] >= SPOTIFY_CONFIDENCE_THRESHOLD:
+        ranked = rank_results(query, results, SearchType.SPOTIFY_SEARCH)
+        if ranked[0][1] >= CONFIDENCE_THRESHOLD:
             track = ranked[0][0]
             return [QueueItem(
                 requester=requester,
@@ -171,27 +324,8 @@ async def parse_query(
     # Get matching tracks from YouTube
     results = await get_youtube_matches(node, query, auto_filter=False)
 
-    # Rank results by similarity to query
-    similarities = [
-        check_similarity_weighted(
-            query,
-            f'{result.title} {result.author}',
-            100 - round(i * (100 / len(results))))
-        for i, result in enumerate(results)
-    ]
-    ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
-
-    # Print confidences for debugging
-    LOGGER.debug('YouTube results and confidences for "%s":', query)
-    for result, confidence in ranked:
-        LOGGER.debug(
-            '  %3d  %-20s\t%-25s',
-            confidence,
-            result.author[:20],
-            result.title[:25]
-        )
-
-    # Play top result
+    # Return top result
+    ranked = rank_results(query, results, SearchType.YOUTUBE)
     result = ranked[0][0]
     return [QueueItem(
         title=result.title,

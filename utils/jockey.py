@@ -16,8 +16,8 @@ from views.now_playing import NowPlayingView
 
 from .exceptions import (EndOfQueueError, JockeyError, JockeyException,
                          LavalinkSearchError, SpotifyNoResultsError)
-from .jockey_helpers import CustomEmbed, create_error_embed, parse_query
-from .lavalink_client import get_deezer_track, get_youtube_matches
+from .jockey_helpers import (CustomEmbed, create_error_embed,
+                             find_lavalink_track, parse_query)
 from .time_util import human_readable_time
 
 if TYPE_CHECKING:
@@ -251,79 +251,18 @@ class Jockey(Player['BlancoBot']):
         return None
 
     async def _play(self, item: 'QueueItem') -> bool:
-        results = []
-
         if item.lavalink_track is None:
-            # Use ISRC if present
-            if item.isrc is not None:
-                # Try to match ISRC on Deezer if enabled
+            try:
                 assert self._bot.config is not None
-                if self._bot.config.lavalink_nodes[self.node.label].deezer:
-                    try:
-                        result = await get_deezer_track(self.node, item.isrc)
-                    except LavalinkSearchError:
-                        self._logger.warning(
-                            'No Deezer match for ISRC %s `%s\'',
-                            item.isrc,
-                            item.title
-                        )
-                    else:
-                        results.append(result)
-                        self._logger.debug(
-                            'Matched ISRC %s `%s\' on Deezer',
-                            item.isrc,
-                            item.title
-                        )
-
-                # Try to match ISRC on YouTube
-                if len(results) == 0:
-                    try:
-                        results = await get_youtube_matches(
-                            self.node,
-                            f'"{item.isrc}"',
-                            desired_duration_ms=item.duration
-                        )
-                    except LavalinkSearchError:
-                        self._logger.warning(
-                            'No YouTube match for ISRC %s `%s\'',
-                            item.isrc,
-                            item.title
-                        )
-                    else:
-                        self._logger.debug(
-                            'Matched ISRC %s `%s\' on YouTube',
-                            item.isrc,
-                            item.title
-                        )
-
-            # Fallback to metadata search
-            if len(results) == 0:
-                self._logger.error(
-                    'No ISRC match for `%s\'. Falling back to metadata search.',
-                    item.title
+                deezer_enabled = self._bot.config.lavalink_nodes[self.node.label].deezer
+                item.lavalink_track = await find_lavalink_track(
+                    self.node,
+                    item,
+                    deezer_enabled=deezer_enabled
                 )
-                item.is_imperfect = True
-
-                try:
-                    results = await get_youtube_matches(
-                        self.node,
-                        f'{item.title} {item.artist}',
-                        desired_duration_ms=item.duration
-                    )
-                except LavalinkSearchError as err:
-                    self._logger.critical('Failed to play `%s\'.', item.title)
-                    self._logger.error(err.message)
-                    return False
-                else:
-                    self._logger.warning(
-                        'Using YouTube result `%s\' (%s) for `%s\'',
-                        results[0].lavalink_track.title,
-                        results[0].lavalink_track.identifier,
-                        item.title
-                    )
-
-            # Save Lavalink result
-            item.lavalink_track = results[0].lavalink_track
+            except LavalinkSearchError as err:
+                self._logger.critical('Failed to play `%s\'.', item.title)
+                raise RuntimeError(err.args[0]) from err
 
         # Play track
         await self.play(item.lavalink_track)

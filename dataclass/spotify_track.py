@@ -13,7 +13,7 @@ class SpotifyTrack:
     """
     title: str
     artist: str       # First artist
-    artists: str      # All artists, separated by ', '
+    author: str       # All artists, separated by ', '
     spotify_id: str
     duration_ms: int
     artwork: Optional[str] = None

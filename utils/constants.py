@@ -34,7 +34,7 @@ SPOTIFY_API_BASE_URL = URL.build(
 # A top search result below this threshold will not be considered for playback
 # and Blanco will fall back to YouTube search. See
 # jockey_helpers.py:check_similarity_weighted() for the computation.
-SPOTIFY_CONFIDENCE_THRESHOLD = 55
+CONFIDENCE_THRESHOLD = 55
 
 SPOTIFY_403_ERR_MSG = ''.join([
     '**Error 403** encountered while trying to {}.\n',

@@ -102,6 +102,29 @@ def parse_result(result: 'Track') -> LavalinkResult:
     return parsed
 
 
+async def get_deezer_matches(
+    node: 'Node',
+    query: str,
+    desired_duration_ms: Optional[int] = None,
+    auto_filter: bool = False
+) -> List[LavalinkResult]:
+    """
+    Gets Deezer tracks from Lavalink, and returns a list of LavalinkResult objects.
+
+    :param node: The Lavalink node to use.
+    :param query: The query to search for.
+    :param desired_duration_ms: The desired duration of the track, in milliseconds.
+    :param automatic: Whether to automatically filter results.
+    """
+    return await search_lavalink(
+        node,
+        query,
+        search_type=SearchType.DEEZER_SEARCH.value,
+        desired_duration_ms=desired_duration_ms,
+        auto_filter=auto_filter
+    )
+
+
 async def get_deezer_track(node: 'Node', isrc: str) -> LavalinkResult:
     """
     Gets a single Deezer track from Lavalink, and returns a LavalinkResult object.
