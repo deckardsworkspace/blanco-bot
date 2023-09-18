@@ -21,7 +21,8 @@ jobs:
       - name: Install pylint
         run: pip install pylint
       - name: Run pylint
-        run: pylint --rcfile=.pylintrc --fail-under=9.0 --exit-zero .
+        run: |
+          pylint --rcfile=.pylintrc --fail-under=9.0 $(git ls-files '*.py')
   build:
     uses: ./.github/workflows/build.yml
 
