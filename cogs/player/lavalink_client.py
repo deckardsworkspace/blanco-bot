@@ -52,7 +52,7 @@ def check_similarity(actual: str, candidate: str) -> float:
     # Get words not in intersection
     for word in difference:
         # Look for close matches
-        close_matches = difflib.get_close_matches(word, candidate_words, cutoff=0.8)
+        close_matches = difflib.get_close_matches(word, candidate_words, cutoff=0.9)
         if len(close_matches) > 0:
             intersection.add(close_matches[0])
 
