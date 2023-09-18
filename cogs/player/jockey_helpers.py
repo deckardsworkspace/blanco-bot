@@ -68,7 +68,7 @@ def rank_results(
 ) -> List[Tuple[T, int]]:
     """
     Ranks search results based on similarity to a fuzzy query.
-    
+
     :param query: The query to check against.
     :param results: The results to rank. Can be mafic.Track, dataclass.SpotifyTrack,
         or any object with a title and author string attribute.

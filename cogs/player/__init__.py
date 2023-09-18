@@ -100,7 +100,7 @@ class PlayerCog(Cog):
     ):
         """
         Attempt to deafen the bot user.
-        
+
         :param bot_user: The bot user to deafen. Should be an instance of nextcord.Member.
         :param was_deafened: Whether the bot user was previously deafened.
         :param channel: The Messageable channel to send the error message to.
@@ -139,7 +139,7 @@ class PlayerCog(Cog):
             if itx is None:
                 raise ValueError('[player::_disconnect] Either jockey or itx must be specified')
             jockey = await self._get_jockey(itx)
-       
+
         try:
             await jockey.stop()
         except PlayerNotConnected:

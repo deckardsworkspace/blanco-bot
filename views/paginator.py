@@ -54,4 +54,3 @@ class PaginatorView(View):
         Go to the last page.
         """
         return await self.paginator.last_page()
-        

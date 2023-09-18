@@ -28,7 +28,7 @@ class ShuffleButton(Button['NowPlayingView']):
     def __init__(self, init_state: bool = False):
         """
         Initialize the shuffle button.
-        
+
         :param init_state: Initial state of the shuffle button.
             True if the queue is shuffled, False otherwise.
         """
