@@ -5,7 +5,7 @@ with fuzzy search and exclusion of non-official track versions
 """
 
 import difflib
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional
 
 from mafic import Playlist, SearchType, TrackLoadException
 
@@ -36,23 +36,6 @@ BLACKLIST = (
 )
 
 
-def parse_result(result: 'Track') -> LavalinkResult:
-    """
-    Parses a Lavalink track result into a LavalinkResult object.
-    """
-    parsed = LavalinkResult(
-        title=result.title,
-        author=result.author,
-        duration_ms=result.length,
-        artwork_url=result.artwork_url,
-        lavalink_track=result
-    )
-    if result.uri is not None:
-        parsed.url = result.uri
-
-    return parsed
-
-
 def check_similarity(actual: str, candidate: str) -> float:
     """
     Checks the similarity between two strings. Meant for comparing
@@ -77,80 +60,12 @@ def check_similarity(actual: str, candidate: str) -> float:
     return len(intersection) / len(actual_words)
 
 
-async def get_tracks(
-    node: 'Node',
-    query: str,
-    search_type: str = 'EMPTY'
-) -> Tuple[Optional[str], List[LavalinkResult]]:
+def filter_results(query: str, search_results: List['Track']) -> List[LavalinkResult]:
     """
-    Gets tracks from Lavalink, and returns a list of LavalinkResult objects.
+    Filters search results by removing karaoke, live, instrumental etc versions.
     """
-    # Check if search type is valid
-    try:
-        _ = SearchType(search_type)
-    except ValueError as exc:
-        raise ValueError(f'Invalid search type "{search_type}"') from exc
+    results = []
 
-    try:
-        result = await node.fetch_tracks(query, search_type=search_type)
-    except TrackLoadException as exc:
-        raise LavalinkSearchError(
-            query,
-            reason=f'Could not get tracks for "{query}": {exc.cause}'
-        ) from exc
-
-    if result is None:
-        raise LavalinkSearchError(query, reason=f'No matches found for "{query}"')
-
-    if isinstance(result, Playlist):
-        return result.name, [parse_result(track) for track in result.tracks]
-    return None, [parse_result(track) for track in result]
-
-
-async def get_deezer_track(node: 'Node', isrc: str) -> LavalinkResult:
-    """
-    Gets a Deezer track from Lavalink, and returns a LavalinkResult object.
-    """
-    try:
-        search = await node.fetch_tracks(isrc, search_type=SearchType.DEEZER_ISRC.value)
-    except TrackLoadException as exc:
-        raise LavalinkSearchError(
-            isrc,
-            reason=f'Could not get track: {exc.cause}'
-        ) from exc
-
-    if (isinstance(search, list) and len(search) == 0) or search is None:
-        raise LavalinkSearchError(isrc, reason='No results found')
-
-    search_result = search[0] if isinstance(search, list) else search.tracks[0]
-    return parse_result(search_result)
-
-
-async def get_youtube_matches(
-    node: 'Node',
-    query: str,
-    desired_duration_ms: Optional[int] = 0,
-    automatic: bool = True
-) -> List[LavalinkResult]:
-    """
-    Gets YouTube tracks from Lavalink, and returns a list of LavalinkResult objects.
-    """
-    results: List[LavalinkResult] = []
-
-    try:
-        search = await node.fetch_tracks(query, search_type=SearchType.YOUTUBE.value)
-    except TrackLoadException as exc:
-        raise LavalinkSearchError(
-            query,
-            reason=f'Could not get track: {exc.cause}'
-        ) from exc
-
-    if isinstance(search, Playlist) and len(search.tracks) == 0:
-        raise LavalinkSearchError(query, reason='Playlist is empty')
-    if (isinstance(search, list) and len(search) == 0) or search is None:
-        raise LavalinkSearchError(query, reason='No results found')
-
-    search_results = search if isinstance(search, list) else search.tracks
     for result in search_results:
         if not result.length:
             # Can't play a track with no duration
@@ -159,14 +74,130 @@ async def get_youtube_matches(
         # Skip karaoke, live, instrumental etc versions
         # if the original query did not ask for it
         valid = True
-        if automatic:
-            for word in BLACKLIST:
-                if word in result.title.lower() and not word in query.lower():
-                    valid = False
-                    break
+        for word in BLACKLIST:
+            if word in result.title.lower() and not word in query.lower():
+                valid = False
+                break
 
         if valid:
             results.append(parse_result(result))
+
+    return results
+
+
+def parse_result(result: 'Track') -> LavalinkResult:
+    """
+    Parses a Lavalink track result into a LavalinkResult object.
+    """
+    parsed = LavalinkResult(
+        title=result.title,
+        author=result.author,
+        duration_ms=result.length,
+        artwork_url=result.artwork_url,
+        lavalink_track=result
+    )
+    if result.uri is not None:
+        parsed.url = result.uri
+
+    return parsed
+
+
+async def get_deezer_track(node: 'Node', isrc: str) -> LavalinkResult:
+    """
+    Gets a single Deezer track from Lavalink, and returns a LavalinkResult object.
+
+    :param node: The Lavalink node to use.
+    :param isrc: The ISRC to search for.
+    """
+    results = await search_lavalink(
+        node,
+        isrc,
+        search_type=SearchType.DEEZER_ISRC.value,
+        auto_filter=False
+    )
+    return results[0]
+
+
+async def get_soundcloud_matches(
+    node: 'Node',
+    query: str,
+    desired_duration_ms: Optional[int] = None,
+    auto_filter: bool = False
+) -> List[LavalinkResult]:
+    """
+    Gets SoundCloud tracks from Lavalink, and returns a list of LavalinkResult objects.
+
+    :param node: The Lavalink node to use.
+    :param query: The query to search for.
+    :param desired_duration_ms: The desired duration of the track, in milliseconds.
+    :param automatic: Whether to automatically filter results.
+    """
+    return await search_lavalink(
+        node,
+        query,
+        search_type=SearchType.SOUNDCLOUD.value,
+        desired_duration_ms=desired_duration_ms,
+        auto_filter=auto_filter
+    )
+
+
+async def get_youtube_matches(
+    node: 'Node',
+    query: str,
+    desired_duration_ms: Optional[int] = None,
+    auto_filter: bool = False
+) -> List[LavalinkResult]:
+    """
+    Gets YouTube tracks from Lavalink, and returns a list of LavalinkResult objects.
+
+    :param node: The Lavalink node to use.
+    :param query: The query to search for.
+    :param desired_duration_ms: The desired duration of the track, in milliseconds.
+    :param automatic: Whether to automatically filter results.
+    """
+    return await search_lavalink(
+        node,
+        query,
+        search_type=SearchType.YOUTUBE.value,
+        desired_duration_ms=desired_duration_ms,
+        auto_filter=auto_filter
+    )
+
+
+async def search_lavalink(
+    node: 'Node',
+    query: str,
+    search_type: str = SearchType.YOUTUBE.value,
+    desired_duration_ms: Optional[int] = None,
+    auto_filter: bool = False
+) -> List[LavalinkResult]:
+    """
+    Generic search function for Lavalink that returns a list of LavalinkResult objects.
+
+    :param node: The Lavalink node to use.
+    :param query: The query to search for.
+    :param search_type: The search type to use. See mafic.SearchType.
+    :param desired_duration_ms: The desired duration of the track, in milliseconds.
+    :param automatic: Whether to automatically filter results.
+    """
+    try:
+        search = await node.fetch_tracks(query, search_type=search_type)
+    except TrackLoadException as exc:
+        raise LavalinkSearchError(
+            query,
+            reason=f'Could not get tracks for `{query}\': {exc.cause}'
+        ) from exc
+
+    if isinstance(search, Playlist) and len(search.tracks) == 0:
+        raise LavalinkSearchError(query, reason='Playlist is empty')
+    if (isinstance(search, list) and len(search) == 0) or search is None:
+        raise LavalinkSearchError(query, reason='No results found')
+
+    search_results = search if isinstance(search, list) else search.tracks
+    if auto_filter:
+        results = filter_results(query, search_results)
+    else:
+        results = [parse_result(result) for result in search_results]
 
     # Are there valid results?
     if len(results) == 0:

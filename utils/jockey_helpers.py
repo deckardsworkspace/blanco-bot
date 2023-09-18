@@ -5,7 +5,6 @@ Helper functions for the music player.
 from itertools import islice
 from typing import TYPE_CHECKING, Any, Generator, List, Optional
 
-from mafic import SearchType
 from nextcord import Color, Embed
 from spotipy.exceptions import SpotifyException
 from thefuzz import fuzz
@@ -17,7 +16,8 @@ from .config import DEBUG_ENABLED
 from .constants import SPOTIFY_CONFIDENCE_THRESHOLD
 from .exceptions import (JockeyException, LavalinkInvalidIdentifierError,
                          SpotifyNoResultsError)
-from .lavalink_client import check_similarity, get_tracks, get_youtube_matches
+from .lavalink_client import (check_similarity, get_soundcloud_matches,
+                              get_youtube_matches)
 from .logger import create_logger
 from .spotify_client import Spotify
 from .url import (check_sc_url, check_spotify_url, check_url,
@@ -169,7 +169,7 @@ async def parse_query(
             )]
 
     # Get matching tracks from YouTube
-    results = await get_youtube_matches(node, query, automatic=False)
+    results = await get_youtube_matches(node, query, auto_filter=False)
 
     # Rank results by similarity to query
     similarities = [
@@ -211,7 +211,7 @@ async def parse_sc_query(node: 'Node', query: str, requester: int) -> List[Queue
     """
     try:
         # Get results with Lavalink
-        _, tracks = await get_tracks(node, query, search_type=SearchType.SOUNDCLOUD.value)
+        tracks = await get_soundcloud_matches(node, query)
     except Exception as exc:
         raise LavalinkInvalidIdentifierError(
             f'Entity {query} is private, nonexistent, or has no stream URL'
@@ -285,10 +285,9 @@ async def parse_youtube_playlist(node: 'Node', query: str, requester: int) -> Li
     try:
         # Get playlist tracks from YouTube
         playlist_id = get_ytlistid_from_url(query)
-        _, tracks = await get_tracks(
+        tracks = await get_youtube_matches(
             node,
-            f'https://youtube.com/playlist?list={playlist_id}',
-            search_type=SearchType.YOUTUBE.value
+            f'https://youtube.com/playlist?list={playlist_id}'
         )
     except Exception as exc:
         # No tracks.
@@ -318,7 +317,7 @@ async def parse_youtube_query(node: 'Node', query: str, requester: int) -> List[
         video_id = get_ytid_from_url(query)
 
         # Get the video's details
-        _, video = await get_tracks(node, video_id, search_type=SearchType.YOUTUBE.value)
+        video = await get_youtube_matches(node, video_id)
         return [QueueItem(
             title=video[0].title,
             artist=video[0].author,
