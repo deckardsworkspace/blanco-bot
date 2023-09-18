@@ -9,16 +9,16 @@ from nextcord.ui import Button, View, button
 from requests.exceptions import HTTPError, Timeout
 
 from utils.constants import SPOTIFY_403_ERR_MSG
+from utils.embeds import create_error_embed, create_success_embed
 from utils.exceptions import VoiceCommandError
-from utils.jockey_helpers import create_error_embed, create_success_embed
 from utils.player_checks import check_mutual_voice
 
 if TYPE_CHECKING:
     from nextcord import Interaction
 
     from cogs.player import PlayerCog
+    from cogs.player.jockey import Jockey
     from utils.blanco import BlancoBot
-    from utils.jockey import Jockey
 
 
 class ShuffleButton(Button['NowPlayingView']):
@@ -28,7 +28,7 @@ class ShuffleButton(Button['NowPlayingView']):
     def __init__(self, init_state: bool = False):
         """
         Initialize the shuffle button.
-        
+
         :param init_state: Initial state of the shuffle button.
             True if the queue is shuffled, False otherwise.
         """

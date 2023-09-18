@@ -60,5 +60,5 @@ class QueueItem:
         else:
             title = 'Unknown title'
             artist = 'Unknown query'
-        
+
         return title, artist

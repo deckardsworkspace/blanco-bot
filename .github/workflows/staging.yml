@@ -1,13 +1,14 @@
-name: Test build Docker Image for PRs
+name: Build staging image
 
 on:
-  pull_request:
+  push:
     branches:
-      - 'main'
+      - 'next'
 
 jobs:
   build:
     uses: ./.github/workflows/build.yml
+
     with:
       IMAGE_FLAVOR: |
         latest=false

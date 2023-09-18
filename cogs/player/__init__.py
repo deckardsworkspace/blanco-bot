@@ -3,7 +3,8 @@ PlayerCog: Cog for controlling the music player.
 """
 
 from asyncio import TimeoutError as AsyncioTimeoutError
-from typing import TYPE_CHECKING, Optional
+from itertools import islice
+from typing import TYPE_CHECKING, Any, Generator, List, Optional
 
 from mafic import PlayerNotConnected
 from nextcord import (Color, Forbidden, Guild, HTTPException, Interaction,
@@ -14,26 +15,34 @@ from nextcord.ext.commands import Cog
 from requests import HTTPError
 
 from dataclass.custom_embed import CustomEmbed
-from utils.blanco import BlancoBot
 from utils.constants import SPOTIFY_403_ERR_MSG
+from utils.embeds import create_error_embed, create_success_embed
 from utils.exceptions import EndOfQueueError, JockeyError, JockeyException
-from utils.jockey import Jockey
-from utils.jockey_helpers import (create_error_embed, create_success_embed,
-                                  list_chunks)
 from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import check_mutual_voice
 from views.spotify_dropdown import SpotifyDropdownView
 
+from .jockey import Jockey
+
 if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
+    from utils.blanco import BlancoBot
+
+
+def list_chunks(data: List[Any]) -> Generator[List[Any], Any, Any]:
+    """
+    Yield 10-element chunks of a list. Used for pagination.
+    """
+    for i in range(0, len(data), 10):
+        yield list(islice(data, i, i + 10))
 
 
 class PlayerCog(Cog):
     """
     Cog for creating, controlling, and destroying music players for guilds.
     """
-    def __init__(self, bot: BlancoBot):
+    def __init__(self, bot: 'BlancoBot'):
         """
         Constructor for PlayerCog.
         """
@@ -91,7 +100,7 @@ class PlayerCog(Cog):
     ):
         """
         Attempt to deafen the bot user.
-        
+
         :param bot_user: The bot user to deafen. Should be an instance of nextcord.Member.
         :param was_deafened: Whether the bot user was previously deafened.
         :param channel: The Messageable channel to send the error message to.
@@ -130,7 +139,7 @@ class PlayerCog(Cog):
             if itx is None:
                 raise ValueError('[player::_disconnect] Either jockey or itx must be specified')
             jockey = await self._get_jockey(itx)
-       
+
         try:
             await jockey.stop()
         except PlayerNotConnected:
@@ -421,7 +430,7 @@ class PlayerCog(Cog):
 
                 # Truncate line if necessary
                 if len(line) > 50:
-                    line = line[:50] + '...'
+                    line = line[:47] + '...'
                 else:
                     line = f'{line:50.50}'
                 chunk_tracks.append(line)
@@ -459,7 +468,7 @@ class PlayerCog(Cog):
             return await itx.response.send_message(embed=create_error_embed(
                 message=f'Specify a number from 1 to {str(jockey.queue_size)}.'
             ), ephemeral=True)
-        elif position - 1 == jockey.current_index:
+        if position - 1 == jockey.current_index:
             return await itx.response.send_message(embed=create_error_embed(
                 message='You cannot remove the currently playing track.'
             ), ephemeral=True)

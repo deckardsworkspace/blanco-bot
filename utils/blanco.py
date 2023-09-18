@@ -15,8 +15,8 @@ from nextcord.ext.commands import Bot
 from database import Database
 from views.now_playing import NowPlayingView
 
+from .embeds import create_error_embed
 from .exceptions import EndOfQueueError
-from .jockey_helpers import create_error_embed
 from .logger import create_logger
 from .scrobbler import Scrobbler
 from .spotify_client import Spotify
@@ -27,9 +27,8 @@ if TYPE_CHECKING:
 
     from mafic import Node, TrackEndEvent, TrackStartEvent
 
+    from cogs.player.jockey import Jockey
     from dataclass.config import Config
-
-    from .jockey import Jockey
 
 
 StatusChannel = Union[PartialMessageable, VoiceChannel, TextChannel, Thread]

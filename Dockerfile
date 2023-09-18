@@ -1,3 +1,6 @@
+ARG RELEASE="0.0.0-unknown"
+
+
 FROM node:lts-alpine AS tailwind
 
 # Compile Tailwind CSS
@@ -23,13 +26,19 @@ RUN pip install --upgrade pip wheel && pip install -r requirements.txt
 
 
 FROM python:3.11-slim AS main
+ARG RELEASE
 COPY --from=dependencies /opt/venv /opt/venv
 LABEL maintainer="Jared Dantis <jareddantis@gmail.com>"
 
-# Copy bot files and run bot
+# Copy bot files
 COPY . /opt/app
 COPY --from=tailwind /opt/build/server/static/css/main.css /opt/app/server/static/css/main.css
 WORKDIR /opt/app
+
+# Set release
+RUN sed -i "s/0.0.0-unknown/${RELEASE}/" utils/constants.py
+
+# Run bot
 ENV PATH="/opt/venv/bin:${PATH}"
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

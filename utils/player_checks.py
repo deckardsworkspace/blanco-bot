@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 
 from nextcord import Interaction, Member
 
-from .exceptions import VoiceCommandError
+from utils.exceptions import VoiceCommandError
 
 if TYPE_CHECKING:
-    from .jockey import Jockey
+    from cogs.player.jockey import Jockey
 
 
 def check_mutual_voice(itx: Interaction, slash: bool = True) -> bool:

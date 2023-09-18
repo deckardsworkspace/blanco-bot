@@ -4,8 +4,9 @@ Constants used for API requests.
 
 from yarl import URL
 
+RELEASE = '0.0.0-unknown' # This is replaced by the release tag during CI/CD
 
-USER_AGENT = 'blanco-bot/0.4.0 ( https://blanco.dantis.me )'
+USER_AGENT = f'blanco-bot/{RELEASE} ( https://blanco.dantis.me )'
 
 DISCORD_API_BASE_URL = URL.build(
     scheme='https',
@@ -34,7 +35,7 @@ SPOTIFY_API_BASE_URL = URL.build(
 # A top search result below this threshold will not be considered for playback
 # and Blanco will fall back to YouTube search. See
 # jockey_helpers.py:check_similarity_weighted() for the computation.
-SPOTIFY_CONFIDENCE_THRESHOLD = 55
+CONFIDENCE_THRESHOLD = 55
 
 SPOTIFY_403_ERR_MSG = ''.join([
     '**Error 403** encountered while trying to {}.\n',
