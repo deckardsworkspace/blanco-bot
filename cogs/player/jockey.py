@@ -315,17 +315,21 @@ class Jockey(Player['BlancoBot']):
                 item.start_time = time_now
         except ValueError as err:
             self._logger.warning('Failed to scrobble `%s\': %s', item.title, err.args[0])
+        else:
+            # Scrobble for every user
+            scrobbled = 0
+            for member in self.channel.members:
+                if not member.bot:
+                    scrobbler = self._bot.get_scrobbler(member.id)
+                    if scrobbler is not None:
+                        await self._bot.loop.run_in_executor(
+                            self._executor,
+                            scrobbler.scrobble,
+                            item
+                        )
+                        scrobbled += 1
 
-        # Scrobble for every user
-        scrobbled = 0
-        for member in self.channel.members:
-            if not member.bot:
-                scrobbler = self._bot.get_scrobbler(member.id)
-                if scrobbler is not None:
-                    await self._bot.loop.run_in_executor(self._executor, scrobbler.scrobble, item)
-                    scrobbled += 1
-
-        self._logger.debug('Scrobbled `%s\' for %d users', item.title, scrobbled)
+            self._logger.debug('Scrobbled `%s\' for %d users', item.title, scrobbled)
 
     async def disconnect(self, *, force: bool = False):
         """
