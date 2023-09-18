@@ -170,7 +170,8 @@ async def find_lavalink_track(
                 dz_results = await get_deezer_matches(
                     node,
                     query,
-                    desired_duration_ms=item.duration
+                    desired_duration_ms=item.duration,
+                    auto_filter=True
                 )
             except LavalinkSearchError:
                 LOGGER.warning(
