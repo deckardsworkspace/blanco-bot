@@ -80,7 +80,7 @@ def rank_results(
         check_similarity_weighted(
             query,
             f'{result.title} {result.author}',  # type: ignore
-            100 - round(i * (100 / len(results)))
+            int(100 * (0.8 ** i))
         )
         for i, result in enumerate(results)
     ]
