@@ -4,8 +4,9 @@ Constants used for API requests.
 
 from yarl import URL
 
+RELEASE = '0.0.0-unknown' # This is replaced by the release tag during CI/CD
 
-USER_AGENT = 'blanco-bot/0.4.0 ( https://blanco.dantis.me )'
+USER_AGENT = f'blanco-bot/{RELEASE} ( https://blanco.dantis.me )'
 
 DISCORD_API_BASE_URL = URL.build(
     scheme='https',
