@@ -12,12 +12,13 @@ from mafic import Player, PlayerNotConnected
 from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
                       StageChannel, VoiceChannel)
 
+from dataclass.custom_embed import CustomEmbed
 from views.now_playing import NowPlayingView
 
+from .embeds import create_error_embed
 from .exceptions import (EndOfQueueError, JockeyError, JockeyException,
                          LavalinkSearchError, SpotifyNoResultsError)
-from .jockey_helpers import (CustomEmbed, create_error_embed,
-                             find_lavalink_track, parse_query)
+from .jockey_helpers import find_lavalink_track, parse_query
 from .time_util import human_readable_time
 
 if TYPE_CHECKING:

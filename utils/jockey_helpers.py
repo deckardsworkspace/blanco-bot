@@ -2,15 +2,12 @@
 Helper functions for the music player.
 """
 
-from itertools import islice
-from typing import TYPE_CHECKING, Any, Generator, List, Optional, Tuple, TypeVar
+from typing import TYPE_CHECKING, List, Tuple, TypeVar
 
 from mafic import SearchType
-from nextcord import Color, Embed
 from spotipy.exceptions import SpotifyException
 from thefuzz import fuzz
 
-from dataclass.custom_embed import CustomEmbed
 from dataclass.queue_item import QueueItem
 
 from .config import DEBUG_ENABLED
@@ -62,45 +59,6 @@ def check_similarity_weighted(actual: str, candidate: str, candidate_rank: int) 
         (tsor * 0.06) +
         (ptsr * 0.04)
     )
-
-
-def create_error_embed(message: str) -> Embed:
-    """
-    Create an error embed.
-    """
-    embed = CustomEmbed(
-        color=Color.red(),
-        title=':x:｜Error',
-        description=message
-    )
-    return embed.get()
-
-
-def create_success_embed(title: Optional[str] = None, body: Optional[str] = None) -> Embed:
-    """
-    Create a success embed.
-    """
-    if body is None:
-        if title is None:
-            raise ValueError('Either title or body must be specified')
-
-        body = title
-        title = 'Success'
-
-    embed = CustomEmbed(
-        color=Color.green(),
-        title=f':white_check_mark:｜{title}',
-        description=body
-    )
-    return embed.get()
-
-
-def list_chunks(data: List[Any]) -> Generator[List[Any], Any, Any]:
-    """
-    Yield 10-element chunks of a list. Used for pagination.
-    """
-    for i in range(0, len(data), 10):
-        yield list(islice(data, i, i + 10))
 
 
 def rank_results(

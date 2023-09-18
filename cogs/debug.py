@@ -9,7 +9,7 @@ from nextcord.ext.commands import Cog
 
 from dataclass.custom_embed import CustomEmbed
 from utils.blanco import BlancoBot
-from utils.jockey_helpers import create_success_embed
+from utils.embeds import create_success_embed
 from utils.logger import create_logger
 from utils.paginator import Paginator
 
