@@ -8,7 +8,7 @@ where the environment variables take precedence over the config file.
 
 from os import environ
 from os.path import isfile
-from typing import Dict, List, Optional
+from typing import Dict
 
 from yaml import safe_load
 
@@ -171,18 +171,3 @@ config = Config(
     lastfm_api_key=LASTFM_API_KEY,
     lastfm_shared_secret=LASTFM_SHARED_SECRET
 )
-
-
-def get_debug_guilds() -> Optional[List[int]]:
-    """
-    Gets a list of guild IDs that are allowed to use commands.
-    Meant for use in debug mode.
-    """
-    return config.debug_guild_ids
-
-
-def get_debug_status() -> bool:
-    """
-    Returns a Boolean that states whether debug mode is enabled.
-    """
-    return config.debug_enabled
