@@ -9,6 +9,7 @@ import spotipy
 from dataclass.spotify import SpotifyResult, SpotifyTrack
 
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
+from .time import human_readable_time
 
 
 def extract_track_info(track_obj: Dict[str, Any], artwork: Optional[str] = None) -> SpotifyTrack:
@@ -218,10 +219,10 @@ class Spotify:
         else:
             # Include artist name and release date in track results
             results = [SpotifyResult(
-                name=entity['name'],
+                name=f'{entity["name"]} '
+                     f'({human_readable_time(entity["duration_ms"])})',
                 description=f'{entity["artists"][0]["name"]} - '
-                            f'{entity["album"]["name"]} '
-                            f'({entity["release_date"]})',
+                            f'{entity["album"]["name"]} ',
                 spotify_id=entity['id']
             ) for entity in items]
 
