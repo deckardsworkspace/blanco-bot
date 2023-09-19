@@ -51,6 +51,13 @@ class Scrobbler:
         if track.duration is not None:
             duration = track.duration // 1000
 
+        # Warn if MBID is not set
+        if track.mbid is None:
+            self._logger.warning(
+                'MBID not set for track `%s\'; scrobble might not be accurate.',
+                track.title
+            )
+
         try:
             self._net.scrobble(
                 artist=track.artist,

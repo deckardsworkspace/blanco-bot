@@ -11,13 +11,11 @@ from typing import TYPE_CHECKING, Deque, List, Optional, Tuple
 from mafic import Player, PlayerNotConnected
 from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
                       StageChannel, VoiceChannel)
-from requests import HTTPError
 
 from dataclass.custom_embed import CustomEmbed
 from utils.embeds import create_error_embed
 from utils.exceptions import (EndOfQueueError, JockeyError, JockeyException,
                               LavalinkSearchError, SpotifyNoResultsError)
-from utils.musicbrainz import mb_lookup, mb_lookup_isrc
 from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
 
@@ -285,7 +283,7 @@ class Jockey(Player['BlancoBot']):
 
         # Check if scrobbling is enabled
         assert self._bot.config is not None
-        if not self._bot.config.lastfm_api_key or not self._bot.config.lastfm_shared_secret:
+        if not self._bot.config.lastfm_enabled:
             return
 
         # Check if track can be scrobbled
@@ -311,39 +309,6 @@ class Jockey(Player['BlancoBot']):
             self._logger.warning('Failed to scrobble `%s\': %s', item.title, err.args[0])
             return
 
-        # Attempt to get MusicBrainz ID and ISRC
-        mbid = item.mbid
-        isrc = item.isrc
-        if mbid is None:
-            if isrc is not None:
-                try:
-                    mbid = mb_lookup_isrc(self._logger, item)
-                except HTTPError as err:
-                    if err.response.status_code == 404:
-                        mbid, isrc = mb_lookup(self._logger, item)
-                    else:
-                        raise
-            else:
-                mbid, isrc = mb_lookup(self._logger, item)
-
-        # Log MusicBrainz ID if found
-        if item.mbid is None and mbid is not None:
-            item.mbid = mbid
-            self._logger.debug(
-                'Found MusicBrainz ID `%s\' for `%s\'',
-                item.mbid,
-                item.title
-            )
-
-        # Log ISRC if found
-        if item.isrc is None and isrc is not None:
-            item.isrc = isrc
-            self._logger.debug(
-                'Found ISRC `%s\' for `%s\'',
-                isrc,
-                item.title
-            )
-
         # Don't scrobble with no MBID and ISRC,
         # as the track probably isn't on Last.fm
         if item.mbid is None and item.isrc is None:
@@ -367,7 +332,7 @@ class Jockey(Player['BlancoBot']):
                     scrobbled += 1
 
         self._logger.debug(
-            'Dispatched scrobbler `%s\' for %d user(s)',
+            'Scrobbling `%s\' for %d user(s)',
             item.title,
             scrobbled
         )
