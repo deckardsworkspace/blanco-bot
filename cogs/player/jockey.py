@@ -373,14 +373,8 @@ class Jockey(Player['BlancoBot']):
 
         # Build track duration string
         duration = ''
-        if isinstance(duration_ms, int):
-            h, m, s = human_readable_time(duration_ms) # pylint: disable=invalid-name
-            if s > 0:
-                duration = f'{s} sec'
-            if m > 0:
-                duration = f'{m} min {duration}'
-            if h > 0:
-                duration = f'{h} hr {duration}'
+        if duration_ms is not None:
+            duration = human_readable_time(duration_ms)
 
         is_stream = False
         if track.lavalink_track is not None:
