@@ -6,7 +6,7 @@ import logging
 from typing import Optional
 
 # Log line format
-LOG_FMT_STR = '{0}%(asctime)s {1}[%(levelname)s]{2} %(message)s (%(filename)s:%(lineno)d)'
+LOG_FMT_STR = '{0}%(asctime)s.%(msecs)03d {1}[%(levelname)s]{2} %(message)s (%(filename)s:%(lineno)d)' # pylint: disable=line-too-long
 
 # ANSI terminal colors (for logging)
 ANSI_BLUE = '\x1b[36;20m'
@@ -54,6 +54,13 @@ def create_logger(name: str, debug: bool = False) -> logging.Logger:
     # Set level
     level = logging.DEBUG if debug else logging.INFO
     logger.setLevel(level)
+
+    # Set level names
+    logging.addLevelName(logging.DEBUG, 'DBUG')
+    logging.addLevelName(logging.INFO, 'INFO')
+    logging.addLevelName(logging.WARNING, 'WARN')
+    logging.addLevelName(logging.ERROR, ' ERR')
+    logging.addLevelName(logging.CRITICAL, 'CRIT')
 
     # Add color formatter
     color_handler = logging.StreamHandler()
