@@ -288,6 +288,29 @@ class Jockey(Player['BlancoBot']):
         if not self._bot.config.lastfm_api_key or not self._bot.config.lastfm_shared_secret:
             return
 
+        # Check if track can be scrobbled
+        time_now = int(time())
+        try:
+            duration = item.duration
+            if item.lavalink_track is not None:
+                duration = item.lavalink_track.length
+
+            if item.start_time is not None and duration is not None:
+                # Check if track is longer than 30 seconds
+                if duration < 30000:
+                    raise ValueError('Track is too short')
+
+                # Check if enough time has passed (1/2 duration or 4 min, whichever is less)
+                elapsed_ms = (time_now - item.start_time) * 1000
+                if elapsed_ms < min(duration // 2, 240000):
+                    raise ValueError('Not enough time has passed')
+            else:
+                # Default to current time for timestamp
+                item.start_time = time_now
+        except ValueError as err:
+            self._logger.warning('Failed to scrobble `%s\': %s', item.title, err.args[0])
+            return
+
         # Attempt to get MusicBrainz ID and ISRC
         mbid = item.mbid
         isrc = item.isrc
@@ -330,46 +353,24 @@ class Jockey(Player['BlancoBot']):
             )
             return
 
-        # Check if track can be scrobbled
-        time_now = int(time())
-        try:
-            duration = item.duration
-            if item.lavalink_track is not None:
-                duration = item.lavalink_track.length
+        # Scrobble for every user
+        scrobbled = 0
+        for member in self.channel.members:
+            if not member.bot:
+                scrobbler = self._bot.get_scrobbler(member.id)
+                if scrobbler is not None:
+                    await self._bot.loop.run_in_executor(
+                        self._executor,
+                        scrobbler.scrobble,
+                        item
+                    )
+                    scrobbled += 1
 
-            if item.start_time is not None and duration is not None:
-                # Check if track is longer than 30 seconds
-                if duration < 30000:
-                    raise ValueError('Track is too short')
-
-                # Check if enough time has passed (1/2 duration or 4 min, whichever is less)
-                elapsed_ms = (time_now - item.start_time) * 1000
-                if elapsed_ms < min(duration // 2, 240000):
-                    raise ValueError('Not enough time has passed')
-            else:
-                # Default to current time for timestamp
-                item.start_time = time_now
-        except ValueError as err:
-            self._logger.warning('Failed to scrobble `%s\': %s', item.title, err.args[0])
-        else:
-            # Scrobble for every user
-            scrobbled = 0
-            for member in self.channel.members:
-                if not member.bot:
-                    scrobbler = self._bot.get_scrobbler(member.id)
-                    if scrobbler is not None:
-                        await self._bot.loop.run_in_executor(
-                            self._executor,
-                            scrobbler.scrobble,
-                            item
-                        )
-                        scrobbled += 1
-
-            self._logger.debug(
-                'Dispatched scrobbler `%s\' for %d user(s)',
-                item.title,
-                scrobbled
-            )
+        self._logger.debug(
+            'Dispatched scrobbler `%s\' for %d user(s)',
+            item.title,
+            scrobbled
+        )
 
     async def disconnect(self, *, force: bool = False):
         """
