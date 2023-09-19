@@ -287,7 +287,7 @@ class PlayerCog(Cog):
         except JockeyError as err:
             # Disconnect if we're not playing anything
             if not jockey.playing:
-                return await self._disconnect(itx=itx, reason=str(err))
+                return await self._disconnect(itx=itx, reason=f'Error: `{err}`')
 
             return await itx.followup.send(embed=create_error_embed(str(err)))
         except JockeyException as exc:
