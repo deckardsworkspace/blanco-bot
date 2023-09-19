@@ -15,9 +15,10 @@ from nextcord.ext.commands import Cog
 from requests import HTTPError
 
 from dataclass.custom_embed import CustomEmbed
-from utils.constants import SPOTIFY_403_ERR_MSG
+from utils.constants import RELEASE, SPOTIFY_403_ERR_MSG
 from utils.embeds import create_error_embed, create_success_embed
-from utils.exceptions import EndOfQueueError, JockeyError, JockeyException, SpotifyNoResultsError
+from utils.exceptions import (EndOfQueueError, JockeyError, JockeyException,
+                              SpotifyNoResultsError)
 from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import check_mutual_voice
@@ -149,7 +150,8 @@ class PlayerCog(Cog):
         # Send disconnection message
         embed = CustomEmbed(
             title=':wave:｜Disconnected from voice',
-            description=reason
+            description=reason,
+            footer=f'Blanco release {RELEASE}'
         ).get()
 
         # Try to send disconnection message
