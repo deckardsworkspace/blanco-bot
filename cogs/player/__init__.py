@@ -308,10 +308,11 @@ class PlayerCog(Cog):
                 f':sparkles: [Link Last.fm]({self._bot.config.base_url}) to scrobble as you listen'
             )
 
-        return await itx.followup.send(embed=create_success_embed(
+        embed = create_success_embed(
             title='Added to queue',
-            body='\n'.join(body)
-        ))
+            body='\n'.join(body),
+        )
+        return await itx.followup.send(embed=embed.set_footer(text=f'Blanco release {RELEASE}'))
 
     @slash_command(name='playlists')
     async def playlist(self, itx: Interaction):
