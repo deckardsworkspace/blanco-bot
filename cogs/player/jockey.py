@@ -331,12 +331,6 @@ class Jockey(Player['BlancoBot']):
                     )
                     scrobbled += 1
 
-        self._logger.debug(
-            'Scrobbling `%s\' for %d user(s)',
-            item.title,
-            scrobbled
-        )
-
     async def disconnect(self, *, force: bool = False):
         """
         Removes the controls from Now Playing, then disconnects.

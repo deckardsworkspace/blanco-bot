@@ -74,3 +74,9 @@ class Scrobbler:
                 err
             )
             raise
+
+        self._logger.debug(
+            'Scrobbled `%s\' for user %d',
+            track.title,
+            self._user_id
+        )
