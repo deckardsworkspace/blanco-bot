@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Optional, Tuple
 
 from requests import HTTPError, Timeout, get
 
-from .constants import MUSICBRAINZ_API_BASE_URL, USER_AGENT
-from .fuzzy import check_similarity
+from .constants import DURATION_THRESHOLD, MUSICBRAINZ_API_BASE_URL, USER_AGENT
+from .fuzzy import check_similarity_weighted
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -20,6 +20,7 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
     Looks up a track on MusicBrainz and returns a tuple containing
     a matching MusicBrainz ID and ISRC, if available.
     """
+    assert track.title is not None and track.artist is not None
     response = get(
         str(MUSICBRAINZ_API_BASE_URL / 'recording'),
         headers={
@@ -60,46 +61,46 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
         )
         return None, None
 
-    # Find best match
-    best_match_avg = 0.0
-    best_match = None
-    for match in parsed['recordings']:
-        title = match['title']
-        artist = match['artist-credit'][0]['name']
-        title_score, artist_score = 0.0, 0.0
-
-        if track.title is not None:
-            title_score = check_similarity(track.title, title)
-        if track.artist is not None:
-            artist_score = check_similarity(track.artist, artist)
-        if track.duration is not None and 'length' in match:
-            mb_diff = track.duration - match['length']
-            duration_score = abs(mb_diff) / track.duration
-            if duration_score > 0.1:
-                logger.debug(
-                    'MusicBrainz result `%s\' by %s is off by %.2f sec',
-                    title,
-                    artist,
-                    mb_diff / 1000
-                )
-                continue
-
-        avg = (title_score + artist_score) / 2
-        if avg > 0.8 and avg > best_match_avg:
-            best_match_avg = avg
-            best_match = match
-
-    if best_match is None:
+    # Filter by duration difference
+    results = [
+        result
+        for result in parsed['recordings']
+        if 'length' in result and abs(track.duration - result['length']) < DURATION_THRESHOLD
+    ]
+    if len(results) == 0:
         logger.error(
             'No results found for track `%s\' on MusicBrainz',
             track.title
         )
         return None, None
 
+    # Sort remaining results by similarity
+    query = f'{track.title} {track.artist}'
+    if len(results) > 1:
+        similarities = [
+            check_similarity_weighted(
+                query,
+                f'{result["title"]} {result["artist-credit"][0]["name"]}',
+                result['score']
+            ) for result in results
+        ]
+        ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
+
+        # Print confidences for debugging
+        logger.debug('MusicBrainz results and confidences for "%s":', query)
+        for result, confidence in ranked:
+            logger.debug(
+                '  %3d  %-20s  %-25s',
+                confidence,
+                result['artist-credit'][0]['name'][:25],
+                result['title'][:20]
+            )
+
     # Extract ID and ISRC
+    best_match = results[0]
     mbid = best_match['id']
     isrc = None
-    if 'isrcs' in best_match:
+    if 'isrcs' in best_match and len(best_match['isrcs']) > 0:
         isrc = best_match['isrcs'][0]
 
     return mbid, isrc

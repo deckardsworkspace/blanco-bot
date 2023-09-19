@@ -43,6 +43,11 @@ SPOTIFY_API_BASE_URL = URL.build(
 # jockey_helpers.py:check_similarity_weighted() for the computation.
 CONFIDENCE_THRESHOLD = 55
 
+# A MusicBrainz recording whose duration exceeds this threshold will not be
+# considered for scrobbling and Blanco will either only scrobble if the track
+# has an ISRC or not at all.
+DURATION_THRESHOLD = 10 * 1000 # 10 seconds
+
 SPOTIFY_403_ERR_MSG = ''.join([
     '**Error 403** encountered while trying to {}.\n',
     'This is likely because this instance of Blanco uses Spotify API credentials ',
