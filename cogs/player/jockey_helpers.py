@@ -128,14 +128,24 @@ async def find_lavalink_track(
                     item.title
                 )
 
-    # Fallback to metadata search
-    query = f'{item.title} {item.artist}'
-    if len(results) == 0:
-        LOGGER.error(
-            'No ISRC match for `%s\'. Falling back to metadata search.',
+        if len(results) == 0:
+            LOGGER.error('No ISRC match for `%s\'', item.title)
+    else:
+        LOGGER.warning(
+            '`%s\' has no ISRC. Scrobbling might fail for this track.',
             item.title
         )
         item.is_imperfect = True
+
+    # Fallback to metadata search
+    if len(results) == 0:
+        query = f'{item.title} {item.artist}'
+
+        if item.isrc is not None:
+            LOGGER.warning(
+                'No ISRC match for `%s\'. Falling back to metadata search.',
+                item.title
+            )
 
         # Try to match on Deezer if enabled
         if deezer_enabled:
