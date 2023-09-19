@@ -27,4 +27,5 @@ class SpotifyTrack:
     spotify_id: str
     duration_ms: int
     artwork: Optional[str] = None
+    album: Optional[str] = None
     isrc: Optional[str] = None

@@ -38,6 +38,7 @@ class QueueItem:
     title: Optional[str] = None
     artist: Optional[str] = None # First artist
     author: Optional[str] = None # All artists, separated by ', '
+    album: Optional[str] = None
     duration: Optional[int] = 0   # milliseconds
     lavalink_track: Optional['Track'] = None
 

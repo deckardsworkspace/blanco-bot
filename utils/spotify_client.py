@@ -12,7 +12,11 @@ from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 from .time import human_readable_time
 
 
-def extract_track_info(track_obj: Dict[str, Any], artwork: Optional[str] = None) -> SpotifyTrack:
+def extract_track_info(
+    track_obj: Dict[str, Any],
+    artwork: Optional[str] = None,
+    album_name: Optional[str] = None
+) -> SpotifyTrack:
     """
     Extracts track information from the Spotify API and returns a SpotifyTrack object.
     """
@@ -28,6 +32,7 @@ def extract_track_info(track_obj: Dict[str, Any], artwork: Optional[str] = None)
 
     # Extract album artwork if present
     if 'album' in track_obj.keys():
+        album_name = track_obj['album']['name']
         if 'images' in track_obj['album'].keys():
             if len(track_obj['album']['images']) > 0:
                 artwork = track_obj['album']['images'][0]['url']
@@ -36,6 +41,7 @@ def extract_track_info(track_obj: Dict[str, Any], artwork: Optional[str] = None)
         title=track_obj['name'],
         artist=track_obj['artists'][0]['name'],
         author=', '.join([x['name'] for x in track_obj['artists']]),
+        album=album_name,
         spotify_id=track_obj['id'],
         duration_ms=int(track_obj['duration_ms']),
         artwork=artwork,
@@ -136,7 +142,7 @@ class Spotify:
                 fields = ','.join([
                     'items.track.name',
                     'items.track.artists',
-                    'items.track.album.images',
+                    'items.track.album',
                     'items.track.id',
                     'items.track.duration_ms',
                     'items.track.external_ids.isrc'
@@ -158,7 +164,10 @@ class Spotify:
                 extract_track_info(x)
                 for x in tracks if x['track'] is not None
             ]
-        return list_name, list_author, [extract_track_info(x, list_artwork) for x in tracks]
+        return list_name, list_author, [
+            extract_track_info(x, list_artwork, album_name=list_name)
+            for x in tracks
+        ]
 
     def search_track(self, query, limit: int = 1) -> List[SpotifyTrack]:
         """
