@@ -68,3 +68,11 @@ class Config:
     lastfm_shared_secret: Optional[str] = None
     debug_enabled: bool = False
     debug_guild_ids: Optional[List[int]] = None
+
+    # Convenience
+    @property
+    def lastfm_enabled(self) -> bool:
+        """
+        Returns whether Last.fm is enabled.
+        """
+        return self.lastfm_api_key is not None and self.lastfm_shared_secret is not None
