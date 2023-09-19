@@ -188,8 +188,14 @@ class BlancoBot(Bot):
         """
         Called when a track starts playing.
         """
+        self._logger.info(
+            'Started playing `%s\' in %s',
+            event.track.title,
+            event.player.guild.name
+        )
+
+        # Send now playing embed
         try:
-            # Send now playing embed
             await self.send_now_playing(event)
         except EndOfQueueError:
             self._logger.warning(
