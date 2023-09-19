@@ -81,10 +81,16 @@ def rank_results(
 async def find_lavalink_track(
     node: 'Node',
     item: QueueItem,
-    deezer_enabled: bool = False
+    deezer_enabled: bool = False,
+    in_place: bool = False
 ) -> 'Track':
     """
     Finds a matching playable Lavalink track for a QueueItem.
+
+    :param node: The Lavalink node to use for searching. Must be an instance of mafic.Node.
+    :param item: The QueueItem to find a track for.
+    :param deezer_enabled: Whether to use Deezer for searching.
+    :param in_place: Whether to modify the QueueItem in place.
     """
     results = []
 
@@ -210,6 +216,8 @@ async def find_lavalink_track(
             results.append(ranked[0][0])
 
     # Save Lavalink result
+    if in_place:
+        item.lavalink_track = results[0].lavalink_track
     return results[0].lavalink_track
 
 
