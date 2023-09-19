@@ -56,7 +56,8 @@ class Scrobbler:
                 artist=track.artist,
                 title=track.title,
                 timestamp=timestamp,
-                duration=duration
+                duration=duration,
+                mbid=track.mbid
             )
         except pylast.PyLastError as err:
             self._logger.error(

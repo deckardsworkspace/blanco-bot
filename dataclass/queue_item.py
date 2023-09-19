@@ -22,6 +22,9 @@ class QueueItem:
     # The Spotify ID for the track, if any
     spotify_id: Optional[str] = None
 
+    # The MusicBrainz ID for the track, if any
+    mbid: Optional[str] = None
+
     # International Standard Recording Code (ISRC)
     isrc: Optional[str] = None
 

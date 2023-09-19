@@ -20,6 +20,12 @@ LASTFM_API_BASE_URL = URL.build(
     path='/2.0'
 )
 
+MUSICBRAINZ_API_BASE_URL = URL.build(
+    scheme='https',
+    host='musicbrainz.org',
+    path='/ws/2'
+)
+
 SPOTIFY_ACCOUNTS_BASE_URL = URL.build(
     scheme='https',
     host='accounts.spotify.com',

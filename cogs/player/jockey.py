@@ -11,11 +11,13 @@ from typing import TYPE_CHECKING, Deque, List, Optional, Tuple
 from mafic import Player, PlayerNotConnected
 from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
                       StageChannel, VoiceChannel)
+from requests import HTTPError
 
 from dataclass.custom_embed import CustomEmbed
 from utils.embeds import create_error_embed
 from utils.exceptions import (EndOfQueueError, JockeyError, JockeyException,
                               LavalinkSearchError, SpotifyNoResultsError)
+from utils.musicbrainz import mb_lookup, mb_lookup_isrc
 from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
 
@@ -286,10 +288,35 @@ class Jockey(Player['BlancoBot']):
         if not self._bot.config.lastfm_api_key or not self._bot.config.lastfm_shared_secret:
             return
 
-        # Check if track has an ISRC
-        if item.isrc is None:
-            self._logger.error(
-                'Refusing to scrobble without ISRC: `%s\'',
+        # Attempt to get MusicBrainz ID and ISRC
+        mbid = item.mbid
+        isrc = item.isrc
+        if mbid is None:
+            if isrc is not None:
+                try:
+                    mbid = mb_lookup_isrc(self._logger, item)
+                except HTTPError as err:
+                    if err.response.status_code == 404:
+                        mbid, isrc = mb_lookup(self._logger, item)
+                    else:
+                        raise
+            else:
+                mbid, isrc = mb_lookup(self._logger, item)
+
+            self._logger.debug(
+                'Found MusicBrainz ID `%s\' and ISRC `%s\' for `%s\'',
+                mbid,
+                isrc,
+                item.title
+            )
+
+        # Don't scrobble with no MBID and ISRC,
+        # as the track probably isn't on Last.fm
+        item.mbid = mbid
+        item.isrc = isrc
+        if item.mbid is None and item.isrc is None:
+            self._logger.warning(
+                'Not scrobbling `%s\': no MusicBrainz ID or ISRC',
                 item.title
             )
             return
@@ -329,7 +356,11 @@ class Jockey(Player['BlancoBot']):
                         )
                         scrobbled += 1
 
-            self._logger.debug('Scrobbled `%s\' for %d users', item.title, scrobbled)
+            self._logger.debug(
+                'Dispatched scrobbler `%s\' for %d user(s)',
+                item.title,
+                scrobbled
+            )
 
     async def disconnect(self, *, force: bool = False):
         """
