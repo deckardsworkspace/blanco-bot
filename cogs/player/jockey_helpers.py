@@ -129,15 +129,17 @@ def rank_results(
 async def find_lavalink_track(
     node: 'Node',
     item: QueueItem,
-    deezer_enabled: bool = False
+    deezer_enabled: bool = False,
+    lastfm_enabled: bool = False
 ) -> 'Track':
     """
     Finds a matching playable Lavalink track for a QueueItem.
     """
     results = []
 
-    # Annotate track with MusicBrainz ID and ISRC
-    annotate_track(item)
+    # Annotate track with ISRC and/or MusicBrainz ID if needed
+    if item.isrc is None or (lastfm_enabled and item.mbid is None):
+        annotate_track(item)
 
     # Use ISRC if present
     if item.isrc is not None:

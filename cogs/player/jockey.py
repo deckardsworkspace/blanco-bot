@@ -258,7 +258,8 @@ class Jockey(Player['BlancoBot']):
                 item.lavalink_track = await find_lavalink_track(
                     self.node,
                     item,
-                    deezer_enabled=deezer_enabled
+                    deezer_enabled=deezer_enabled,
+                    lastfm_enabled=self._bot.config.lastfm_enabled
                 )
             except LavalinkSearchError as err:
                 self._logger.critical('Failed to play `%s\'.', item.title)
