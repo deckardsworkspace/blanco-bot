@@ -110,7 +110,7 @@ def mb_lookup_isrc(logger: 'Logger', track: 'QueueItem') -> Optional[str]:
     """
     assert track.isrc is not None
     response = get(
-        str(MUSICBRAINZ_API_BASE_URL / 'isrc' / track.isrc),
+        str(MUSICBRAINZ_API_BASE_URL / 'isrc' / track.isrc.upper()),
         headers={
             'User-Agent': USER_AGENT,
             'Accept': 'application/json'
