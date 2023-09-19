@@ -303,17 +303,26 @@ class Jockey(Player['BlancoBot']):
             else:
                 mbid, isrc = mb_lookup(self._logger, item)
 
+        # Log MusicBrainz ID if found
+        if item.mbid is None and mbid is not None:
+            item.mbid = mbid
             self._logger.debug(
-                'Found MusicBrainz ID `%s\' and ISRC `%s\' for `%s\'',
-                mbid,
+                'Found MusicBrainz ID `%s\' for `%s\'',
+                item.mbid,
+                item.title
+            )
+
+        # Log ISRC if found
+        if item.isrc is None and isrc is not None:
+            item.isrc = isrc
+            self._logger.debug(
+                'Found ISRC `%s\' for `%s\'',
                 isrc,
                 item.title
             )
 
         # Don't scrobble with no MBID and ISRC,
         # as the track probably isn't on Last.fm
-        item.mbid = mbid
-        item.isrc = isrc
         if item.mbid is None and item.isrc is None:
             self._logger.warning(
                 'Not scrobbling `%s\': no MusicBrainz ID or ISRC',
