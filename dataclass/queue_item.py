@@ -45,6 +45,9 @@ class QueueItem:
     # Imperfect match - True when ISRC is present but no match found on YouTube
     is_imperfect: Optional[bool] = False
 
+    # If annotate_track() was called on this track
+    is_annotated: Optional[bool] = False
+
     # When the track started playing
     start_time: Optional[int] = None
 

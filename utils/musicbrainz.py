@@ -22,8 +22,13 @@ def annotate_track(track: 'QueueItem'):
     """
     Annotates a track with MusicBrainz ID and ISRC if they are not already present.
 
-    :param track: The track to annotate. Must be an instance of dataclass.'QueueItem'.
+    :param track: The track to annotate. Must be an instance of
+    dataclass.queue_item.QueueItem.
     """
+    # Check if track has already been annotated
+    if track.is_annotated:
+        return
+
     mbid = track.mbid
     isrc = track.isrc
     if mbid is None:
@@ -63,6 +68,9 @@ def annotate_track(track: 'QueueItem'):
             isrc,
             track.title
         )
+
+    # Signal that the track has been annotated
+    track.is_annotated = True
 
 
 def mb_lookup(track: 'QueueItem') -> Tuple[str | None, str | None]:
