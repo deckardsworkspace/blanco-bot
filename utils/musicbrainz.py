@@ -121,13 +121,11 @@ def mb_lookup_isrc(logger: 'Logger', track: 'QueueItem') -> Optional[str]:
 
     try:
         response.raise_for_status()
-    except HTTPError as err:
+    except HTTPError:
         logger.error(
-            'Error %d looking up track `%s\' (%s) on MusicBrainz.\n%s',
-            err.response.status_code,
-            track.title,
+            'ISRC %s (`%s\') is not on MusicBrainz',
             track.isrc,
-            err
+            track.title
         )
         raise
     except Timeout:
