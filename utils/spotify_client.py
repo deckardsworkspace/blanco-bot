@@ -24,7 +24,7 @@ def extract_track_info(track_obj: Dict[str, Any], artwork: Optional[str] = None)
     isrc = None
     if 'external_ids' in track_obj.keys():
         if 'isrc' in track_obj['external_ids'].keys():
-            isrc = track_obj['external_ids']['isrc']
+            isrc = track_obj['external_ids']['isrc'].upper()
 
     # Extract album artwork if present
     if 'album' in track_obj.keys():
