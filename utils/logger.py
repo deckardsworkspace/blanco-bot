@@ -85,7 +85,7 @@ def create_logger(name: str, debug: bool = False) -> logging.Logger:
     # Add Sentry handler
     if SENTRY_DSN is not None and SENTRY_ENV is not None:
         sentry_handler = EventHandler()
-        sentry_handler.setLevel(logging.WARNING)
+        sentry_handler.setLevel(logging.ERROR)
         logger.addHandler(sentry_handler)
 
     return logger
