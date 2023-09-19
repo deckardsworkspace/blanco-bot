@@ -2,8 +2,8 @@
 Music player class for Blanco. Subclass of mafic.Player.
 """
 
+from asyncio import get_event_loop
 from collections import deque
-from concurrent.futures import ThreadPoolExecutor
 from random import shuffle
 from time import time
 from typing import TYPE_CHECKING, Deque, List, Optional, Tuple
@@ -62,9 +62,6 @@ class Jockey(Player['BlancoBot']):
 
         # Volume
         self._volume = client.database.get_volume(channel.guild.id)
-
-        # Scrobble executor
-        self._executor = ThreadPoolExecutor(max_workers=1)
 
         # Logger
         self._logger = client.jockey_logger
@@ -279,6 +276,22 @@ class Jockey(Player['BlancoBot']):
         return True
 
     async def _scrobble(self, item: 'QueueItem'):
+        """
+        Scrobbles a track in a separate thread.
+
+        :param item: The track to scrobble.
+        """
+        get_event_loop().create_task(self._scrobble_impl(item))
+
+    async def _scrobble_impl(self, item: 'QueueItem'):
+        """
+        Scrobbles a track for all users in the channel who have
+        linked their Last.fm accounts.
+
+        Called by _scrobble() in a separate thread.
+
+        :param item: The track to scrobble.
+        """
         if not isinstance(self.channel, VoiceChannel):
             return
 
@@ -324,17 +337,11 @@ class Jockey(Player['BlancoBot']):
             return
 
         # Scrobble for every user
-        scrobbled = 0
         for member in self.channel.members:
             if not member.bot:
                 scrobbler = self._bot.get_scrobbler(member.id)
                 if scrobbler is not None:
-                    await self._bot.loop.run_in_executor(
-                        self._executor,
-                        scrobbler.scrobble,
-                        item
-                    )
-                    scrobbled += 1
+                    scrobbler.scrobble(item)
 
     async def disconnect(self, *, force: bool = False):
         """
