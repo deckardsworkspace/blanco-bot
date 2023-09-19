@@ -17,7 +17,7 @@ from requests import HTTPError
 from dataclass.custom_embed import CustomEmbed
 from utils.constants import SPOTIFY_403_ERR_MSG
 from utils.embeds import create_error_embed, create_success_embed
-from utils.exceptions import EndOfQueueError, JockeyError, JockeyException
+from utils.exceptions import EndOfQueueError, JockeyError, JockeyException, SpotifyNoResultsError
 from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import check_mutual_voice
@@ -67,9 +67,9 @@ class PlayerCog(Cog):
         if jockey is not None:
             # Stop playing if we're left alone
             if (hasattr(jockey.channel, 'members') and
-                len(jockey.channel.members) == 1 and
-                jockey.channel.members[0].id == member.guild.me.id and
-                after.channel is None): # type: ignore
+                len(jockey.channel.members) == 1 and # type: ignore
+                jockey.channel.members[0].id == member.guild.me.id and # type: ignore
+                after.channel is None):
                 return await self._disconnect(jockey=jockey, reason='You left me alone :(')
 
             # Did we get server undeafened?
@@ -346,7 +346,7 @@ class PlayerCog(Cog):
             ), ephemeral=True)
 
         # Create dropdown
-        view = SpotifyDropdownView(self._bot, playlists, itx.user.id)
+        view = SpotifyDropdownView(self._bot, playlists, itx.user.id, 'playlist')
         await itx.followup.send(embed=create_success_embed(
             title='Pick a playlist',
             body='Select a playlist from the dropdown below.'
@@ -480,6 +480,39 @@ class PlayerCog(Cog):
             title='Removed from queue',
             body=f'**{title}**\n{artist}'
         ))
+
+    @slash_command(name='search')
+    async def search(
+        self,
+        itx: Interaction,
+        search_type: str = SlashOption(
+            description='Search type',
+            required=True,
+            choices=['track', 'playlist', 'album', 'artist']
+        ),
+        query: str = SlashOption(description='Query string', required=True)
+    ):
+        """
+        Search Spotify's catalog for tracks to play.
+        """
+        if itx.user is None:
+            return
+        await itx.response.defer()
+
+        # Search catalog
+        try:
+            results = self._bot.spotify.search(query, search_type)
+        except SpotifyNoResultsError:
+            return await itx.followup.send(embed=create_error_embed(
+                message=f'No results found for `{query}`.'
+            ), ephemeral=True)
+
+        # Create dropdown
+        view = SpotifyDropdownView(self._bot, results, itx.user.id, search_type)
+        await itx.followup.send(embed=create_success_embed(
+            title=f'Results for `{query}`',
+            body='Select a result to play from the dropdown below.'
+        ), view=view, delete_after=60.0)
 
     @slash_command(name='shuffle')
     @application_checks.check(check_mutual_voice)

@@ -128,7 +128,8 @@ def get_spinfo_from_url(url: str) -> tuple[str, str]:
     elif re.match(r"^spotify:[a-z]", url):
         # We are dealing with a Spotify URI
         parsed_path = url.split(":")[1:]
-    if len(parsed_path) < 2 or parsed_path[0] not in ('track', 'album', 'playlist'):
+    if (len(parsed_path) < 2 or 
+        parsed_path[0] not in ('track', 'album', 'playlist', 'artist')):
         raise SpotifyInvalidURLError(url)
 
     return parsed_path[0], parsed_path[1]

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import spotipy
 
-from dataclass.spotify_track import SpotifyTrack
+from dataclass.spotify import SpotifyResult, SpotifyTrack
 
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 
@@ -69,6 +69,17 @@ class Spotify:
         if len(art) == 0:
             return default
         return art[0]['url']
+
+    def get_artist_top_tracks(self, artist_id: str) -> List[SpotifyTrack]:
+        """
+        Returns a list of SpotifyTrack objects for a given artist's
+        top 10 tracks.
+        """
+        response = self._client.artist_top_tracks(artist_id)
+        if response is None:
+            raise SpotifyInvalidURLError(f'spotify:artist:{artist_id}')
+
+        return [extract_track_info(track) for track in response['tracks']]
 
     def get_track_art(self, track_id: str) -> str:
         """
@@ -148,7 +159,7 @@ class Spotify:
             ]
         return list_name, list_author, [extract_track_info(x, list_artwork) for x in tracks]
 
-    def search(self, query, limit: int = 1) -> List[SpotifyTrack]:
+    def search_track(self, query, limit: int = 1) -> List[SpotifyTrack]:
         """
         Searches Spotify for a given query and returns a list of SpotifyTrack objects.
         """
@@ -157,3 +168,61 @@ class Spotify:
             raise SpotifyNoResultsError
 
         return [extract_track_info(track) for track in response['tracks']['items']]
+
+    def search(self, query: str, search_type: str) -> List[SpotifyResult]:
+        """
+        Searches Spotify for a given artist, album, or playlist,
+        and returns a list of SpotifyResult objects.
+
+        If you want to search for tracks specifically, use search_track(),
+        as that will yield a list of SpotifyTrack objects instead of SpotifyResults.
+
+        :param query: The artist/album/playlist to search for.
+        :param search_type: The type of entity to search for.
+            Must be one of 'artist', 'album', 'playlist', or 'track'.
+        """
+        if search_type not in ('artist', 'album', 'playlist', 'track'):
+            raise ValueError(f'Invalid search type: {search_type}')
+
+        response = self._client.search(query, limit=10, type=search_type)
+        if response is None or len(response[f'{search_type}s']['items']) == 0:
+            raise SpotifyNoResultsError
+
+        # Parse results
+        items = response[f'{search_type}s']['items']
+        if search_type == 'artist':
+            # Sort artists by followers
+            items = sorted(items, key=lambda x: x['followers']['total'], reverse=True)
+            results = [SpotifyResult(
+                name=entity['name'],
+                description=f'{entity["followers"]["total"]} followers',
+                spotify_id=entity['id']
+            ) for entity in items]
+        elif search_type == 'album':
+            # Include artist name, track count, and release date in album results
+            results = [SpotifyResult(
+                name=entity['name'],
+                description=f'{entity["artists"][0]["name"]} '
+                            f'({entity["total_tracks"]} tracks, '
+                            f'released {entity["release_date"]})',
+                spotify_id=entity['id']
+            ) for entity in items]
+        elif search_type == 'playlist':
+            # Include author name and track count in playlist results
+            results = [SpotifyResult(
+                name=entity['name'],
+                description=f'{entity["owner"]["display_name"]} '
+                            f'({entity["tracks"]["total"]} tracks)',
+                spotify_id=entity['id']
+            ) for entity in items]
+        else:
+            # Include artist name and release date in track results
+            results = [SpotifyResult(
+                name=entity['name'],
+                description=f'{entity["artists"][0]["name"]} - '
+                            f'{entity["album"]["name"]} '
+                            f'({entity["release_date"]})',
+                spotify_id=entity['id']
+            ) for entity in items]
+
+        return results

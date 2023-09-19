@@ -7,12 +7,13 @@ their data through Blanco.
 
 from base64 import b64encode
 from time import time
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, List
 
 import requests
 from requests import HTTPError, Timeout
 
 from dataclass.oauth import OAuth
+from dataclass.spotify import SpotifyResult
 
 from .constants import (SPOTIFY_ACCOUNTS_BASE_URL, SPOTIFY_API_BASE_URL,
                         USER_AGENT)
@@ -62,6 +63,7 @@ class PrivateSpotify:
                 self._credentials.user_id,
                 err
             )
+            raise
         except Timeout:
             self._logger.error(
                 'Timed out while refreshing Spotify access token for user %d',
@@ -97,7 +99,7 @@ class PrivateSpotify:
             )
             self._refresh_token()
 
-    def get_user_playlists(self) -> Dict[str, str]:
+    def get_user_playlists(self) -> List[SpotifyResult]:
         """
         Gets a list of 25 of the user's playlists.
         """
@@ -129,14 +131,14 @@ class PrivateSpotify:
                 'Timed out while getting Spotify playlists for user %d',
                 self._credentials.user_id
             )
-            return {}
+            return []
 
         parsed = response.json()
-        return {
-            playlist['id']: f'{playlist["name"]} '
-                            f'({playlist["tracks"]["total"]} tracks)' # type: ignore
-            for playlist in parsed['items']
-        }
+        return [SpotifyResult(
+            name=playlist['name'],
+            description=f'{playlist["tracks"]["total"]} tracks',
+            spotify_id=playlist['id']
+        ) for playlist in parsed['items']]
 
     def save_track(self, spotify_id: str):
         """

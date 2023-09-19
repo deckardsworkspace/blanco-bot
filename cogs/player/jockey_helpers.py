@@ -28,7 +28,7 @@ from .lavalink_client import (check_similarity, get_deezer_matches,
 if TYPE_CHECKING:
     from mafic import Node, Track
 
-    from dataclass.spotify_track import SpotifyTrack
+    from dataclass.spotify import SpotifyTrack
 
 
 LOGGER = create_logger('jockey_helpers', debug=DEBUG_ENABLED)
@@ -262,7 +262,7 @@ async def parse_query(
 
     # Attempt to look for a matching track on Spotify
     try:
-        results = spotify.search(query, limit=10)
+        results = spotify.search_track(query, limit=10)
     except SpotifyNoResultsError:
         pass
     else:
@@ -335,6 +335,9 @@ async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> L
         if sp_type == 'track':
             # Get track details from Spotify
             track_queue = [spotify.get_track(sp_id)]
+        elif sp_type == 'artist':
+            # Get top tracks from Spotify
+            track_queue = spotify.get_artist_top_tracks(sp_id)
         else:
             # Get playlist or album tracks from Spotify
             track_queue = spotify.get_tracks(sp_type, sp_id)[2]
@@ -353,7 +356,7 @@ async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> L
         if sp_type == 'track':
             # No tracks.
             raise SpotifyNoResultsError('Track does not exist or is private.')
-        raise SpotifyNoResultsError('Playlist is empty.')
+        raise SpotifyNoResultsError(f'{sp_type} does not have any public tracks.')
 
     # At least one track.
     for track in track_queue:
