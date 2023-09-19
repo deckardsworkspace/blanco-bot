@@ -11,7 +11,6 @@ from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
                       Interaction, NotFound, PartialMessageable, TextChannel,
                       Thread, VoiceChannel)
 from nextcord.ext.commands import Bot
-from requests import HTTPError
 
 from database import Database
 from views.now_playing import NowPlayingView
@@ -19,7 +18,6 @@ from views.now_playing import NowPlayingView
 from .embeds import create_error_embed
 from .exceptions import EndOfQueueError
 from .logger import create_logger
-from .musicbrainz import mb_lookup, mb_lookup_isrc
 from .scrobbler import Scrobbler
 from .spotify_client import Spotify
 from .spotify_private import PrivateSpotify
@@ -199,52 +197,6 @@ class BlancoBot(Bot):
                 event.player.guild.name
             )
             return
-
-        # Check if scrobbling is enabled
-        if self._config is None or not self._config.lastfm_enabled:
-            return
-
-        # Get MusicBrainz ID and ISRC for scrobbling
-        track = event.player.queue[event.player.current_index]
-        mbid = track.mbid
-        isrc = track.isrc
-        if mbid is None:
-            if isrc is not None:
-                self._logger.info(
-                    'Looking up MusicBrainz ID for `%s\'',
-                    track.title
-                )
-                try:
-                    mbid = mb_lookup_isrc(self._logger, track)
-                except HTTPError as err:
-                    if err.response.status_code == 404:
-                        mbid, isrc = mb_lookup(self._logger, track)
-                    else:
-                        raise
-            else:
-                self._logger.info(
-                    'Looking up MusicBrainz ID and ISRC for `%s\'',
-                    track.title
-                )
-                mbid, isrc = mb_lookup(self._logger, track)
-
-        # Log MusicBrainz ID if found
-        if track.mbid is None and mbid is not None:
-            track.mbid = mbid
-            self._logger.info(
-                'Using MusicBrainz ID `%s\' for `%s\'',
-                track.mbid,
-                track.title
-            )
-
-        # Log ISRC if found
-        if track.isrc is None and isrc is not None:
-            track.isrc = isrc
-            self._logger.info(
-                'Using ISRC `%s\' for `%s\'',
-                isrc,
-                track.title
-            )
 
     async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
         """

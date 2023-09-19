@@ -5,6 +5,7 @@ Helper functions for the music player.
 from typing import TYPE_CHECKING, List, Tuple, TypeVar
 
 from mafic import SearchType
+from requests import HTTPError
 from spotipy.exceptions import SpotifyException
 
 from dataclass.queue_item import QueueItem
@@ -14,6 +15,7 @@ from utils.exceptions import (JockeyException, LavalinkInvalidIdentifierError,
                               LavalinkSearchError, SpotifyNoResultsError)
 from utils.fuzzy import check_similarity_weighted
 from utils.logger import create_logger
+from utils.musicbrainz import mb_lookup, mb_lookup_isrc
 from utils.spotify_client import Spotify
 from utils.url import (check_sc_url, check_spotify_url, check_url,
                        check_youtube_playlist_url, check_youtube_url,
@@ -32,6 +34,53 @@ if TYPE_CHECKING:
 
 LOGGER = create_logger('jockey_helpers', debug=DEBUG_ENABLED)
 T = TypeVar('T')
+
+
+def annotate_track(track: QueueItem):
+    """
+    Annotates a track with MusicBrainz ID and ISRC if they are not already present.
+
+    :param track: The track to annotate. Must be an instance of dataclass.QueueItem.
+    """
+    mbid = track.mbid
+    isrc = track.isrc
+    if mbid is None:
+        if isrc is not None:
+            LOGGER.info(
+                'Looking up MusicBrainz ID for `%s\'',
+                track.title
+            )
+            try:
+                mbid = mb_lookup_isrc(LOGGER, track)
+            except HTTPError as err:
+                if err.response.status_code == 404:
+                    mbid, isrc = mb_lookup(LOGGER, track)
+                else:
+                    raise
+        else:
+            LOGGER.info(
+                'Looking up MusicBrainz ID and ISRC for `%s\'',
+                track.title
+            )
+            mbid, isrc = mb_lookup(LOGGER, track)
+
+    # Log MusicBrainz ID if found
+    if track.mbid is None and mbid is not None:
+        track.mbid = mbid
+        LOGGER.info(
+            'Using MusicBrainz ID `%s\' for `%s\'',
+            track.mbid,
+            track.title
+        )
+
+    # Log ISRC if found
+    if track.isrc is None and isrc is not None:
+        track.isrc = isrc
+        LOGGER.info(
+            'Using ISRC `%s\' for `%s\'',
+            isrc,
+            track.title
+        )
 
 
 def rank_results(
@@ -86,6 +135,9 @@ async def find_lavalink_track(
     Finds a matching playable Lavalink track for a QueueItem.
     """
     results = []
+
+    # Annotate track with MusicBrainz ID and ISRC
+    annotate_track(item)
 
     # Use ISRC if present
     if item.isrc is not None:
