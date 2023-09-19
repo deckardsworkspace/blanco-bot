@@ -20,7 +20,13 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
     Looks up a track on MusicBrainz and returns a tuple containing
     a matching MusicBrainz ID and ISRC, if available.
     """
+    # Build MusicBrainz query
     assert track.title is not None and track.artist is not None
+    query = f'recording:{track.title} && artist:{track.artist}'
+    if track.album is not None:
+        query += f' && release:{track.album}'
+
+    # Perform search
     response = get(
         str(MUSICBRAINZ_API_BASE_URL / 'recording'),
         headers={
@@ -28,14 +34,13 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
             'Accept': 'application/json'
         },
         params={
-            'query': f'recording:{track.title} && artist:{track.artist}',
+            'query': query,
             'limit': 10,
             'inc': 'isrcs',
             'fmt': 'json'
         },
         timeout=5.0
     )
-
     try:
         response.raise_for_status()
     except HTTPError as err:
@@ -53,6 +58,7 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
         )
         return None, None
 
+    # Parse response
     parsed = response.json()
     if len(parsed['recordings']) == 0:
         logger.error(
@@ -74,8 +80,9 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
         )
         return None, None
 
-    # Sort remaining results by similarity
+    # Sort remaining results by similarity and ISRC presence
     query = f'{track.title} {track.artist}'
+    best_match = results[0]
     if len(results) > 1:
         similarities = [
             check_similarity_weighted(
@@ -84,20 +91,29 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
                 result['score']
             ) for result in results
         ]
-        ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
+        isrc_presence = [
+            'isrcs' in result and len(result['isrcs']) > 0
+            for result in results
+        ]
+        ranked = sorted(
+            zip(results, similarities, isrc_presence),
+            key=lambda x: (x[1], x[2]),
+            reverse=True
+        )
+        best_match = ranked[0][0]
 
         # Print confidences for debugging
         logger.debug('MusicBrainz results and confidences for "%s":', query)
-        for result, confidence in ranked:
+        for result, confidence, has_isrc in ranked:
             logger.debug(
-                '  %3d  %-20s  %-25s',
+                '  %3d  %-20s  %-20s  isrc=%s',
                 confidence,
-                result['artist-credit'][0]['name'][:25],
-                result['title'][:20]
+                result['artist-credit'][0]['name'][:20],
+                result['title'][:20],
+                has_isrc
             )
 
     # Extract ID and ISRC
-    best_match = results[0]
     mbid = best_match['id']
     isrc = None
     if 'isrcs' in best_match and len(best_match['isrcs']) > 0:
