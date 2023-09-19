@@ -5,6 +5,12 @@ Custom logger module that supports ANSI color codes.
 import logging
 from typing import Optional
 
+import sentry_sdk
+from sentry_sdk.integrations.logging import EventHandler
+
+from .config import SENTRY_DSN, SENTRY_ENV
+from .constants import RELEASE
+
 # Log line format
 LOG_FMT_STR = '{0}%(asctime)s.%(msecs)03d {1}[%(levelname)s]{2} %(message)s (%(filename)s:%(lineno)d)' # pylint: disable=line-too-long
 
@@ -24,6 +30,15 @@ LOG_FMT_COLOR = {
     logging.CRITICAL: LOG_FMT_STR.format(ANSI_GREY, ANSI_RED_BOLD, ANSI_RESET),
 }
 
+
+# Initialize sentry
+if SENTRY_DSN is not None and SENTRY_ENV is not None:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENV,
+        release=RELEASE,
+        traces_sample_rate=1.0
+    )
 
 class ColorFormatter(logging.Formatter):
     """
@@ -66,5 +81,11 @@ def create_logger(name: str, debug: bool = False) -> logging.Logger:
     color_handler = logging.StreamHandler()
     color_handler.setFormatter(ColorFormatter())
     logger.addHandler(color_handler)
+
+    # Add Sentry handler
+    if SENTRY_DSN is not None and SENTRY_ENV is not None:
+        sentry_handler = EventHandler()
+        sentry_handler.setLevel(logging.WARNING)
+        logger.addHandler(sentry_handler)
 
     return logger
