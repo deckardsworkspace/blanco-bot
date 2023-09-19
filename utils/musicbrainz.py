@@ -6,16 +6,66 @@ from typing import TYPE_CHECKING, Optional, Tuple
 
 from requests import HTTPError, Timeout, get
 
+from .config import DEBUG_ENABLED
 from .constants import DURATION_THRESHOLD, MUSICBRAINZ_API_BASE_URL, USER_AGENT
 from .fuzzy import check_similarity_weighted
+from .logger import create_logger
 
 if TYPE_CHECKING:
-    from logging import Logger
-
     from dataclass.queue_item import QueueItem
 
 
-def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | None]:
+LOGGER = create_logger('musicbrainz', debug=DEBUG_ENABLED)
+
+
+def annotate_track(track: 'QueueItem'):
+    """
+    Annotates a track with MusicBrainz ID and ISRC if they are not already present.
+
+    :param track: The track to annotate. Must be an instance of dataclass.'QueueItem'.
+    """
+    mbid = track.mbid
+    isrc = track.isrc
+    if mbid is None:
+        if isrc is not None:
+            LOGGER.info(
+                'Looking up MusicBrainz ID for `%s\'',
+                track.title
+            )
+            try:
+                mbid = mb_lookup_isrc(track)
+            except HTTPError as err:
+                if err.response.status_code == 404:
+                    mbid, isrc = mb_lookup(track)
+                else:
+                    raise
+        else:
+            LOGGER.info(
+                'Looking up MusicBrainz ID and ISRC for `%s\'',
+                track.title
+            )
+            mbid, isrc = mb_lookup(track)
+
+    # Log MusicBrainz ID if found
+    if track.mbid is None and mbid is not None:
+        track.mbid = mbid
+        LOGGER.info(
+            'Using MusicBrainz ID `%s\' for `%s\'',
+            track.mbid,
+            track.title
+        )
+
+    # Log ISRC if found
+    if track.isrc is None and isrc is not None:
+        track.isrc = isrc
+        LOGGER.info(
+            'Using ISRC `%s\' for `%s\'',
+            isrc,
+            track.title
+        )
+
+
+def mb_lookup(track: 'QueueItem') -> Tuple[str | None, str | None]:
     """
     Looks up a track on MusicBrainz and returns a tuple containing
     a matching MusicBrainz ID and ISRC, if available.
@@ -44,7 +94,7 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
     try:
         response.raise_for_status()
     except HTTPError as err:
-        logger.error(
+        LOGGER.error(
             'Error %d looking up track `%s\' on MusicBrainz.\n%s',
             err.response.status_code,
             track.title,
@@ -52,7 +102,7 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
         )
         raise
     except Timeout:
-        logger.warning(
+        LOGGER.warning(
             'Timed out while looking up track `%s\' on MusicBrainz',
             track.title
         )
@@ -61,7 +111,7 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
     # Parse response
     parsed = response.json()
     if len(parsed['recordings']) == 0:
-        logger.error(
+        LOGGER.error(
             'No results found for track `%s\' on MusicBrainz',
             track.title
         )
@@ -74,7 +124,7 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
         if 'length' in result and abs(track.duration - result['length']) < DURATION_THRESHOLD
     ]
     if len(results) == 0:
-        logger.error(
+        LOGGER.error(
             'No results found for track `%s\' on MusicBrainz',
             track.title
         )
@@ -103,9 +153,9 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
         best_match = ranked[0][0]
 
         # Print confidences for debugging
-        logger.debug('MusicBrainz results and confidences for "%s":', query)
+        LOGGER.debug('MusicBrainz results and confidences for "%s":', query)
         for result, confidence, has_isrc in ranked:
-            logger.debug(
+            LOGGER.debug(
                 '  %3d  %-20s  %-20s  isrc=%s',
                 confidence,
                 result['artist-credit'][0]['name'][:20],
@@ -122,7 +172,7 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
     return mbid, isrc
 
 
-def mb_lookup_isrc(logger: 'Logger', track: 'QueueItem') -> Optional[str]:
+def mb_lookup_isrc(track: 'QueueItem') -> Optional[str]:
     """
     Looks up a track by its ISRC on MusicBrainz and returns a MusicBrainz ID.
     """
@@ -140,14 +190,14 @@ def mb_lookup_isrc(logger: 'Logger', track: 'QueueItem') -> Optional[str]:
     try:
         response.raise_for_status()
     except HTTPError:
-        logger.error(
+        LOGGER.error(
             'ISRC %s (`%s\') is not on MusicBrainz',
             track.isrc,
             track.title
         )
         raise
     except Timeout:
-        logger.warning(
+        LOGGER.warning(
             'Timed out while looking up track `%s\' (%s) on MusicBrainz',
             track.title,
             track.isrc
@@ -156,7 +206,7 @@ def mb_lookup_isrc(logger: 'Logger', track: 'QueueItem') -> Optional[str]:
 
     parsed = response.json()
     if len(parsed['recordings']) == 0:
-        logger.error(
+        LOGGER.error(
             'No results found for track `%s\' (%s) on MusicBrainz',
             track.title,
             track.isrc

@@ -16,6 +16,7 @@ from dataclass.custom_embed import CustomEmbed
 from utils.embeds import create_error_embed
 from utils.exceptions import (EndOfQueueError, JockeyError, JockeyException,
                               LavalinkSearchError, SpotifyNoResultsError)
+from utils.musicbrainz import annotate_track
 from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
 
@@ -258,8 +259,7 @@ class Jockey(Player['BlancoBot']):
                 item.lavalink_track = await find_lavalink_track(
                     self.node,
                     item,
-                    deezer_enabled=deezer_enabled,
-                    lastfm_enabled=self._bot.config.lastfm_enabled
+                    deezer_enabled=deezer_enabled
                 )
             except LavalinkSearchError as err:
                 self._logger.critical('Failed to play `%s\'.', item.title)
@@ -309,6 +309,10 @@ class Jockey(Player['BlancoBot']):
         except ValueError as err:
             self._logger.warning('Failed to scrobble `%s\': %s', item.title, err.args[0])
             return
+
+        # Lookup MusicBrainz ID if needed
+        if item.mbid is None:
+            annotate_track(item)
 
         # Don't scrobble with no MBID and ISRC,
         # as the track probably isn't on Last.fm
