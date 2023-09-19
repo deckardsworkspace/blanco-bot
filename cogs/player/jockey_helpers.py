@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, List, Tuple, TypeVar
 
 from mafic import SearchType
 from spotipy.exceptions import SpotifyException
-from thefuzz import fuzz
 
 from dataclass.queue_item import QueueItem
 from utils.config import DEBUG_ENABLED
 from utils.constants import CONFIDENCE_THRESHOLD
 from utils.exceptions import (JockeyException, LavalinkInvalidIdentifierError,
                               LavalinkSearchError, SpotifyNoResultsError)
+from utils.fuzzy import check_similarity_weighted
 from utils.logger import create_logger
 from utils.spotify_client import Spotify
 from utils.url import (check_sc_url, check_spotify_url, check_url,
@@ -21,9 +21,8 @@ from utils.url import (check_sc_url, check_spotify_url, check_url,
                        get_spinfo_from_url, get_ytid_from_url,
                        get_ytlistid_from_url)
 
-from .lavalink_client import (check_similarity, get_deezer_matches,
-                              get_deezer_track, get_soundcloud_matches,
-                              get_youtube_matches)
+from .lavalink_client import (get_deezer_matches, get_deezer_track,
+                              get_soundcloud_matches, get_youtube_matches)
 
 if TYPE_CHECKING:
     from mafic import Node, Track
@@ -33,32 +32,6 @@ if TYPE_CHECKING:
 
 LOGGER = create_logger('jockey_helpers', debug=DEBUG_ENABLED)
 T = TypeVar('T')
-
-
-def check_similarity_weighted(actual: str, candidate: str, candidate_rank: int) -> int:
-    """
-    Checks the similarity between two strings using a weighted average
-    of a given similarity score and the results of multiple fuzzy string
-    matching algorithms. Meant for refining search results that are
-    already ranked.
-
-    :param actual: The actual string.
-    :param candidate: The candidate string, i.e. from a search result.
-    :param candidate_rank: The rank of the candidate, from 0 to 100.
-    :return: An integer from 0 to 100, where 100 is the closest match.
-    """
-    naive = check_similarity(actual, candidate) * 100
-    tsr = fuzz.token_set_ratio(actual, candidate)
-    tsor = fuzz.token_sort_ratio(actual, candidate)
-    ptsr = fuzz.partial_token_sort_ratio(actual, candidate)
-
-    return int(
-        (naive * 0.7) +
-        (tsr * 0.12) +
-        (candidate_rank * 0.08) +
-        (tsor * 0.06) +
-        (ptsr * 0.04)
-    )
 
 
 def rank_results(

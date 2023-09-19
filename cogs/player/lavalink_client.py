@@ -4,13 +4,13 @@ with fuzzy search and exclusion of non-official track versions
 (remixes, etc.) that the user didn't specifically ask for.
 """
 
-import difflib
 from typing import TYPE_CHECKING, List, Optional
 
 from mafic import Playlist, SearchType, TrackLoadException
 
 from dataclass.lavalink_result import LavalinkResult
 from utils.exceptions import LavalinkSearchError
+from utils.fuzzy import check_similarity
 
 if TYPE_CHECKING:
     from mafic import Node, Track
@@ -33,30 +33,6 @@ BLACKLIST = (
     'reverb',
     'slowed'
 )
-
-
-def check_similarity(actual: str, candidate: str) -> float:
-    """
-    Checks the similarity between two strings. Meant for comparing
-    song titles and artists with search results.
-
-    :param actual: The actual string.
-    :param candidate: The candidate string, i.e. from a search result.
-    :return: A float from 0 to 1, where 1 is a perfect match.
-    """
-    actual_words = set(actual.lower().split(' '))
-    candidate_words = set(candidate.lower().split(' '))
-    intersection = actual_words.intersection(candidate_words)
-    difference = actual_words.difference(candidate_words)
-
-    # Get words not in intersection
-    for word in difference:
-        # Look for close matches
-        close_matches = difflib.get_close_matches(word, candidate_words, cutoff=0.9)
-        if len(close_matches) > 0:
-            intersection.add(close_matches[0])
-
-    return len(intersection) / len(actual_words)
 
 
 def filter_results(query: str, search_results: List['Track']) -> List[LavalinkResult]:
