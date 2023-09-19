@@ -231,8 +231,8 @@ class BlancoBot(Bot):
         # Log MusicBrainz ID if found
         if track.mbid is None and mbid is not None:
             track.mbid = mbid
-            self._logger.debug(
-                'Found MusicBrainz ID `%s\' for `%s\'',
+            self._logger.info(
+                'Using MusicBrainz ID `%s\' for `%s\'',
                 track.mbid,
                 track.title
             )
@@ -240,8 +240,8 @@ class BlancoBot(Bot):
         # Log ISRC if found
         if track.isrc is None and isrc is not None:
             track.isrc = isrc
-            self._logger.debug(
-                'Found ISRC `%s\' for `%s\'',
+            self._logger.info(
+                'Using ISRC `%s\' for `%s\'',
                 isrc,
                 track.title
             )
