@@ -64,21 +64,22 @@ def mb_lookup(logger: 'Logger', track: 'QueueItem') -> Tuple[str | None, str | N
     best_match_avg = 0.0
     best_match = None
     for match in parsed['recordings']:
+        title = match['title']
+        artist = match['artist-credit'][0]['name']
         title_score, artist_score = 0.0, 0.0
 
         if track.title is not None:
-            title_score = check_similarity(track.title, match['title'])
+            title_score = check_similarity(track.title, title)
         if track.artist is not None:
-            artist_score = check_similarity(track.artist, match['artist-credit'][0]['name'])
+            artist_score = check_similarity(track.artist, artist)
         if track.duration is not None and 'length' in match:
             mb_diff = track.duration - match['length']
             duration_score = abs(mb_diff) / track.duration
             if duration_score > 0.1:
                 logger.debug(
-                    'Skipping MusicBrainz result `%s\' '
-                    'for `%s\': duration mismatch (%.2f s)',
-                    match['title'],
-                    track.title,
+                    'MusicBrainz result `%s\' by %s is off by %.2f sec',
+                    title,
+                    artist,
                     mb_diff / 1000
                 )
                 continue
