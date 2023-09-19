@@ -127,9 +127,6 @@ async def find_lavalink_track(
                     item.isrc,
                     item.title
                 )
-
-        if len(results) == 0:
-            LOGGER.error('No ISRC match for `%s\'', item.title)
     else:
         LOGGER.warning(
             '`%s\' has no ISRC. Scrobbling might fail for this track.',
