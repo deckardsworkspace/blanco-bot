@@ -21,6 +21,6 @@ def run_migrations(logger: 'Logger', con: 'Connection'):
     """
     for file in sorted(listdir(path.dirname(__file__))):
         if file != path.basename(__file__) and file.endswith('.py'):
-            logger.info('Running migration: %s', file)
+            logger.debug('Running migration: %s', file)
             migration = import_module(f'database.migrations.{file[:-3]}')
             migration.run(con)

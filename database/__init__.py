@@ -20,9 +20,9 @@ class Database:
         self._con = sql.connect(db_filename, check_same_thread=False)
         self._cur = self._con.cursor()
         self._logger = create_logger(self.__class__.__name__)
-        self._logger.info('Connected to database: %s', db_filename)
 
         # Run migrations
+        self._logger.info('Connected to database %s, running migrations...', db_filename)
         run_migrations(self._logger, self._con)
 
     def init_guild(self, guild_id: int):
