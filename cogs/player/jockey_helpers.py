@@ -337,6 +337,7 @@ async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> L
             requester=requester,
             title=track.title,
             artist=track.artist,
+            author=track.author,
             spotify_id=track.spotify_id,
             duration=track.duration_ms,
             artwork=track.artwork,

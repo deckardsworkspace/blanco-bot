@@ -376,6 +376,11 @@ class Jockey(Player['BlancoBot']):
         if duration_ms is not None:
             duration = human_readable_time(duration_ms)
 
+        # Display complete artists if available
+        artist = track.artist if track.author is None else track.author
+        if artist is None:
+            artist = 'Unknown artist'
+
         is_stream = False
         if track.lavalink_track is not None:
             is_stream = track.lavalink_track.stream
@@ -385,7 +390,7 @@ class Jockey(Player['BlancoBot']):
             title='Now streaming' if is_stream else 'Now playing',
             description=[
                 f'[**{track.title}**]({uri})',
-                f'{track.artist}',
+                artist,
                 duration if not is_stream else '',
                 f'\nrequested by <@{track.requester}>',
                 imperfect_msg.format(current.uri) if track.is_imperfect else ''
