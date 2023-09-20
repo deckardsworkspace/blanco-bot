@@ -38,7 +38,7 @@ class DebugCog(Cog):
         Constructor for DebugCog.
         """
         self._bot = bot
-        self._logger = create_logger(self.__class__.__name__, bot.debug)
+        self._logger = create_logger(self.__class__.__name__)
         self._logger.info('Loaded DebugCog')
 
     @slash_command(name='announce')

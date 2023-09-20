@@ -38,7 +38,7 @@ async def run_app(database: 'Database', config: 'Config'):
     Run the web server.
     """
     # Create logger
-    logger = create_logger('server', debug=config.debug_enabled)
+    logger = create_logger('server')
 
     # Create app
     app = web.Application()

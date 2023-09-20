@@ -2,6 +2,14 @@
 Custom exceptions for Blanco
 """
 
+class EmptyQueueError(Exception):
+    """
+    Raised when the queue is empty.
+    """
+    def __init__(self):
+        self.message = 'The queue is empty.'
+        super().__init__(self.message)
+
 class EndOfQueueError(Exception):
     """
     Raised when the end of the queue is reached.

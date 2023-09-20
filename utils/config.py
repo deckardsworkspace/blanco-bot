@@ -8,19 +8,18 @@ where the environment variables take precedence over the config file.
 
 from os import environ
 from os.path import isfile
-from typing import Dict, List, Optional
+from typing import Dict
 
 from yaml import safe_load
 
 from dataclass.config import Config, LavalinkNode
 
-from .logger import create_logger
 
-logger = create_logger('config', debug=True)
 DATABASE_FILE = None
 DISCORD_TOKEN = None
 SPOTIFY_CLIENT_ID = None
 SPOTIFY_CLIENT_SECRET = None
+MATCH_AHEAD = False
 ENABLE_SERVER = False
 SERVER_PORT = 8080
 SERVER_BASE_URL = None
@@ -29,13 +28,16 @@ DISCORD_OAUTH_SECRET = None
 LASTFM_API_KEY = None
 LASTFM_SHARED_SECRET = None
 LAVALINK_NODES: Dict[str, LavalinkNode] = {}
+SENTRY_DSN = None
+SENTRY_ENV = None
+REDIS_HOST = None
+REDIS_PORT = -1
+REDIS_PASSWORD = None
 DEBUG_ENABLED = False
 DEBUG_GUILDS = None
 
 # Parse config file if it exists
 if isfile('config.yml'):
-    logger.info('Reading config.yml')
-
     with open('config.yml', encoding='UTF-8') as f:
         try:
             config_file = safe_load(f)
@@ -68,6 +70,7 @@ if isfile('config.yml'):
                 LAVALINK_NODES[node['id']] = lavalink_node
 
             # Add optional config values
+            MATCH_AHEAD = config_file['bot'].get('match_ahead', False)
             if 'server' in config_file:
                 ENABLE_SERVER = config_file['server']['enabled']
                 SERVER_PORT = config_file['server'].get('port', 8080)
@@ -80,18 +83,31 @@ if isfile('config.yml'):
             if 'debug' in config_file['bot']:
                 DEBUG_ENABLED = config_file['bot']['debug']['enabled']
                 DEBUG_GUILDS = config_file['bot']['debug']['guild_ids']
+            if 'sentry' in config_file:
+                SENTRY_DSN = config_file['sentry']['dsn']
+                SENTRY_ENV = config_file['sentry']['environment']
+            if 'redis' in config_file:
+                REDIS_HOST = config_file['redis']['host']
+                REDIS_PORT = config_file['redis']['port']
+                REDIS_PASSWORD = config_file['redis']['password']
         except KeyError as e:
-            logger.warning('Config missing from config.yml: %s', e.args[0])
+            raise RuntimeError(f'Config missing from config.yml: {e.args[0]}') from e
 
 
 # Override config from environment variables
-logger.info('Reading config from environment variables')
 DATABASE_FILE = environ.get('BLANCO_DB_FILE', DATABASE_FILE)
 DISCORD_TOKEN = environ.get('BLANCO_TOKEN', DISCORD_TOKEN)
 LASTFM_API_KEY = environ.get('BLANCO_LASTFM_KEY', LASTFM_API_KEY)
 LASTFM_SHARED_SECRET = environ.get('BLANCO_LASTFM_SECRET', LASTFM_SHARED_SECRET)
 SPOTIFY_CLIENT_ID = environ.get('BLANCO_SPOTIFY_ID', SPOTIFY_CLIENT_ID)
 SPOTIFY_CLIENT_SECRET = environ.get('BLANCO_SPOTIFY_SECRET', SPOTIFY_CLIENT_SECRET)
+SENTRY_DSN = environ.get('BLANCO_SENTRY_DSN', SENTRY_DSN)
+SENTRY_ENV = environ.get('BLANCO_SENTRY_ENV', SENTRY_ENV)
+REDIS_HOST = environ.get('BLANCO_REDIS_HOST', REDIS_HOST)
+REDIS_PORT = int(environ.get('BLANCO_REDIS_PORT', REDIS_PORT))
+REDIS_PASSWORD = environ.get('BLANCO_REDIS_PASSWORD', REDIS_PASSWORD)
+if 'BLANCO_MATCH_AHEAD' in environ:
+    MATCH_AHEAD = environ['BLANCO_MATCH_AHEAD'].lower() == 'true'
 if 'BLANCO_DEBUG' in environ:
     DEBUG_ENABLED = environ['BLANCO_DEBUG'].lower() == 'true'
     DEBUG_GUILDS = [int(id) for id in environ['BLANCO_DEBUG_GUILDS'].split(',')]
@@ -151,35 +167,6 @@ if ENABLE_SERVER and (DISCORD_OAUTH_ID is None or
                       DISCORD_OAUTH_SECRET is None or SERVER_BASE_URL is None):
     raise ValueError('Discord OAuth ID, secret, and base URL must be specified to enable server')
 
-# Print parsed config
-if DEBUG_ENABLED:
-    logger.debug('Parsed configuration:')
-    logger.debug('  Database file: %s', DATABASE_FILE)
-    logger.debug('  Discord token: %s...', DISCORD_TOKEN[:3])
-    logger.debug('  Spotify client ID: %s...', SPOTIFY_CLIENT_ID[:3])
-    logger.debug('  Spotify client secret: %s...', SPOTIFY_CLIENT_SECRET[:3])
-
-    if LASTFM_API_KEY is not None and LASTFM_SHARED_SECRET is not None:
-        logger.debug('  Last.fm API key: %s...', LASTFM_API_KEY[:3])
-        logger.debug('  Last.fm shared secret: %s...', LASTFM_SHARED_SECRET[:3])
-    else:
-        logger.debug('  Last.fm integration disabled')
-
-    logger.debug('  Webserver: %s', 'enabled' if ENABLE_SERVER else 'disabled')
-    if ENABLE_SERVER:
-        assert DISCORD_OAUTH_ID is not None
-        assert DISCORD_OAUTH_SECRET is not None
-        logger.debug('    - Listening on port %d', SERVER_PORT)
-        logger.debug('    - Base URL: %s', SERVER_BASE_URL)
-        logger.debug('    - OAuth ID: %s...', str(DISCORD_OAUTH_ID)[:3])
-        logger.debug('    - OAuth secret: %s...', DISCORD_OAUTH_SECRET[:3])
-
-    logger.debug('  Lavalink nodes:')
-    for node in LAVALINK_NODES.values():
-        logger.debug('    - %s (%s:%d)', node.id, node.host, node.port)
-        logger.debug('      Secure: %s', 'yes' if node.secure else 'no')
-        logger.debug('      Supports Deezer: %s', 'yes' if node.deezer else 'no')
-        logger.debug('      Regions: %s', ', '.join(node.regions))
 
 # Create config object
 config = Config(
@@ -191,6 +178,7 @@ config = Config(
     debug_enabled=DEBUG_ENABLED,
     debug_guild_ids=DEBUG_GUILDS,
     enable_server=ENABLE_SERVER,
+    match_ahead=MATCH_AHEAD,
     server_port=SERVER_PORT,
     base_url=SERVER_BASE_URL,
     discord_oauth_id=DISCORD_OAUTH_ID,
@@ -198,18 +186,3 @@ config = Config(
     lastfm_api_key=LASTFM_API_KEY,
     lastfm_shared_secret=LASTFM_SHARED_SECRET
 )
-
-
-def get_debug_guilds() -> Optional[List[int]]:
-    """
-    Gets a list of guild IDs that are allowed to use commands.
-    Meant for use in debug mode.
-    """
-    return config.debug_guild_ids
-
-
-def get_debug_status() -> bool:
-    """
-    Returns a Boolean that states whether debug mode is enabled.
-    """
-    return config.debug_enabled

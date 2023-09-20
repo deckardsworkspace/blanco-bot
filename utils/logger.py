@@ -5,8 +5,14 @@ Custom logger module that supports ANSI color codes.
 import logging
 from typing import Optional
 
+import sentry_sdk
+from sentry_sdk.integrations.logging import EventHandler
+
+from .config import DEBUG_ENABLED, SENTRY_DSN, SENTRY_ENV
+from .constants import RELEASE
+
 # Log line format
-LOG_FMT_STR = '{0}%(asctime)s {1}[%(levelname)s]{2} %(message)s (%(filename)s:%(lineno)d)'
+LOG_FMT_STR = '{0}%(asctime)s.%(msecs)03d {1}[%(levelname)s]{2} %(message)s (%(filename)s:%(lineno)d)' # pylint: disable=line-too-long
 
 # ANSI terminal colors (for logging)
 ANSI_BLUE = '\x1b[36;20m'
@@ -25,6 +31,15 @@ LOG_FMT_COLOR = {
 }
 
 
+# Initialize sentry
+if SENTRY_DSN is not None and SENTRY_ENV is not None:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENV,
+        release=RELEASE,
+        traces_sample_rate=1.0
+    )
+
 class ColorFormatter(logging.Formatter):
     """
     Custom logging formatter that supports ANSI color codes.
@@ -40,7 +55,7 @@ class ColorFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def create_logger(name: str, debug: bool = False) -> logging.Logger:
+def create_logger(name: str) -> logging.Logger:
     """
     Creates a logger with the given name and returns it.
 
@@ -52,12 +67,25 @@ def create_logger(name: str, debug: bool = False) -> logging.Logger:
         logger.handlers.clear()
 
     # Set level
-    level = logging.DEBUG if debug else logging.INFO
+    level = logging.DEBUG if DEBUG_ENABLED else logging.INFO
     logger.setLevel(level)
+
+    # Set level names
+    logging.addLevelName(logging.DEBUG, 'DBUG')
+    logging.addLevelName(logging.INFO, 'INFO')
+    logging.addLevelName(logging.WARNING, 'WARN')
+    logging.addLevelName(logging.ERROR, 'ERR!')
+    logging.addLevelName(logging.CRITICAL, 'CRIT')
 
     # Add color formatter
     color_handler = logging.StreamHandler()
     color_handler.setFormatter(ColorFormatter())
     logger.addHandler(color_handler)
+
+    # Add Sentry handler
+    if SENTRY_DSN is not None and SENTRY_ENV is not None:
+        sentry_handler = EventHandler()
+        sentry_handler.setLevel(logging.ERROR)
+        logger.addHandler(sentry_handler)
 
     return logger

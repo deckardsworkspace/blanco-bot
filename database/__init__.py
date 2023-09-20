@@ -20,9 +20,9 @@ class Database:
         self._con = sql.connect(db_filename, check_same_thread=False)
         self._cur = self._con.cursor()
         self._logger = create_logger(self.__class__.__name__)
-        self._logger.info('Connected to database: %s', db_filename)
 
         # Run migrations
+        self._logger.info('Connected to database %s, running migrations...', db_filename)
         run_migrations(self._logger, self._con)
 
     def init_guild(self, guild_id: int):
@@ -61,6 +61,22 @@ class Database:
         """
         self._cur.execute(
             f'UPDATE player_settings SET loop = {int(loop)} WHERE guild_id = {guild_id}'
+        )
+        self._con.commit()
+
+    def get_loop_all(self, guild_id: int) -> bool:
+        """
+        Get the whole-queue loop setting for a guild.
+        """
+        self._cur.execute(f'SELECT loop_all FROM player_settings WHERE guild_id = {guild_id}')
+        return self._cur.fetchone()[0] == 1
+
+    def set_loop_all(self, guild_id: int, loop: bool):
+        """
+        Set the whole-queue loop setting for a guild.
+        """
+        self._cur.execute(
+            f'UPDATE player_settings SET loop_all = {int(loop)} WHERE guild_id = {guild_id}'
         )
         self._con.commit()
 

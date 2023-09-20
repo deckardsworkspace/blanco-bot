@@ -22,6 +22,9 @@ class QueueItem:
     # The Spotify ID for the track, if any
     spotify_id: Optional[str] = None
 
+    # The MusicBrainz ID for the track, if any
+    mbid: Optional[str] = None
+
     # International Standard Recording Code (ISRC)
     isrc: Optional[str] = None
 
@@ -33,12 +36,17 @@ class QueueItem:
 
     # Track details
     title: Optional[str] = None
-    artist: Optional[str] = None
+    artist: Optional[str] = None # First artist
+    author: Optional[str] = None # All artists, separated by ', '
+    album: Optional[str] = None
     duration: Optional[int] = 0   # milliseconds
     lavalink_track: Optional['Track'] = None
 
     # Imperfect match - True when ISRC is present but no match found on YouTube
     is_imperfect: Optional[bool] = False
+
+    # If annotate_track() was called on this track
+    is_annotated: Optional[bool] = False
 
     # When the track started playing
     start_time: Optional[int] = None

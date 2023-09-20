@@ -51,12 +51,20 @@ class Scrobbler:
         if track.duration is not None:
             duration = track.duration // 1000
 
+        # Warn if MBID is not set
+        if track.mbid is None:
+            self._logger.warning(
+                'MBID not set for track `%s\'; scrobble might not be accurate.',
+                track.title
+            )
+
         try:
             self._net.scrobble(
                 artist=track.artist,
                 title=track.title,
                 timestamp=timestamp,
-                duration=duration
+                duration=duration,
+                mbid=track.mbid
             )
         except pylast.PyLastError as err:
             self._logger.error(
@@ -66,3 +74,9 @@ class Scrobbler:
                 err
             )
             raise
+
+        self._logger.debug(
+            'Scrobbled `%s\' for user %d',
+            track.title,
+            self._user_id
+        )

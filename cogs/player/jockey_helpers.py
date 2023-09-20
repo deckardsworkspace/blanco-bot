@@ -6,14 +6,15 @@ from typing import TYPE_CHECKING, List, Tuple, TypeVar
 
 from mafic import SearchType
 from spotipy.exceptions import SpotifyException
-from thefuzz import fuzz
 
+from database.redis import REDIS
 from dataclass.queue_item import QueueItem
-from utils.config import DEBUG_ENABLED
 from utils.constants import CONFIDENCE_THRESHOLD
 from utils.exceptions import (JockeyException, LavalinkInvalidIdentifierError,
                               LavalinkSearchError, SpotifyNoResultsError)
+from utils.fuzzy import check_similarity_weighted
 from utils.logger import create_logger
+from utils.musicbrainz import annotate_track
 from utils.spotify_client import Spotify
 from utils.url import (check_sc_url, check_spotify_url, check_url,
                        check_youtube_playlist_url, check_youtube_url,
@@ -21,44 +22,17 @@ from utils.url import (check_sc_url, check_spotify_url, check_url,
                        get_spinfo_from_url, get_ytid_from_url,
                        get_ytlistid_from_url)
 
-from .lavalink_client import (check_similarity, get_deezer_matches,
-                              get_deezer_track, get_soundcloud_matches,
-                              get_youtube_matches)
+from .lavalink_client import (get_deezer_matches, get_deezer_track,
+                              get_soundcloud_matches, get_youtube_matches)
 
 if TYPE_CHECKING:
     from mafic import Node, Track
 
-    from dataclass.spotify_track import SpotifyTrack
+    from dataclass.spotify import SpotifyTrack
 
 
-LOGGER = create_logger('jockey_helpers', debug=DEBUG_ENABLED)
+LOGGER = create_logger('jockey_helpers')
 T = TypeVar('T')
-
-
-def check_similarity_weighted(actual: str, candidate: str, candidate_rank: int) -> int:
-    """
-    Checks the similarity between two strings using a weighted average
-    of a given similarity score and the results of multiple fuzzy string
-    matching algorithms. Meant for refining search results that are
-    already ranked.
-
-    :param actual: The actual string.
-    :param candidate: The candidate string, i.e. from a search result.
-    :param candidate_rank: The rank of the candidate, from 0 to 100.
-    :return: An integer from 0 to 100, where 100 is the closest match.
-    """
-    naive = check_similarity(actual, candidate) * 100
-    tsr = fuzz.token_set_ratio(actual, candidate)
-    tsor = fuzz.token_sort_ratio(actual, candidate)
-    ptsr = fuzz.partial_token_sort_ratio(actual, candidate)
-
-    return int(
-        (naive * 0.7) +
-        (tsr * 0.12) +
-        (candidate_rank * 0.08) +
-        (tsor * 0.06) +
-        (ptsr * 0.04)
-    )
 
 
 def rank_results(
@@ -104,15 +78,53 @@ def rank_results(
     return ranked
 
 
-async def find_lavalink_track(
+async def find_lavalink_track( # pylint: disable=too-many-statements
     node: 'Node',
     item: QueueItem,
-    deezer_enabled: bool = False
+    /,
+    deezer_enabled: bool = False,
+    in_place: bool = False,
+    lookup_mbid: bool = False
 ) -> 'Track':
     """
     Finds a matching playable Lavalink track for a QueueItem.
+
+    :param node: The Lavalink node to use for searching. Must be an instance of mafic.Node.
+    :param item: The QueueItem to find a track for.
+    :param deezer_enabled: Whether to use Deezer for searching.
+    :param in_place: Whether to modify the QueueItem in place.
+    :param lookup_mbid: Whether to look up the MBID for the track.
     """
     results = []
+
+    # Check Redis if enabled
+    redis_key = None
+    redis_key_type = None
+    if REDIS is not None:
+        # Determine key type
+        if item.spotify_id is not None:
+            redis_key = item.spotify_id
+            redis_key_type = 'spotify_id'
+        elif item.isrc is not None:
+            redis_key = item.isrc
+            redis_key_type = 'isrc'
+
+        # Get cached Lavalink track
+        if redis_key is not None and redis_key_type is not None:
+            encoded = REDIS.get_lavalink_track(redis_key, key_type=redis_key_type)
+            if encoded is not None:
+                LOGGER.info(
+                    'Found cached Lavalink track for Spotify ID %s',
+                    item.spotify_id
+                )
+                if in_place:
+                    item.lavalink_track = await node.decode_track(encoded)
+
+                return await node.decode_track(encoded)
+
+    # Annotate track with ISRC and/or MBID
+    if item.isrc is None or lookup_mbid:
+        annotate_track(item)
 
     # Use ISRC if present
     if item.isrc is not None:
@@ -154,15 +166,22 @@ async def find_lavalink_track(
                     item.isrc,
                     item.title
                 )
-
-    # Fallback to metadata search
-    query = f'{item.title} {item.artist}'
-    if len(results) == 0:
-        LOGGER.error(
-            'No ISRC match for `%s\'. Falling back to metadata search.',
+    else:
+        LOGGER.warning(
+            '`%s\' has no ISRC. Scrobbling might fail for this track.',
             item.title
         )
         item.is_imperfect = True
+
+    # Fallback to metadata search
+    if len(results) == 0:
+        query = f'{item.title} {item.artist}'
+
+        if item.isrc is not None:
+            LOGGER.warning(
+                'No ISRC match for `%s\'. Falling back to metadata search.',
+                item.title
+            )
 
         # Try to match on Deezer if enabled
         if deezer_enabled:
@@ -225,7 +244,20 @@ async def find_lavalink_track(
             results.append(ranked[0][0])
 
     # Save Lavalink result
-    return results[0].lavalink_track
+    lavalink_track = results[0].lavalink_track
+    if in_place:
+        item.lavalink_track = lavalink_track
+
+    # Save data to Redis if enabled
+    if REDIS is not None and redis_key_type is not None and redis_key is not None:
+        # Save Lavalink track
+        REDIS.set_lavalink_track(
+            redis_key,
+            lavalink_track.id,
+            key_type=redis_key_type
+        )
+
+    return lavalink_track
 
 
 async def parse_query(
@@ -262,7 +294,7 @@ async def parse_query(
 
     # Attempt to look for a matching track on Spotify
     try:
-        results = spotify.search(query, limit=10)
+        results = spotify.search_track(query, limit=10)
     except SpotifyNoResultsError:
         pass
     else:
@@ -274,6 +306,8 @@ async def parse_query(
                 requester=requester,
                 title=track.title,
                 artist=track.artist,
+                author=track.author,
+                album=track.album,
                 spotify_id=track.spotify_id,
                 duration=track.duration_ms,
                 artwork=track.artwork,
@@ -335,6 +369,9 @@ async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> L
         if sp_type == 'track':
             # Get track details from Spotify
             track_queue = [spotify.get_track(sp_id)]
+        elif sp_type == 'artist':
+            # Get top tracks from Spotify
+            track_queue = spotify.get_artist_top_tracks(sp_id)
         else:
             # Get playlist or album tracks from Spotify
             track_queue = spotify.get_tracks(sp_type, sp_id)[2]
@@ -353,7 +390,7 @@ async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> L
         if sp_type == 'track':
             # No tracks.
             raise SpotifyNoResultsError('Track does not exist or is private.')
-        raise SpotifyNoResultsError('Playlist is empty.')
+        raise SpotifyNoResultsError(f'{sp_type} does not have any public tracks.')
 
     # At least one track.
     for track in track_queue:
@@ -361,6 +398,8 @@ async def parse_spotify_query(spotify: Spotify, query: str, requester: int) -> L
             requester=requester,
             title=track.title,
             artist=track.artist,
+            author=track.author,
+            album=track.album,
             spotify_id=track.spotify_id,
             duration=track.duration_ms,
             artwork=track.artwork,

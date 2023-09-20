@@ -6,13 +6,29 @@ from math import floor
 from typing import Tuple, Union
 
 
-def human_readable_time(msec: Union[int, float]) -> Tuple[int, int, int]:
+def get_time_components(msec: Union[int, float]) -> Tuple[int, int, int]:
     """
-    Turn milliseconds into a tuple of hours, minutes, and seconds.
+    Decompose milliseconds into a tuple of hours, minutes, and seconds.
     """
     minute, sec = divmod(msec / 1000, 60)
     hour, minute = divmod(minute, 60)
     return floor(hour), floor(minute), floor(sec)
+
+
+def human_readable_time(msec: Union[int, float]) -> str:
+    """
+    Turn milliseconds into a human readable time string.
+    """
+    hour, minute, sec = get_time_components(msec)
+    string = ''
+    if hour > 0:
+        string += f'{hour} hr'
+    if minute > 0:
+        string += f' {minute} min'
+    if sec > 0:
+        string += f' {sec} sec'
+
+    return string.strip()
 
 
 def machine_readable_time(colon_delimited_time: str) -> int:

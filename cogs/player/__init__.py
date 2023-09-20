@@ -15,9 +15,10 @@ from nextcord.ext.commands import Cog
 from requests import HTTPError
 
 from dataclass.custom_embed import CustomEmbed
-from utils.constants import SPOTIFY_403_ERR_MSG
+from utils.constants import RELEASE, SPOTIFY_403_ERR_MSG
 from utils.embeds import create_error_embed, create_success_embed
-from utils.exceptions import EndOfQueueError, JockeyError, JockeyException
+from utils.exceptions import (EmptyQueueError, EndOfQueueError, JockeyError,
+                              JockeyException, SpotifyNoResultsError)
 from utils.logger import create_logger
 from utils.paginator import Paginator
 from utils.player_checks import check_mutual_voice
@@ -47,7 +48,7 @@ class PlayerCog(Cog):
         Constructor for PlayerCog.
         """
         self._bot = bot
-        self._logger = create_logger(self.__class__.__name__, bot.debug)
+        self._logger = create_logger(self.__class__.__name__)
 
         # Initialize Lavalink client instance
         if not bot.pool_initialized:
@@ -67,9 +68,9 @@ class PlayerCog(Cog):
         if jockey is not None:
             # Stop playing if we're left alone
             if (hasattr(jockey.channel, 'members') and
-                len(jockey.channel.members) == 1 and
-                jockey.channel.members[0].id == member.guild.me.id and
-                after.channel is None): # type: ignore
+                len(jockey.channel.members) == 1 and # type: ignore
+                jockey.channel.members[0].id == member.guild.me.id and # type: ignore
+                after.channel is None):
                 return await self._disconnect(jockey=jockey, reason='You left me alone :(')
 
             # Did we get server undeafened?
@@ -149,7 +150,8 @@ class PlayerCog(Cog):
         # Send disconnection message
         embed = CustomEmbed(
             title=':wave:｜Disconnected from voice',
-            description=reason
+            description=reason,
+            footer=f'Blanco release {RELEASE}'
         ).get()
 
         # Try to send disconnection message
@@ -163,6 +165,9 @@ class PlayerCog(Cog):
                     await channel.send(embed=embed)
         except (Forbidden, HTTPException):
             self._logger.error('Unable to send disconnect message in guild %d', jockey.guild.id)
+
+        # Dispatch disconnect event
+        self._bot.dispatch('jockey_disconnect', jockey)
 
     @slash_command(name='jump')
     @application_checks.check(check_mutual_voice)
@@ -196,8 +201,8 @@ class PlayerCog(Cog):
         Loops the current track.
         """
         jockey = await self._get_jockey(itx)
-        if not jockey.is_looping:
-            jockey.is_looping = True
+        if not jockey.queue_manager.is_looping_one:
+            jockey.queue_manager.is_looping_one = True
         return await itx.response.send_message(embed=create_success_embed('Looping current track'))
 
     @slash_command(name='loopall')
@@ -207,8 +212,8 @@ class PlayerCog(Cog):
         Loops the whole queue.
         """
         jockey = await self._get_jockey(itx)
-        if not jockey.is_looping_all:
-            jockey.is_looping_all = True
+        if not jockey.queue_manager.is_looping_all:
+            jockey.queue_manager.is_looping_all = True
         return await itx.response.send_message(embed=create_success_embed('Looping entire queue'))
 
     @slash_command(name='nowplaying')
@@ -285,7 +290,7 @@ class PlayerCog(Cog):
         except JockeyError as err:
             # Disconnect if we're not playing anything
             if not jockey.playing:
-                return await self._disconnect(itx=itx, reason=str(err))
+                return await self._disconnect(itx=itx, reason=f'Error: `{err}`')
 
             return await itx.followup.send(embed=create_error_embed(str(err)))
         except JockeyException as exc:
@@ -306,10 +311,11 @@ class PlayerCog(Cog):
                 f':sparkles: [Link Last.fm]({self._bot.config.base_url}) to scrobble as you listen'
             )
 
-        return await itx.followup.send(embed=create_success_embed(
+        embed = create_success_embed(
             title='Added to queue',
-            body='\n'.join(body)
-        ))
+            body='\n'.join(body),
+        )
+        return await itx.followup.send(embed=embed.set_footer(text=f'Blanco release {RELEASE}'))
 
     @slash_command(name='playlists')
     async def playlist(self, itx: Interaction):
@@ -346,7 +352,7 @@ class PlayerCog(Cog):
             ), ephemeral=True)
 
         # Create dropdown
-        view = SpotifyDropdownView(self._bot, playlists, itx.user.id)
+        view = SpotifyDropdownView(self._bot, playlists, itx.user.id, 'playlist')
         await itx.followup.send(embed=create_success_embed(
             title='Pick a playlist',
             body='Select a playlist from the dropdown below.'
@@ -385,20 +391,16 @@ class PlayerCog(Cog):
 
         # Show loop status
         embed_header = [f'{len(jockey.queue)} total']
-        if jockey.is_looping_all:
+        if jockey.queue_manager.is_looping_all:
             embed_header.append(':repeat: Looping entire queue (`/unloopall` to disable)')
 
         # Show shuffle status
-        queue = list(jockey.queue)
-        current = jockey.current_index
-        if jockey.is_shuffling:
+        queue = jockey.queue_manager.shuffled_queue
+        current = jockey.queue_manager.current_shuffled_index
+        if jockey.queue_manager.is_shuffling:
             embed_header.append(
                 ':twisted_rightwards_arrows: Shuffling queue  (`/unshuffle` to disable)'
             )
-            current = jockey.shuffle_indices.index(current)
-
-            # Get shuffled version of queue
-            queue = [jockey.queue[i] for i in jockey.shuffle_indices]
 
         # Show queue in chunks of 10 per page
         pages = []
@@ -468,7 +470,7 @@ class PlayerCog(Cog):
             return await itx.response.send_message(embed=create_error_embed(
                 message=f'Specify a number from 1 to {str(jockey.queue_size)}.'
             ), ephemeral=True)
-        if position - 1 == jockey.current_index:
+        if position - 1 == jockey.queue_manager.current_index:
             return await itx.response.send_message(embed=create_error_embed(
                 message='You cannot remove the currently playing track.'
             ), ephemeral=True)
@@ -480,6 +482,39 @@ class PlayerCog(Cog):
             title='Removed from queue',
             body=f'**{title}**\n{artist}'
         ))
+
+    @slash_command(name='search')
+    async def search(
+        self,
+        itx: Interaction,
+        search_type: str = SlashOption(
+            description='Search type',
+            required=True,
+            choices=['track', 'playlist', 'album', 'artist']
+        ),
+        query: str = SlashOption(description='Query string', required=True)
+    ):
+        """
+        Search Spotify's catalog for tracks to play.
+        """
+        if itx.user is None:
+            return
+        await itx.response.defer()
+
+        # Search catalog
+        try:
+            results = self._bot.spotify.search(query, search_type)
+        except SpotifyNoResultsError:
+            return await itx.followup.send(embed=create_error_embed(
+                message=f'No results found for `{query}`.'
+            ), ephemeral=True)
+
+        # Create dropdown
+        view = SpotifyDropdownView(self._bot, results, itx.user.id, search_type)
+        await itx.followup.send(embed=create_success_embed(
+            title=f'Results for `{query}`',
+            body='Select a result to play from the dropdown below.'
+        ), view=view, delete_after=60.0)
 
     @slash_command(name='shuffle')
     @application_checks.check(check_mutual_voice)
@@ -494,8 +529,8 @@ class PlayerCog(Cog):
         # Dispatch to jockey
         jockey = await self._get_jockey(itx)
         try:
-            await jockey.shuffle()
-        except EndOfQueueError as err:
+            jockey.queue_manager.shuffle()
+        except EmptyQueueError as err:
             if not quiet:
                 await itx.followup.send(embed=create_error_embed(str(err.args[0])))
         else:
@@ -538,8 +573,8 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         jockey = await self._get_jockey(itx)
-        if jockey.is_looping:
-            jockey.is_looping = False
+        if jockey.queue_manager.is_looping_one:
+            jockey.queue_manager.is_looping_one = False
         return await itx.response.send_message(
             embed=create_success_embed('Not looping current track')
         )
@@ -552,8 +587,8 @@ class PlayerCog(Cog):
         """
         # Dispatch to jockey
         jockey = await self._get_jockey(itx)
-        if jockey.is_looping_all:
-            jockey.is_looping_all = False
+        if jockey.queue_manager.is_looping_all:
+            jockey.queue_manager.is_looping_all = False
         return await itx.response.send_message(
             embed=create_success_embed('Not looping entire queue')
         )
@@ -585,8 +620,8 @@ class PlayerCog(Cog):
 
         # Dispatch to jockey
         jockey = await self._get_jockey(itx)
-        if jockey.is_shuffling:
-            jockey.shuffle_indices = []
+        if jockey.queue_manager.is_shuffling:
+            jockey.queue_manager.unshuffle()
             if not quiet:
                 return await itx.followup.send(embed=create_success_embed('Unshuffled'))
 
