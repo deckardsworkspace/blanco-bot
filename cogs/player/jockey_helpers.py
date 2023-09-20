@@ -9,7 +9,6 @@ from spotipy.exceptions import SpotifyException
 
 from database.redis import REDIS
 from dataclass.queue_item import QueueItem
-from utils.config import DEBUG_ENABLED
 from utils.constants import CONFIDENCE_THRESHOLD
 from utils.exceptions import (JockeyException, LavalinkInvalidIdentifierError,
                               LavalinkSearchError, SpotifyNoResultsError)
@@ -82,7 +81,7 @@ def rank_results(
 async def find_lavalink_track(
     node: 'Node',
     item: QueueItem,
-    *,
+    /,
     deezer_enabled: bool = False,
     in_place: bool = False,
     lookup_mbid: bool = False
