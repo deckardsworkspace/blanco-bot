@@ -7,7 +7,6 @@ from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from asyncio import get_event_loop
-from concurrent.futures import ThreadPoolExecutor
 from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
                       Interaction, NotFound, PartialMessageable, TextChannel,
@@ -59,9 +58,6 @@ class BlancoBot(Bot):
         # Loggers
         self._logger = create_logger(self.__class__.__name__, debug=True)
         self._jockey_logger = create_logger('jockey', debug=True)
-
-        # Executor
-        self._executor = ThreadPoolExecutor(max_workers=2)
 
         # Scrobblers and private Spotify clients per user
         self._scrobblers: Dict[int, 'Scrobbler'] = {}
