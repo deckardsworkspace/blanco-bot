@@ -256,6 +256,10 @@ class BlancoBot(Bot):
                     lookup_mbid=self._config.lastfm_enabled
                 )
             )
+
+            # Store task so it can be cancelled if the player disconnects
+            if guild.id not in self._tasks:
+                self._tasks[guild.id] = []
             task.add_done_callback(lambda _: self._tasks[guild.id].remove(task))
             self._tasks[guild.id].append(task)
 
