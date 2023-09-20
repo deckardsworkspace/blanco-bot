@@ -21,7 +21,7 @@ LOGGER = create_logger('musicbrainz', debug=DEBUG_ENABLED)
 
 @limits(calls=25, period=1)
 @sleep_and_retry
-def annotate_track(track: 'QueueItem'):
+def annotate_track(track: 'QueueItem', *, in_place: bool = True) -> Optional[Tuple[str | None, str | None]]:
     """
     Annotates a track with MusicBrainz ID and ISRC if they are not already present.
 
@@ -31,7 +31,9 @@ def annotate_track(track: 'QueueItem'):
     and one to search for it by title and artist if the ISRC search fails).
 
     :param track: The track to annotate. Must be an instance of
-    dataclass.queue_item.QueueItem.
+        dataclass.queue_item.QueueItem.
+    :param in_place: Whether to modify the track in place. If False, a tuple containing
+        the MusicBrainz ID and ISRC will be returned instead.
     """
     # Check if track has already been annotated
     if track.is_annotated:
@@ -61,25 +63,29 @@ def annotate_track(track: 'QueueItem'):
 
     # Log MusicBrainz ID if found
     if track.mbid is None and mbid is not None:
-        track.mbid = mbid
+        if in_place:
+            track.mbid = mbid
         LOGGER.info(
-            'Using MusicBrainz ID `%s\' for `%s\'',
+            'Found MusicBrainz ID `%s\' for `%s\'',
             track.mbid,
             track.title
         )
 
     # Log ISRC if found
     if track.isrc is None and isrc is not None:
-        track.isrc = isrc
+        if in_place:
+            track.isrc = isrc
         LOGGER.info(
-            'Using ISRC `%s\' for `%s\'',
+            'Found ISRC `%s\' for `%s\'',
             isrc,
             track.title
         )
 
-    # Signal that the track has been annotated
-    track.is_annotated = True
-
+    if in_place:
+        # Signal that the track has been annotated
+        track.is_annotated = True
+    else:
+        return mbid, isrc
 
 def mb_lookup(track: 'QueueItem') -> Tuple[str | None, str | None]:
     """
