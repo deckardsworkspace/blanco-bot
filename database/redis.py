@@ -26,7 +26,7 @@ class RedisClient:
 
         # Logger
         self._logger = create_logger(self.__class__.__name__)
-        self._logger.info('Connected to Redis server')
+        self._logger.info('Connected to Redis server. Enable debug logging to see cache hits.')
 
     def set_lavalink_track(self, key: str, value: str, *, key_type: str):
         """
@@ -36,7 +36,7 @@ class RedisClient:
         :param value: The encoded track.
         :param key_type: The type of key to save the track under, e.g. 'isrc' or 'spotify_id'.
         """
-        self._logger.info('Caching Lavalink track for %s:%s', key_type, key)
+        self._logger.debug('Caching Lavalink track for %s:%s', key_type, key)
         self._client.set(f'lavalink:{key_type}:{key}', value)
 
     def get_lavalink_track(self, key: str, *, key_type: str) -> Optional[str]:
@@ -49,14 +49,14 @@ class RedisClient:
         if not self._client.exists(f'lavalink:{key_type}:{key}'):
             return None
 
-        self._logger.info('Got cached Lavalink track for %s:%s', key_type, key)
+        self._logger.debug('Got cached Lavalink track for %s:%s', key_type, key)
         return self._client.get(f'lavalink:{key_type}:{key}') # type: ignore
 
     def set_spotify_track(self, spotify_id: str, track: 'SpotifyTrack'):
         """
         Save a Spotify track.
         """
-        self._logger.info('Caching info for Spotify track %s', spotify_id)
+        self._logger.debug('Caching info for Spotify track %s', spotify_id)
         self._client.hmset(f'spotify:{spotify_id}', {
             'title': track.title,
             'artist': track.artist,
@@ -80,7 +80,7 @@ class RedisClient:
         if not track:
             return None
 
-        self._logger.info('Got cached info for Spotify track %s', spotify_id)
+        self._logger.debug('Got cached info for Spotify track %s', spotify_id)
         return SpotifyTrack(
             title=track['title'], # type: ignore
             artist=track['artist'], # type: ignore
@@ -96,7 +96,7 @@ class RedisClient:
         """
         Save a MusicBrainz ID for a Spotify track.
         """
-        self._logger.info('Caching MusicBrainz ID for Spotify track %s', spotify_id)
+        self._logger.debug('Caching MusicBrainz ID for Spotify track %s', spotify_id)
         self._client.set(f'mbid:{spotify_id}', mbid)
 
     def get_mbid(self, spotify_id: str) -> Optional[str]:
@@ -105,8 +105,8 @@ class RedisClient:
         """
         if not self._client.exists(f'mbid:{spotify_id}'):
             return None
-        
-        self._logger.info('Got cached MusicBrainz ID for Spotify track %s', spotify_id)
+
+        self._logger.debug('Got cached MusicBrainz ID for Spotify track %s', spotify_id)
         return self._client.get(f'mbid:{spotify_id}') # type: ignore
 
     def set_isrc(self, spotify_id: str, isrc: str):
@@ -116,10 +116,10 @@ class RedisClient:
         # Check if there is a Spotify track with this ID
         if self._client.exists(f'spotify:{spotify_id}'):
             # Update ISRC in Spotify track
-            self._logger.info('Updating cached ISRC for Spotify track %s', spotify_id)
+            self._logger.debug('Updating cached ISRC for Spotify track %s', spotify_id)
             self._client.hset(f'spotify:{spotify_id}', 'isrc', isrc)
 
-        self._logger.info('Caching ISRC for Spotify track %s', spotify_id)
+        self._logger.debug('Caching ISRC for Spotify track %s', spotify_id)
         self._client.set(f'isrc:{spotify_id}', isrc)
 
     def get_isrc(self, spotify_id: str) -> Optional[str]:
@@ -129,13 +129,13 @@ class RedisClient:
         # Check if there is a Spotify track with this ID
         if self._client.exists(f'spotify:{spotify_id}'):
             # Return ISRC from Spotify track
-            self._logger.info('Got cached ISRC for Spotify track %s', spotify_id)
+            self._logger.debug('Got cached ISRC for Spotify track %s', spotify_id)
             return self._client.hget(f'spotify:{spotify_id}', 'isrc') # type: ignore
 
         if not self._client.exists(f'isrc:{spotify_id}'):
             return None
 
-        self._logger.info('Got cached ISRC for Spotify track %s', spotify_id)
+        self._logger.debug('Got cached ISRC for Spotify track %s', spotify_id)
         return self._client.get(f'isrc:{spotify_id}') # type: ignore
 
 
