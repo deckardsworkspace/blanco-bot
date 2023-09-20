@@ -113,7 +113,7 @@ async def find_lavalink_track(
         if redis_key is not None and redis_key_type is not None:
             encoded = REDIS.get_lavalink_track(redis_key, key_type=redis_key_type)
             if encoded is not None:
-                LOGGER.debug(
+                LOGGER.info(
                     'Found cached Lavalink track for Spotify ID %s',
                     item.spotify_id
                 )
