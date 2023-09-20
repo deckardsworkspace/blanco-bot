@@ -4,6 +4,7 @@ Utility functions for interfacing with the MusicBrainz API.
 
 from typing import TYPE_CHECKING, Optional, Tuple
 
+from ratelimit import limits, sleep_and_retry
 from requests import HTTPError, Timeout, get
 
 from .config import DEBUG_ENABLED
@@ -18,9 +19,16 @@ if TYPE_CHECKING:
 LOGGER = create_logger('musicbrainz', debug=DEBUG_ENABLED)
 
 
+@limits(calls=25, period=1)
+@sleep_and_retry
 def annotate_track(track: 'QueueItem'):
     """
     Annotates a track with MusicBrainz ID and ISRC if they are not already present.
+
+    Can be called up to 25 times per second, and will sleep and retry if this limit
+    is exceeded. This is because MusicBrainz has a rate limit of 50 requests per second,
+    but we need to make at most two requests per track (one to search for the track by ISRC,
+    and one to search for it by title and artist if the ISRC search fails).
 
     :param track: The track to annotate. Must be an instance of
     dataclass.queue_item.QueueItem.
