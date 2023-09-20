@@ -52,7 +52,7 @@ class Jockey(Player['BlancoBot']):
         self._queue_mgr = QueueManager(channel.guild.id, client.database)
 
         # Volume
-        self.volume = client.database.get_volume(channel.guild.id)
+        self._volume = client.database.get_volume(channel.guild.id)
 
         # Logger
         self._logger = client.jockey_logger
@@ -196,7 +196,7 @@ class Jockey(Player['BlancoBot']):
                 raise RuntimeError(err.args[0]) from err
 
         # Play track
-        await self.play(item.lavalink_track)
+        await self.play(item.lavalink_track, volume=self.volume)
 
         # We don't want to play if the player is not idle
         # as that will effectively skip the current track.
