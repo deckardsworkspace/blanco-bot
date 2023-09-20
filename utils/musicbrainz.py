@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, Optional, Tuple
 from ratelimit import limits, sleep_and_retry
 from requests import HTTPError, Timeout, get
 
-from .config import DEBUG_ENABLED
+from database.redis import REDIS
+
 from .constants import DURATION_THRESHOLD, MUSICBRAINZ_API_BASE_URL, USER_AGENT
 from .fuzzy import check_similarity_weighted
 from .logger import create_logger
@@ -16,12 +17,16 @@ if TYPE_CHECKING:
     from dataclass.queue_item import QueueItem
 
 
-LOGGER = create_logger('musicbrainz', debug=DEBUG_ENABLED)
+LOGGER = create_logger('musicbrainz')
 
 
 @limits(calls=25, period=1)
 @sleep_and_retry
-def annotate_track(track: 'QueueItem', *, in_place: bool = True) -> Optional[Tuple[str | None, str | None]]:
+def annotate_track(
+    track: 'QueueItem',
+    *,
+    in_place: bool = True
+) -> Optional[Tuple[str | None, str | None]]:
     """
     Annotates a track with MusicBrainz ID and ISRC if they are not already present.
 
@@ -39,8 +44,25 @@ def annotate_track(track: 'QueueItem', *, in_place: bool = True) -> Optional[Tup
     if track.is_annotated:
         return
 
+    # Check if information is already cached
     mbid = track.mbid
     isrc = track.isrc
+    mbid_cached = False
+    isrc_cached = False
+    if REDIS is not None:
+        # Check for cached MusicBrainz ID
+        if mbid is None and track.spotify_id is not None:
+            mbid = REDIS.get_mbid(track.spotify_id)
+            if mbid is not None:
+                mbid_cached = True
+
+        # Check for cached ISRC
+        if isrc is None and track.spotify_id is not None:
+            isrc = REDIS.get_isrc(track.spotify_id)
+            if isrc is not None:
+                isrc_cached = True
+
+    # Lookup MusicBrainz ID and ISRC if not cached
     if mbid is None:
         if isrc is not None:
             LOGGER.info(
@@ -65,8 +87,12 @@ def annotate_track(track: 'QueueItem', *, in_place: bool = True) -> Optional[Tup
     if track.mbid is None and mbid is not None:
         if in_place:
             track.mbid = mbid
+        if REDIS is not None and track.spotify_id is not None:
+            REDIS.set_mbid(track.spotify_id, mbid)
+
         LOGGER.info(
-            'Found MusicBrainz ID `%s\' for `%s\'',
+            'Found %sMusicBrainz ID `%s\' for `%s\'',
+            'cached ' if mbid_cached else '',
             track.mbid,
             track.title
         )
@@ -75,8 +101,12 @@ def annotate_track(track: 'QueueItem', *, in_place: bool = True) -> Optional[Tup
     if track.isrc is None and isrc is not None:
         if in_place:
             track.isrc = isrc
+        if REDIS is not None and track.spotify_id is not None:
+            REDIS.set_isrc(track.spotify_id, isrc)
+
         LOGGER.info(
-            'Found ISRC `%s\' for `%s\'',
+            'Found %sISRC `%s\' for `%s\'',
+            'cached ' if isrc_cached else '',
             isrc,
             track.title
         )

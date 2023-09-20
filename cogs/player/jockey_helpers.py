@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, List, Tuple, TypeVar
 from mafic import SearchType
 from spotipy.exceptions import SpotifyException
 
+from database.redis import REDIS
 from dataclass.queue_item import QueueItem
 from utils.config import DEBUG_ENABLED
 from utils.constants import CONFIDENCE_THRESHOLD
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from dataclass.spotify import SpotifyTrack
 
 
-LOGGER = create_logger('jockey_helpers', debug=DEBUG_ENABLED)
+LOGGER = create_logger('jockey_helpers')
 T = TypeVar('T')
 
 
@@ -96,6 +97,31 @@ async def find_lavalink_track(
     :param lookup_mbid: Whether to look up the MBID for the track.
     """
     results = []
+
+    # Check Redis if enabled
+    redis_key = None
+    redis_key_type = None
+    if REDIS is not None:
+        # Determine key type
+        if item.spotify_id is not None:
+            redis_key = item.spotify_id
+            redis_key_type = 'spotify_id'
+        elif item.isrc is not None:
+            redis_key = item.isrc
+            redis_key_type = 'isrc'
+
+        # Get cached Lavalink track
+        if redis_key is not None and redis_key_type is not None:
+            encoded = REDIS.get_lavalink_track(redis_key, key_type=redis_key_type)
+            if encoded is not None:
+                LOGGER.debug(
+                    'Found cached Lavalink track for Spotify ID %s',
+                    item.spotify_id
+                )
+                if in_place:
+                    item.lavalink_track = await node.decode_track(encoded)
+
+                return await node.decode_track(encoded)
 
     # Annotate track with ISRC and/or MBID
     if item.isrc is None or lookup_mbid:
@@ -219,9 +245,20 @@ async def find_lavalink_track(
             results.append(ranked[0][0])
 
     # Save Lavalink result
+    lavalink_track = results[0].lavalink_track
     if in_place:
-        item.lavalink_track = results[0].lavalink_track
-    return results[0].lavalink_track
+        item.lavalink_track = lavalink_track
+
+    # Save data to Redis if enabled
+    if REDIS is not None and redis_key_type is not None and redis_key is not None:
+        # Save Lavalink track
+        REDIS.set_lavalink_track(
+            redis_key,
+            lavalink_track.id,
+            key_type=redis_key_type
+        )
+
+    return lavalink_track
 
 
 async def parse_query(

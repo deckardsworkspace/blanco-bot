@@ -30,6 +30,9 @@ LASTFM_SHARED_SECRET = None
 LAVALINK_NODES: Dict[str, LavalinkNode] = {}
 SENTRY_DSN = None
 SENTRY_ENV = None
+REDIS_HOST = None
+REDIS_PORT = -1
+REDIS_PASSWORD = None
 DEBUG_ENABLED = False
 DEBUG_GUILDS = None
 
@@ -83,6 +86,10 @@ if isfile('config.yml'):
             if 'sentry' in config_file:
                 SENTRY_DSN = config_file['sentry']['dsn']
                 SENTRY_ENV = config_file['sentry']['environment']
+            if 'redis' in config_file:
+                REDIS_HOST = config_file['redis']['host']
+                REDIS_PORT = config_file['redis']['port']
+                REDIS_PASSWORD = config_file['redis']['password']
         except KeyError as e:
             raise RuntimeError(f'Config missing from config.yml: {e.args[0]}') from e
 
@@ -96,6 +103,9 @@ SPOTIFY_CLIENT_ID = environ.get('BLANCO_SPOTIFY_ID', SPOTIFY_CLIENT_ID)
 SPOTIFY_CLIENT_SECRET = environ.get('BLANCO_SPOTIFY_SECRET', SPOTIFY_CLIENT_SECRET)
 SENTRY_DSN = environ.get('BLANCO_SENTRY_DSN', SENTRY_DSN)
 SENTRY_ENV = environ.get('BLANCO_SENTRY_ENV', SENTRY_ENV)
+REDIS_HOST = environ.get('BLANCO_REDIS_HOST', REDIS_HOST)
+REDIS_PORT = int(environ.get('BLANCO_REDIS_PORT', REDIS_PORT))
+REDIS_PASSWORD = environ.get('BLANCO_REDIS_PASSWORD', REDIS_PASSWORD)
 if 'BLANCO_MATCH_AHEAD' in environ:
     MATCH_AHEAD = environ['BLANCO_MATCH_AHEAD'].lower() == 'true'
 if 'BLANCO_DEBUG' in environ:

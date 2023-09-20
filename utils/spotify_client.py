@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import spotipy
 
 from dataclass.spotify import SpotifyResult, SpotifyTrack
+from database.redis import REDIS
 
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 from .time import human_readable_time
@@ -101,9 +102,20 @@ class Spotify:
         """
         Returns a SpotifyTrack object for a given track ID.
         """
+        # Check cache
+        if REDIS is not None:
+            cached_track = REDIS.get_spotify_track(track_id)
+            if cached_track is not None:
+                return cached_track
+
         result = self._client.track(track_id)
         if result is None:
             raise SpotifyInvalidURLError(f'spotify:track:{track_id}')
+
+        # Save to cache
+        if REDIS is not None:
+            REDIS.set_spotify_track(track_id, extract_track_info(result))
+
         return extract_track_info(result)
 
     def get_tracks(self, list_type: str, list_id: str) -> Tuple[str, str, List[SpotifyTrack]]:

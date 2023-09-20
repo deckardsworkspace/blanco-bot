@@ -5,14 +5,15 @@ Main bot file.
 from nextcord import Intents
 
 from utils.blanco import BlancoBot
-from utils.config import SENTRY_DSN, SENTRY_ENV, config
+from utils.config import (REDIS_HOST, REDIS_PASSWORD, REDIS_PORT, SENTRY_DSN,
+                          SENTRY_ENV, config)
 from utils.constants import RELEASE
 from utils.logger import create_logger
 
-logger = create_logger('main', config.debug_enabled)
-
 
 if __name__ == '__main__':
+    logger = create_logger('main')
+
     # Print parsed config
     if config.debug_enabled:
         logger.debug('Parsed configuration:')
@@ -27,6 +28,14 @@ if __name__ == '__main__':
             logger.debug('  Sentry environment: %s', SENTRY_ENV)
         else:
             logger.debug('  Sentry integration disabled')
+
+        if REDIS_HOST is not None and REDIS_PORT != -1:
+            logger.debug('  Redis host: %s', REDIS_HOST)
+            logger.debug('  Redis port: %d', REDIS_PORT)
+            if REDIS_PASSWORD is not None:
+                logger.debug('  Redis password: %s...', REDIS_PASSWORD[:3])
+        else:
+            logger.debug('  Redis integration disabled')
 
         if config.lastfm_enabled:
             assert config.lastfm_api_key is not None and config.lastfm_shared_secret is not None
