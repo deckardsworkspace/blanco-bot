@@ -2,7 +2,6 @@
 Custom bot class for Blanco.
 """
 
-from logging import INFO
 from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
@@ -54,12 +53,12 @@ class BlancoBot(Bot):
         self._pool_initialized = False
 
         # Loggers
-        self._logger = create_logger(self.__class__.__name__, debug=True)
-        self._jockey_logger = create_logger('jockey', debug=True)
+        self._logger = create_logger(self.__class__.__name__)
+        self._jockey_logger = create_logger('jockey')
 
         # Scrobblers and private Spotify clients per user
         self._scrobblers: Dict[int, 'Scrobbler'] = {}
-        self._scrobbler_logger = create_logger('scrobbler', debug=True)
+        self._scrobbler_logger = create_logger('scrobbler')
         self._spotify_clients: Dict[int, PrivateSpotify] = {}
 
     @property
@@ -348,13 +347,6 @@ class BlancoBot(Bot):
         Initialize the bot with a config.
         """
         self._config = config
-
-        # Change log level if needed
-        if not self.debug:
-            self._logger.setLevel(INFO)
-            self._jockey_logger.setLevel(INFO)
-            self._scrobbler_logger.setLevel(INFO)
-
         self._db = Database(config.db_file)
         self._spotify_client = Spotify(
             client_id=config.spotify_client_id,

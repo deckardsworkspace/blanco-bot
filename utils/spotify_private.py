@@ -36,7 +36,7 @@ class PrivateSpotify:
         self._client_secret = config.spotify_client_secret
         self._credentials = credentials
         self._db = database
-        self._logger = create_logger(self.__class__.__name__, debug=config.debug_enabled)
+        self._logger = create_logger(self.__class__.__name__)
 
     def _refresh_token(self):
         """

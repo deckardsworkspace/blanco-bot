@@ -8,7 +8,7 @@ from typing import Optional
 import sentry_sdk
 from sentry_sdk.integrations.logging import EventHandler
 
-from .config import SENTRY_DSN, SENTRY_ENV
+from .config import DEBUG_ENABLED, SENTRY_DSN, SENTRY_ENV
 from .constants import RELEASE
 
 # Log line format
@@ -55,7 +55,7 @@ class ColorFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def create_logger(name: str, debug: bool = False) -> logging.Logger:
+def create_logger(name: str) -> logging.Logger:
     """
     Creates a logger with the given name and returns it.
 
@@ -67,7 +67,7 @@ def create_logger(name: str, debug: bool = False) -> logging.Logger:
         logger.handlers.clear()
 
     # Set level
-    level = logging.DEBUG if debug else logging.INFO
+    level = logging.DEBUG if DEBUG_ENABLED else logging.INFO
     logger.setLevel(level)
 
     # Set level names

@@ -48,7 +48,7 @@ class PlayerCog(Cog):
         Constructor for PlayerCog.
         """
         self._bot = bot
-        self._logger = create_logger(self.__class__.__name__, bot.debug)
+        self._logger = create_logger(self.__class__.__name__)
 
         # Initialize Lavalink client instance
         if not bot.pool_initialized:
