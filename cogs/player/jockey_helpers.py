@@ -78,7 +78,7 @@ def rank_results(
     return ranked
 
 
-async def find_lavalink_track(
+async def find_lavalink_track( # pylint: disable=too-many-statements
     node: 'Node',
     item: QueueItem,
     /,
