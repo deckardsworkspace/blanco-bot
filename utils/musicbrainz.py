@@ -42,7 +42,7 @@ def annotate_track(
     """
     # Check if track has already been annotated
     if track.is_annotated:
-        return
+        return track.mbid, track.isrc
 
     # Check if information is already cached
     mbid = track.mbid
@@ -114,8 +114,8 @@ def annotate_track(
     if in_place:
         # Signal that the track has been annotated
         track.is_annotated = True
-    else:
-        return mbid, isrc
+
+    return mbid, isrc
 
 def mb_lookup(track: 'QueueItem') -> Tuple[str | None, str | None]:
     """
