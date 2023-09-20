@@ -166,6 +166,9 @@ class PlayerCog(Cog):
         except (Forbidden, HTTPException):
             self._logger.error('Unable to send disconnect message in guild %d', jockey.guild.id)
 
+        # Dispatch disconnect event
+        self._bot.dispatch('jockey_disconnect', jockey)
+
     @slash_command(name='jump')
     @application_checks.check(check_mutual_voice)
     async def jump(

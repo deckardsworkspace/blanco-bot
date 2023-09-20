@@ -2,21 +2,14 @@
 Queue manager class for the player cog.
 """
 
-from asyncio import get_event_loop
 from random import shuffle
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 from dataclass.queue_item import QueueItem
 from utils.exceptions import EmptyQueueError, EndOfQueueError
 from utils.logger import create_logger
 
-from .jockey_helpers import find_lavalink_track
-
 if TYPE_CHECKING:
-    from asyncio import Task
-
-    from mafic import Node
-
     from database import Database
 
 
@@ -24,16 +17,7 @@ class QueueManager:
     """
     Queue manager for Blanco's Jockey.
     """
-    def __init__(
-        self,
-        guild_id: int,
-        database: 'Database',
-        *,
-        match_ahead: bool = False,
-        node: Optional['Node'] = None,
-        deezer: bool = False,
-        lookup_mbid: bool = False
-    ):
+    def __init__(self, guild_id: int, database: 'Database', /):
         self._guild_id = guild_id
         self._queue: List[QueueItem] = []
         self._shuf_i: List[int] = []
@@ -46,17 +30,7 @@ class QueueManager:
         # The current track index.
         # Even if the queue is shuffled, this must ALWAYS
         # correspond to an element in self._queue, not self._shuf_i.
-        self._i = 0
-
-        # Background tasks for matching Lavalink tracks
-        self._match_ahead = match_ahead
-        if match_ahead:
-            if node is None:
-                raise ValueError('`node\' must be specified if `match_ahead\' is True')
-            self._node = node
-            self._deezer = deezer
-            self._lookup_mbid = lookup_mbid
-            self._bg_tasks: List['Task'] = []
+        self._i = -1
 
         # Logger
         self._logger = create_logger(self.__class__.__name__)
@@ -207,36 +181,6 @@ class QueueManager:
 
         return i, track
 
-    async def _match_lavalink_tracks(self, items: List[QueueItem]):
-        """
-        Match QueueItems to Lavalink tracks.
-        """
-        for item in items:
-            self._logger.debug(
-                'Matching track `%s\' in the background',
-                item.title
-            )
-            await find_lavalink_track(
-                self._node,
-                item,
-                deezer_enabled=self._deezer,
-                in_place=True,
-                lookup_mbid=self._lookup_mbid
-            )
-
-    def match_lavalink_tracks(self, items: List[QueueItem]):
-        """
-        Create background task for matching Lavalink tracks.
-        """
-        loop = get_event_loop()
-        task = loop.create_task(self._match_lavalink_tracks(items))
-        self._bg_tasks.append(task)
-
-        # Remove completed tasks from the list.
-        for task in self._bg_tasks:
-            if task.done():
-                self._bg_tasks.remove(task)
-
     def calc_next_index(self, *, forward: bool) -> int:
         """
         Calculate the next track index, accounting for shuffling and
@@ -344,9 +288,9 @@ class QueueManager:
         if self.is_shuffling:
             self._shuf_i.extend(list(range(self.size - len(items), self.size)))
 
-        # Match next tracks in the background
-        if self._match_ahead:
-            self.match_lavalink_tracks(items[1 if new_queue else 0:])
+        # Update index
+        if new_queue:
+            self.current_index = 0
 
     def insert(self, item: QueueItem, /, index: int):
         """

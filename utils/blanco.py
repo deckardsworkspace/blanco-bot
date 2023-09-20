@@ -2,8 +2,9 @@
 Custom bot class for Blanco.
 """
 
+from asyncio import get_event_loop
 from sqlite3 import OperationalError
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
@@ -12,6 +13,7 @@ from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
 from nextcord.ext.commands import Bot
 
 from database import Database
+from cogs.player.jockey_helpers import find_lavalink_track
 from views.now_playing import NowPlayingView
 
 from .embeds import create_error_embed
@@ -22,6 +24,7 @@ from .spotify_client import Spotify
 from .spotify_private import PrivateSpotify
 
 if TYPE_CHECKING:
+    from asyncio import Task
     from logging import Logger
 
     from mafic import Node, TrackEndEvent, TrackStartEvent
@@ -60,6 +63,9 @@ class BlancoBot(Bot):
         self._scrobblers: Dict[int, 'Scrobbler'] = {}
         self._scrobbler_logger = create_logger('scrobbler')
         self._spotify_clients: Dict[int, PrivateSpotify] = {}
+
+        # Annotator tasks
+        self._tasks: Dict[int, List['Task']] = {}
 
     @property
     def config(self) -> Optional['Config']:
@@ -166,6 +172,18 @@ class BlancoBot(Bot):
         else:
             await itx.response.send_message(embed=embed)
 
+    async def on_jockey_disconnect(self, jockey: 'Jockey'):
+        """
+        Called when a player disconnects from voice.
+        """
+        self._logger.debug('Jockey disconnected from voice in %s', jockey.guild.name)
+
+        # Clear tasks for this guild
+        if jockey.guild.id in self._tasks:
+            for task in self._tasks[jockey.guild.id]:
+                task.cancel()
+            del self._tasks[jockey.guild.id]
+
     async def on_node_ready(self, node: 'Node'):
         """
         Called when a Lavalink node is connected and ready.
@@ -187,10 +205,11 @@ class BlancoBot(Bot):
         """
         Called when a track starts playing.
         """
+        guild = event.player.guild
         self._logger.info(
             'Started playing `%s\' in %s',
             event.track.title,
-            event.player.guild.name
+            guild.name
         )
 
         # Send now playing embed
@@ -199,9 +218,42 @@ class BlancoBot(Bot):
         except EndOfQueueError:
             self._logger.warning(
                 'Got track_start event for idle player in %s',
-                event.player.guild.name
+                guild.name
             )
             return
+
+        # Get queue manager and node
+        q_mgr = event.player.queue_manager
+        node = event.player.node
+
+        # Check if Deezer is enabled for this node
+        assert self._config is not None
+        deezer_enabled = self._config.lavalink_nodes[node.label].deezer
+
+        # Prefetch the next track in the background
+        if self._config.match_ahead:
+            try:
+                _, next_track = q_mgr.next_track
+            except EndOfQueueError:
+                return
+            if next_track.lavalink_track is not None:
+                return
+
+            self._logger.debug(
+                'Matching next track `%s\' in the background',
+                next_track.title
+            )
+            task = get_event_loop().create_task(
+                find_lavalink_track(
+                    node,
+                    next_track,
+                    deezer_enabled=deezer_enabled,
+                    in_place=True,
+                    lookup_mbid=self._config.lastfm_enabled
+                )
+            )
+            task.add_done_callback(lambda _: self._tasks[guild.id].remove(task))
+            self._tasks[guild.id].append(task)
 
     async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
         """
