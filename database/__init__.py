@@ -64,6 +64,22 @@ class Database:
         )
         self._con.commit()
 
+    def get_loop_all(self, guild_id: int) -> bool:
+        """
+        Get the whole-queue loop setting for a guild.
+        """
+        self._cur.execute(f'SELECT loop_all FROM player_settings WHERE guild_id = {guild_id}')
+        return self._cur.fetchone()[0] == 1
+
+    def set_loop_all(self, guild_id: int, loop: bool):
+        """
+        Set the whole-queue loop setting for a guild.
+        """
+        self._cur.execute(
+            f'UPDATE player_settings SET loop_all = {int(loop)} WHERE guild_id = {guild_id}'
+        )
+        self._con.commit()
+
     def get_now_playing(self, guild_id: int) -> int:
         """
         Get the last now playing message ID for a guild.
