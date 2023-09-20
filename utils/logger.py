@@ -74,7 +74,7 @@ def create_logger(name: str) -> logging.Logger:
     logging.addLevelName(logging.DEBUG, 'DBUG')
     logging.addLevelName(logging.INFO, 'INFO')
     logging.addLevelName(logging.WARNING, 'WARN')
-    logging.addLevelName(logging.ERROR, ' ERR')
+    logging.addLevelName(logging.ERROR, 'ERR!')
     logging.addLevelName(logging.CRITICAL, 'CRIT')
 
     # Add color formatter
