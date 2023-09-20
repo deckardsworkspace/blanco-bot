@@ -81,8 +81,10 @@ def rank_results(
 async def find_lavalink_track(
     node: 'Node',
     item: QueueItem,
+    *,
     deezer_enabled: bool = False,
-    in_place: bool = False
+    in_place: bool = False,
+    lookup_mbid: bool = False
 ) -> 'Track':
     """
     Finds a matching playable Lavalink track for a QueueItem.
@@ -91,11 +93,12 @@ async def find_lavalink_track(
     :param item: The QueueItem to find a track for.
     :param deezer_enabled: Whether to use Deezer for searching.
     :param in_place: Whether to modify the QueueItem in place.
+    :param lookup_mbid: Whether to look up the MBID for the track.
     """
     results = []
 
-    # Annotate track with ISRC
-    if item.isrc is None:
+    # Annotate track with ISRC and/or MBID
+    if item.isrc is None or lookup_mbid:
         annotate_track(item)
 
     # Use ISRC if present

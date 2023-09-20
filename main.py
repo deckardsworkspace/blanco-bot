@@ -20,6 +20,7 @@ if __name__ == '__main__':
         logger.debug('  Discord token: %s...', config.discord_token[:3])
         logger.debug('  Spotify client ID: %s...', config.spotify_client_id[:3])
         logger.debug('  Spotify client secret: %s...', config.spotify_client_secret[:3])
+        logger.debug('  Match ahead: %s', 'enabled' if config.match_ahead else 'disabled')
 
         if SENTRY_DSN is not None and SENTRY_ENV is not None:
             logger.debug('  Sentry DSN: %s...', SENTRY_DSN[:10])

@@ -66,6 +66,7 @@ class Config:
     discord_oauth_secret: Optional[str] = None
     lastfm_api_key: Optional[str] = None
     lastfm_shared_secret: Optional[str] = None
+    match_ahead: bool = False
     debug_enabled: bool = False
     debug_guild_ids: Optional[List[int]] = None
 

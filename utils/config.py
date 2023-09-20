@@ -19,6 +19,7 @@ DATABASE_FILE = None
 DISCORD_TOKEN = None
 SPOTIFY_CLIENT_ID = None
 SPOTIFY_CLIENT_SECRET = None
+MATCH_AHEAD = False
 ENABLE_SERVER = False
 SERVER_PORT = 8080
 SERVER_BASE_URL = None
@@ -66,6 +67,7 @@ if isfile('config.yml'):
                 LAVALINK_NODES[node['id']] = lavalink_node
 
             # Add optional config values
+            MATCH_AHEAD = config_file['bot'].get('match_ahead', False)
             if 'server' in config_file:
                 ENABLE_SERVER = config_file['server']['enabled']
                 SERVER_PORT = config_file['server'].get('port', 8080)
@@ -94,6 +96,8 @@ SPOTIFY_CLIENT_ID = environ.get('BLANCO_SPOTIFY_ID', SPOTIFY_CLIENT_ID)
 SPOTIFY_CLIENT_SECRET = environ.get('BLANCO_SPOTIFY_SECRET', SPOTIFY_CLIENT_SECRET)
 SENTRY_DSN = environ.get('BLANCO_SENTRY_DSN', SENTRY_DSN)
 SENTRY_ENV = environ.get('BLANCO_SENTRY_ENV', SENTRY_ENV)
+if 'BLANCO_MATCH_AHEAD' in environ:
+    MATCH_AHEAD = environ['BLANCO_MATCH_AHEAD'].lower() == 'true'
 if 'BLANCO_DEBUG' in environ:
     DEBUG_ENABLED = environ['BLANCO_DEBUG'].lower() == 'true'
     DEBUG_GUILDS = [int(id) for id in environ['BLANCO_DEBUG_GUILDS'].split(',')]
@@ -164,6 +168,7 @@ config = Config(
     debug_enabled=DEBUG_ENABLED,
     debug_guild_ids=DEBUG_GUILDS,
     enable_server=ENABLE_SERVER,
+    match_ahead=MATCH_AHEAD,
     server_port=SERVER_PORT,
     base_url=SERVER_BASE_URL,
     discord_oauth_id=DISCORD_OAUTH_ID,

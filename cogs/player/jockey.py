@@ -49,7 +49,15 @@ class Jockey(Player['BlancoBot']):
         client.database.init_guild(channel.guild.id)
 
         # Queue
-        self._queue_mgr = QueueManager(channel.guild.id, client.database)
+        assert client.config is not None
+        self._queue_mgr = QueueManager(
+            channel.guild.id,
+            client.database,
+            node=self.node,
+            deezer=client.config.lavalink_nodes[self.node.label].deezer,
+            match_ahead=client.config.match_ahead,
+            lookup_mbid=client.config.lastfm_enabled
+        )
 
         # Volume
         self._volume = client.database.get_volume(channel.guild.id)

@@ -6,14 +6,12 @@ from logging import INFO
 from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
-from asyncio import get_event_loop
 from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
                       Interaction, NotFound, PartialMessageable, TextChannel,
                       Thread, VoiceChannel)
 from nextcord.ext.commands import Bot
 
-from cogs.player.jockey import find_lavalink_track
 from database import Database
 from views.now_playing import NowPlayingView
 
@@ -205,32 +203,6 @@ class BlancoBot(Bot):
                 event.player.guild.name
             )
             return
-
-        # Find Lavalink track for next track in queue
-        try:
-            _, next_track = event.player.queue_manager.next_track
-        except EndOfQueueError:
-            return
-
-        if next_track.lavalink_track is not None:
-            # Track has already been matched
-            return
-
-        self._logger.debug(
-            'Matching track `%s\' in the background',
-            next_track.title
-        )
-
-        # Check if Deezer is enabled
-        assert self._config is not None
-        deezer_enabled = self._config.lavalink_nodes[event.player.node.label].deezer
-
-        get_event_loop().create_task(find_lavalink_track(
-            node=event.player.node,
-            item=next_track,
-            deezer_enabled=deezer_enabled,
-            in_place=True
-        ))
 
     async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
         """
