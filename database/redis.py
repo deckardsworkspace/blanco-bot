@@ -16,7 +16,6 @@ class RedisClient:
     Redis client that takes care of caching MusicBrainz and Spotify lookups.
     """
     def __init__(self, host: str, port: int, password: Optional[str] = None):
-        self._logger = create_logger(self.__class__.__name__)
         self._client = redis.StrictRedis(
             host=host,
             port=port,
@@ -24,6 +23,10 @@ class RedisClient:
             encoding='utf-8',
             decode_responses=True
         )
+
+        # Logger
+        self._logger = create_logger(self.__class__.__name__)
+        self._logger.info('Connected to Redis server')
 
     def set_lavalink_track(self, key: str, value: str, *, key_type: str):
         """
