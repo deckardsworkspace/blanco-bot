@@ -192,7 +192,11 @@ class BlancoBot(Bot):
 
         # Store session ID in database
         if node.session_id is not None:
-            old_id = self.database.get_session_id(node.label)
+            try:
+                old_id = self.database.get_session_id(node.label)
+            except (OperationalError, TypeError):
+                old_id = None
+
             if old_id is not None and old_id != node.session_id:
                 self._logger.debug(
                     'Replacing old session ID `%s\' for node `%s\'',
@@ -423,7 +427,7 @@ class BlancoBot(Bot):
             # Get session ID from database
             try:
                 session_id = self.database.get_session_id(node.id)
-            except OperationalError:
+            except (OperationalError, TypeError):
                 session_id = None
                 self._logger.debug('No session ID for node `%s\'', node.id)
             else:
