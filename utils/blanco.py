@@ -207,33 +207,30 @@ class BlancoBot(Bot):
             return
 
         # Find Lavalink track for next track in queue
-        curr_i = event.player.current_index
-        if event.player.is_shuffling:
-            next_shuf_i = event.player.shuffle_indices.index(curr_i) + 1
-            next_i = event.player.shuffle_indices[next_shuf_i]
-        else:
-            next_i = curr_i + 1
-        if next_i < len(event.player.queue):
-            next_track = event.player.queue[next_i]
-            if next_track.lavalink_track is not None:
-                # Track has already been matched
-                return
+        try:
+            _, next_track = event.player.queue_manager.next_track
+        except EndOfQueueError:
+            return
 
-            self._logger.debug(
-                'Matching track `%s\' in the background',
-                next_track.title
-            )
+        if next_track.lavalink_track is not None:
+            # Track has already been matched
+            return
 
-            # Check if Deezer is enabled
-            assert self._config is not None
-            deezer_enabled = self._config.lavalink_nodes[event.player.node.label].deezer
+        self._logger.debug(
+            'Matching track `%s\' in the background',
+            next_track.title
+        )
 
-            get_event_loop().create_task(find_lavalink_track(
-                node=event.player.node,
-                item=next_track,
-                deezer_enabled=deezer_enabled,
-                in_place=True
-            ))
+        # Check if Deezer is enabled
+        assert self._config is not None
+        deezer_enabled = self._config.lavalink_nodes[event.player.node.label].deezer
+
+        get_event_loop().create_task(find_lavalink_track(
+            node=event.player.node,
+            item=next_track,
+            deezer_enabled=deezer_enabled,
+            in_place=True
+        ))
 
     async def on_track_end(self, event: 'TrackEndEvent[Jockey]'):
         """
@@ -451,7 +448,7 @@ class BlancoBot(Bot):
                 pass
 
         # Send now playing embed
-        current_track = event.player.queue[event.player.current_index]
+        current_track = event.player.queue_manager.current
         embed = event.player.now_playing(event.track)
         view = NowPlayingView(self, event.player, current_track.spotify_id)
         msg = await channel.send(embed=embed, view=view)

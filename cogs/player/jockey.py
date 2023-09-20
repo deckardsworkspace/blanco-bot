@@ -3,10 +3,8 @@ Music player class for Blanco. Subclass of mafic.Player.
 """
 
 from asyncio import get_event_loop
-from collections import deque
-from random import shuffle
 from time import time
-from typing import TYPE_CHECKING, Deque, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from mafic import Player, PlayerNotConnected
 from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
@@ -21,6 +19,7 @@ from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
 
 from .jockey_helpers import find_lavalink_track, parse_query
+from .queue import QueueManager
 
 if TYPE_CHECKING:
     from mafic import Track
@@ -50,15 +49,7 @@ class Jockey(Player['BlancoBot']):
         client.database.init_guild(channel.guild.id)
 
         # Queue
-        self._queue: Deque['QueueItem'] = deque()
-        self._queue_i = -1
-
-        # Repeat
-        self._loop = client.database.get_loop(channel.guild.id)
-        self._loop_whole = False
-
-        # Shuffle indices
-        self._shuffle_indices = []
+        self._queue_mgr = QueueManager(channel.guild.id, client.database)
 
         # Volume
         self._volume = client.database.get_volume(channel.guild.id)
@@ -72,48 +63,6 @@ class Jockey(Player['BlancoBot']):
         )
 
     @property
-    def current_index(self) -> int:
-        """
-        Returns the index of the current track in the queue.
-        """
-        return self._queue_i
-
-    @property
-    def is_looping(self) -> bool:
-        """
-        Returns whether the player is looping the current track.
-        """
-        return self._loop
-
-    @is_looping.setter
-    def is_looping(self, value: bool):
-        """
-        Sets whether the player will loop the current track.
-        """
-        self._loop = value
-
-    @property
-    def is_looping_all(self) -> bool:
-        """
-        Returns whether the player is looping the entire queue.
-        """
-        return self._loop_whole
-
-    @is_looping_all.setter
-    def is_looping_all(self, value: bool):
-        """
-        Sets whether the player will loop the entire queue.
-        """
-        self._loop_whole = value
-
-    @property
-    def is_shuffling(self) -> bool:
-        """
-        Returns whether the player is shuffling the queue.
-        """
-        return len(self._shuffle_indices) > 0
-
-    @property
     def playing(self) -> bool:
         """
         Returns whether the player is currently playing a track.
@@ -121,36 +70,25 @@ class Jockey(Player['BlancoBot']):
         return self.current is not None
 
     @property
-    def queue(self) -> Deque['QueueItem']:
+    def queue(self) -> List['QueueItem']:
         """
         Returns the player queue.
         """
-        return self._queue
+        return self._queue_mgr.queue
+
+    @property
+    def queue_manager(self) -> QueueManager:
+        """
+        Returns the queue manager for the player.
+        """
+        return self._queue_mgr
 
     @property
     def queue_size(self) -> int:
         """
-        Returns the size of the player queue.
+        Returns the player queue size.
         """
-        return len(self._queue)
-
-    @property
-    def shuffle_indices(self) -> List[int]:
-        """
-        Returns the list of shuffle indices.
-
-        Blanco uses a list of indices to keep track of the
-        shuffled queue, so that it can be restored later if
-        the user chooses to unshuffle.
-        """
-        return self._shuffle_indices
-
-    @shuffle_indices.setter
-    def shuffle_indices(self, value: List[int]):
-        """
-        Sets the list of shuffle indices.
-        """
-        self._shuffle_indices = value
+        return self._queue_mgr.size
 
     @property
     def status_channel(self) -> 'Messageable':
@@ -203,13 +141,8 @@ class Jockey(Player['BlancoBot']):
         :param index: The index of the track to enqueue.
         :param auto: Whether this is an automatic enqueue, i.e. not part of a user's command.
         """
-        track_index = self._shuffle_indices[index] if self.is_shuffling else index
-        track = self._queue[track_index]
-
-        # Save current index in case enqueue fails
-        current = self._queue_i
-        self._queue_i = track_index
         try:
+            track = self._queue_mgr.queue[index]
             result = await self._play(track)
         except PlayerNotConnected:
             if not auto:
@@ -223,13 +156,13 @@ class Jockey(Player['BlancoBot']):
                 await self.status_channel.send(embed=create_error_embed(
                     f'Unable to play next track: {exc}'
                 ))
-
-            # Restore current index
-            self._queue_i = current
             return False
 
         # Scrobble if possible
-        await self._scrobble(self._queue[current])
+        await self._scrobble(self._queue_mgr.current)
+
+        # Update queue index
+        self._queue_mgr.current_index = index
 
         return result
 
@@ -373,7 +306,7 @@ class Jockey(Player['BlancoBot']):
             current = self.current
 
         # Construct Spotify URL if it exists
-        track = self._queue[self._queue_i]
+        track = self._queue_mgr.current
         uri = current.uri
         if track.spotify_id is not None:
             uri = f'https://open.spotify.com/track/{track.spotify_id}'
@@ -393,9 +326,20 @@ class Jockey(Player['BlancoBot']):
         if artist is None:
             artist = 'Unknown artist'
 
+        # Display type of track
         is_stream = False
         if track.lavalink_track is not None:
             is_stream = track.lavalink_track.stream
+
+        # Build footer
+        footer = f'Track {self._queue_mgr.current_shuffled_index + 1} of {self.queue_size}'
+        if self._queue_mgr.is_shuffling:
+            footer += ' 🔀'
+        if self._queue_mgr.is_looping_one:
+            footer += ' 🔂'
+        if self._queue_mgr.is_looping_all:
+            footer += ' 🔁'
+        footer += f' • Volume {self.volume}%'
 
         imperfect_msg = ':warning: Playing the [**closest match**]({})'
         embed = CustomEmbed(
@@ -407,10 +351,9 @@ class Jockey(Player['BlancoBot']):
                 f'\nrequested by <@{track.requester}>',
                 imperfect_msg.format(current.uri) if track.is_imperfect else ''
             ],
-            footer=f'Track {self.current_index + 1} of {len(self._queue)}',
+            footer=footer,
             color=Colour.teal(),
-            thumbnail_url=track.artwork,
-            timestamp_now=True
+            thumbnail_url=track.artwork
         )
         return embed.get()
 
@@ -440,31 +383,19 @@ class Jockey(Player['BlancoBot']):
             raise JockeyError(str(exc)) from exc
 
         # Add new tracks to queue
-        old_size = len(self._queue)
-        self._queue.extend(new_tracks)
+        old_size = self._queue_mgr.size
+        self._queue_mgr.extend(new_tracks)
 
-        # Update shuffle indices if applicable
-        if self.is_shuffling:
-            new_indices = [old_size + i for i in range(len(new_tracks))]
-            self._shuffle_indices.extend(new_indices)
-
-        # Are we beginning a new queue?
+        # Get info for first track
         first = new_tracks[0]
         first_name = f'**{first.title}**\n{first.artist}' if first.title is not None else query
-        if not self.playing:
-            # We are! Play the first track.
-            current = self._queue_i
-            self._queue_i = old_size
-            enqueue_result = await self._play(new_tracks[0])
-            if not enqueue_result:
-                # Failed to enqueue, restore state
-                for _ in range(old_size, len(self._queue)):
-                    del self._queue[-1]
-                self._queue_i = current
-                if self.is_shuffling:
-                    self._shuffle_indices = self._shuffle_indices[:old_size]
 
-                raise JockeyError(f'Failed to enqueue "{first.title}"\n{enqueue_result}')
+        # Are we beginning a new queue?
+        if old_size == 0:
+            # We are! Play the first track.
+            self._queue_mgr.current_index = old_size
+            if not await self._play(new_tracks[0]):
+                raise JockeyError(f'Failed to play "{first.title}"')
 
         # Send embed
         return first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
@@ -473,27 +404,8 @@ class Jockey(Player['BlancoBot']):
         """
         Removes a track from the queue.
         """
-        # Translate index if shuffling
-        actual_index = index
-        if self.is_shuffling:
-            actual_index = self._shuffle_indices[index]
-
         # Remove track from queue
-        removed_track = self._queue[actual_index]
-        del self._queue[actual_index]
-        if self.is_shuffling:
-            del self._shuffle_indices[index]
-
-            # Decrement future shuffle indices by 1
-            self._shuffle_indices = [
-                i - 1
-                if i > actual_index else i
-                for i in self._shuffle_indices
-            ]
-
-        # Adjust current index
-        if self._queue_i > actual_index:
-            self._queue_i -= 1
+        removed_track = self._queue_mgr.remove(index)
 
         # Return removed track details
         return removed_track.title, removed_track.artist
@@ -505,26 +417,12 @@ class Jockey(Player['BlancoBot']):
         await super().set_volume(volume)
         self.volume = volume
 
-    async def shuffle(self):
-        """
-        Generates a random permutation of the queue indices for shuffling.
-        """
-        if len(self._queue) == 0:
-            raise EndOfQueueError('Queue is empty, nothing to shuffle')
-
-        # Shuffle indices
-        indices = [i for i in range(len(self._queue)) if i != self._queue_i]
-        shuffle(indices)
-
-        # Put current track at the start of the list
-        indices.insert(0, self._queue_i)
-
-        # Save shuffled indices
-        self._shuffle_indices = indices
-
-    async def skip(self, forward: bool = True, index: int = -1, auto: bool = True):
+    async def skip(self, *, forward: bool = True, index: int = -1, auto: bool = True):
         """
         Skips the current track and plays the next one in the queue.
+
+        :param forward: Whether to skip forward or backward.
+        :param index: The index of the track to skip to.
         """
         # It takes a while for the player to skip,
         # so let's remove the player controls while we wait
@@ -540,35 +438,15 @@ class Jockey(Player['BlancoBot']):
         # Is this autoskipping?
         if auto:
             # Check if we're looping the current track
-            if self.is_looping:
+            if self._queue_mgr.is_looping_one:
                 # Re-enqueue the current track
-                await self._enqueue(self._queue_i, auto=auto)
+                await self._enqueue(self._queue_mgr.current_index, auto=auto)
                 return
 
-        # Set initial index
-        next_i = self._shuffle_indices.index(self._queue_i) if self.is_shuffling else self._queue_i
-        while 0 <= next_i < self.queue_size:
-            # Have we reached an end of the queue?
-            if (next_i == self.queue_size - 1 and forward) or (
-                next_i == 0 and not forward):
-                # Reached an end of the queue, are we looping?
-                if self.is_looping_all:
-                    next_i = 0 if forward else self.queue_size - 1
-                else:
-                    if not auto:
-                        # If we reached this point,
-                        # we are at one of either ends of the queue,
-                        # and the user was expecting to skip past it.
-                        await self._edit_np_controls(show_controls=True)
-                        if forward:
-                            raise EndOfQueueError('Reached the end of the queue')
-                        raise EndOfQueueError('Reached the beginning of the queue')
-
-                    # Queue likely finished on its own. Scrobble last track.
-                    await self._scrobble(self._queue[self._queue_i])
-                    return
-            else:
-                next_i += 1 if forward else -1
+        # Try to enqueue the next playable track
+        while True:
+            # Get next index
+            next_i = self._queue_mgr.calc_next_index(forward=forward)
 
             # Try to enqueue the next track
             if not await self._enqueue(next_i, auto=auto):

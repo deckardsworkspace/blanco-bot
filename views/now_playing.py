@@ -45,7 +45,7 @@ class ShuffleButton(Button['NowPlayingView']):
         view: NowPlayingView = self.view
 
         if await view.check_mutual_voice(interaction):
-            status = view.player.is_shuffling
+            status = view.player.queue_manager.is_shuffling
             self.label = 'Shuffle' if status else 'Unshuffle'
             await interaction.response.edit_message(view=view)
 
@@ -71,7 +71,7 @@ class NowPlayingView(View):
         self._player = player
 
         # Add shuffle button
-        self.add_item(ShuffleButton(player.is_shuffling))
+        self.add_item(ShuffleButton(player.queue_manager.is_shuffling))
 
     @property
     def cog(self) -> 'PlayerCog':
