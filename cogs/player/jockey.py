@@ -390,11 +390,20 @@ class Jockey(Player['BlancoBot']):
         first = new_tracks[0]
         first_name = f'**{first.title}**\n{first.artist}' if first.title is not None else query
 
-        # Are we beginning a new queue?
-        if old_size == 0:
-            # We are! Play the first track.
+        # Are we beginning a new queue or is the player idle?
+        if not self.playing:
+            # We are! Play the first new track.
+            old_index = self._queue_mgr.current_index
             self._queue_mgr.current_index = old_size
+
             if not await self._play(new_tracks[0]):
+                # Remove enqueued tracks
+                for _ in range(old_size, self._queue_mgr.size):
+                    self._queue_mgr.remove(old_size)
+
+                # Restore old index
+                self._queue_mgr.current_index = old_index
+
                 raise JockeyError(f'Failed to play "{first.title}"')
 
         # Send embed
