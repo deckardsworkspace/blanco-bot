@@ -446,7 +446,11 @@ class Jockey(Player['BlancoBot']):
         # Try to enqueue the next playable track
         while True:
             # Get next index
-            next_i = self._queue_mgr.calc_next_index(forward=forward)
+            try:
+                next_i = self._queue_mgr.calc_next_index(forward=forward)
+            except EndOfQueueError:
+                # We've reached the end of the queue and looping is disabled
+                return
 
             # Try to enqueue the next track
             if not await self._enqueue(next_i, auto=auto):
