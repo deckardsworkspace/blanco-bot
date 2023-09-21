@@ -31,7 +31,9 @@ BLACKLIST = (
     'remix',
     'rendition',
     'reverb',
-    'slowed'
+    'slowed',
+    'sped',
+    'speed'
 )
 
 
