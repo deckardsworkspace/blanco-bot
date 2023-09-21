@@ -1,11 +1,6 @@
 name: Docker Image CI
 
 on:
-  push:
-    branches:
-      - 'main'
-    paths-ignore:
-      - '**.md'
   workflow_call:
     inputs:
       IMAGE_FLAVOR:

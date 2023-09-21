@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'next'
+    paths-ignore:
+      - '**.md'
 
 jobs:
   build:
