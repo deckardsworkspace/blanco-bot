@@ -130,9 +130,22 @@ class BlancoBot(Bot):
         """
         Called when the bot is ready.
         """
+        if self._config is None:
+            raise RuntimeError('Received on_ready event before config was initialized')
+
         self._logger.info('Logged in as %s', self.user)
         self.load_extension('cogs')
-        self.load_extension('server')
+
+        # Load server extension if server is enabled
+        if self._config.enable_server:
+            self._logger.info('Starting web server...')
+            self.load_extension('server')
+        else:
+            if self._config.base_url is not None:
+                self._logger.warning(
+                    'Server is disabled, but base URL is set to %s',
+                    self._config.base_url
+                )
 
         if self.debug:
             self._logger.warning('Debug mode enabled')
