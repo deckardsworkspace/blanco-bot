@@ -466,3 +466,21 @@ class Jockey(Player['BlancoBot']):
                 await self._edit_np_controls(show_controls=True)
             else:
                 return
+
+    async def update_now_playing(self):
+        """
+        Update the existing Now Playing view with current information.
+        """
+        # Get now playing message
+        np_msg = await self._get_now_playing()
+        if np_msg is None:
+            return
+
+        # Edit message
+        try:
+            await np_msg.edit(embed=self.now_playing())
+        except (HTTPException, Forbidden):
+            self._logger.warning(
+                'Failed to edit now playing message for %s',
+                self.guild.name
+            )
