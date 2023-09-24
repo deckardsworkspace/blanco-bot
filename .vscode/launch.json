@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Blanco",
+            "name": "Blanco",
             "type": "python",
             "request": "launch",
             "program": "main.py",
@@ -16,20 +16,15 @@
             }
         },
         {
-            "name": "Python: Remote Attach",
+            "name": "Webserver",
             "type": "python",
-            "request": "attach",
-            "connect": {
-                "host": "localhost",
-                "port": 5678
-            },
-            "pathMappings": [
-                {
-                    "localRoot": "${workspaceFolder}",
-                    "remoteRoot": "."
-                }
-            ],
-            "justMyCode": true
+            "request": "launch",
+            "program": "dev_server.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONDONTWRITEBYTECODE": "1"
+            }
         }
     ]
 }
