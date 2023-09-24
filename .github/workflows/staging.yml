@@ -14,5 +14,3 @@ jobs:
     with:
       IMAGE_FLAVOR: |
         latest=false
-      ADDITIONAL_TAGS: |
-        type=raw,staging

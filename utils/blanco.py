@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
-                      Interaction, NotFound, PartialMessageable, TextChannel,
-                      Thread, VoiceChannel)
+                      Interaction, NotFound, PartialMessageable, StageChannel,
+                      TextChannel, Thread, VoiceChannel)
 from nextcord.ext.commands import Bot
 
-from database import Database
 from cogs.player.jockey_helpers import find_lavalink_track
+from database import Database
 from views.now_playing import NowPlayingView
 
 from .embeds import create_error_embed
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from dataclass.config import Config
 
 
-StatusChannel = Union[PartialMessageable, VoiceChannel, TextChannel, Thread]
+StatusChannel = Union[PartialMessageable, VoiceChannel, TextChannel, StageChannel, Thread]
 
 
 class BlancoBot(Bot):
@@ -130,9 +130,22 @@ class BlancoBot(Bot):
         """
         Called when the bot is ready.
         """
+        if self._config is None:
+            raise RuntimeError('Received on_ready event before config was initialized')
+
         self._logger.info('Logged in as %s', self.user)
         self.load_extension('cogs')
-        self.load_extension('server')
+
+        # Load server extension if server is enabled
+        if self._config.enable_server:
+            self._logger.info('Starting web server...')
+            self.load_extension('server')
+        else:
+            if self._config.base_url is not None:
+                self._logger.warning(
+                    'Server is disabled, but base URL is set to %s',
+                    self._config.base_url
+                )
 
         if self.debug:
             self._logger.warning('Debug mode enabled')

@@ -203,6 +203,10 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         if not jockey.queue_manager.is_looping_one:
             jockey.queue_manager.is_looping_one = True
+
+            # Update now playing message
+            await jockey.update_now_playing()
+
         return await itx.response.send_message(embed=create_success_embed('Looping current track'))
 
     @slash_command(name='loopall')
@@ -214,6 +218,10 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         if not jockey.queue_manager.is_looping_all:
             jockey.queue_manager.is_looping_all = True
+
+            # Update now playing message
+            await jockey.update_now_playing()
+
         return await itx.response.send_message(embed=create_success_embed('Looping entire queue'))
 
     @slash_command(name='nowplaying')
@@ -310,6 +318,9 @@ class PlayerCog(Cog):
             body.append(
                 f':sparkles: [Link Last.fm]({self._bot.config.base_url}) to scrobble as you listen'
             )
+
+        # Update now playing message
+        await jockey.update_now_playing()
 
         embed = create_success_embed(
             title='Added to queue',
@@ -483,6 +494,9 @@ class PlayerCog(Cog):
             body=f'**{title}**\n{artist}'
         ))
 
+        # Update now playing message
+        await jockey.update_now_playing()
+
     @slash_command(name='search')
     async def search(
         self,
@@ -534,6 +548,9 @@ class PlayerCog(Cog):
             if not quiet:
                 await itx.followup.send(embed=create_error_embed(str(err.args[0])))
         else:
+            # Update now playing message
+            await jockey.update_now_playing()
+
             if not quiet:
                 await itx.followup.send(
                     embed=create_success_embed(f'{len(jockey.queue)} tracks shuffled')
@@ -575,6 +592,10 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         if jockey.queue_manager.is_looping_one:
             jockey.queue_manager.is_looping_one = False
+
+            # Update now playing message
+            await jockey.update_now_playing()
+
         return await itx.response.send_message(
             embed=create_success_embed('Not looping current track')
         )
@@ -589,6 +610,10 @@ class PlayerCog(Cog):
         jockey = await self._get_jockey(itx)
         if jockey.queue_manager.is_looping_all:
             jockey.queue_manager.is_looping_all = False
+
+            # Update now playing message
+            await jockey.update_now_playing()
+
         return await itx.response.send_message(
             embed=create_success_embed('Not looping entire queue')
         )
@@ -625,6 +650,9 @@ class PlayerCog(Cog):
             if not quiet:
                 return await itx.followup.send(embed=create_success_embed('Unshuffled'))
 
+            # Update now playing message
+            await jockey.update_now_playing()
+
         if not quiet:
             return await itx.followup.send(
                 embed=create_error_embed('Current queue is not shuffled')
@@ -659,3 +687,6 @@ class PlayerCog(Cog):
         await itx.response.defer()
         await jockey.set_volume(volume)
         await itx.followup.send(embed=create_success_embed(f'Volume set to {volume}'))
+
+        # Update now playing message
+        await jockey.update_now_playing()
