@@ -23,6 +23,7 @@ def setup_routes(app: 'Application'):
     app.router.add_get('/linkspotify', link_spotify)
     app.router.add_get('/login', login)
     app.router.add_get('/logout', logout)
+    app.router.add_get('/robots.txt', robotstxt)
     app.router.add_get('/spotifyoauth', spotifyoauth)
     app.router.add_get('/unlink', unlink)
     app.router.add_static('/static/', path='server/static', name='static')
