@@ -26,6 +26,15 @@ class RedisClient:
 
         # Logger
         self._logger = create_logger(self.__class__.__name__)
+        self._logger.debug('Attempting to connect to Redis server...')
+
+        # Test connection
+        try:
+            self._client.ping()
+        except redis.ConnectionError as err:
+            self._logger.critical('Could not connect to Redis server. Check your configuration.')
+            raise RuntimeError('Could not connect to Redis server.') from err
+
         self._logger.info('Connected to Redis server. Enable debug logging to see cache hits.')
 
     def set_lavalink_track(self, key: str, value: str, *, key_type: str):
