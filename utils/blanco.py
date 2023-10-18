@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
                       Interaction, NotFound, PartialMessageable, StageChannel,
-                      TextChannel, Thread, VoiceChannel)
+                      TextChannel, Thread, VoiceChannel, MessageFlags)
 from nextcord.ext.commands import Bot
 
 from cogs.player.jockey_helpers import find_lavalink_track
@@ -488,7 +488,11 @@ class BlancoBot(Bot):
         current_track = event.player.queue_manager.current
         embed = event.player.now_playing(event.track)
         view = NowPlayingView(self, event.player, current_track.spotify_id)
-        msg = await channel.send(embed=embed, view=view)
+
+        # Send message silently
+        flags = MessageFlags()
+        flags.suppress_notifications = True
+        msg = await channel.send(embed=embed, view=view, flags=flags)
 
         # Save now playing message ID
         self.database.set_now_playing(guild_id, msg.id)

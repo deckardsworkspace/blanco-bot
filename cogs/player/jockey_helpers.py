@@ -260,6 +260,38 @@ async def find_lavalink_track( # pylint: disable=too-many-statements
     return lavalink_track
 
 
+def invalidate_lavalink_track(item: QueueItem):
+    """
+    Removes a cached Lavalink track from Redis.
+
+    :param item: The QueueItem to invalidate the track for.
+    """
+    if REDIS is None:
+        return
+
+    # Determine key type
+    redis_key = None
+    redis_key_type = None
+    if item.spotify_id is not None:
+        redis_key = item.spotify_id
+        redis_key_type = 'spotify_id'
+    elif item.isrc is not None:
+        redis_key = item.isrc
+        redis_key_type = 'isrc'
+
+    # Invalidate cached Lavalink track
+    if redis_key is not None and redis_key_type is not None:
+        REDIS.invalidate_lavalink_track(
+            redis_key,
+            key_type=redis_key_type
+        )
+    else:
+        LOGGER.warning(
+            'Could not invalidate cached track for `%s\': no key',
+            item.title
+        )
+
+
 async def parse_query(
     node: 'Node',
     spotify: Spotify,

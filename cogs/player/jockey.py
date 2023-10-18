@@ -2,7 +2,7 @@
 Music player class for Blanco. Subclass of mafic.Player.
 """
 
-from asyncio import get_event_loop
+from asyncio import get_event_loop, sleep
 from time import time
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
@@ -18,7 +18,8 @@ from utils.musicbrainz import annotate_track
 from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
 
-from .jockey_helpers import find_lavalink_track, parse_query
+from .jockey_helpers import (find_lavalink_track, invalidate_lavalink_track,
+                             parse_query)
 from .queue import QueueManager
 
 if TYPE_CHECKING:
@@ -196,7 +197,36 @@ class Jockey(Player['BlancoBot']):
                 raise RuntimeError(err.args[0]) from err
 
         # Play track
-        await self.play(item.lavalink_track, volume=self.volume)
+        has_retried = False
+        while True:
+            try:
+                await self.play(item.lavalink_track, volume=self.volume)
+            except PlayerNotConnected as err:
+                # If we've already retried, give up
+                if has_retried:
+                    raise JockeyError(err.args[0]) from err
+
+                # Wait until we're connected
+                wait_time = 0
+                self._logger.warning(
+                    'PlayerNotConnected raised while trying to play `%s\', retrying...',
+                    item.title
+                )
+                while not self.connected:
+                    if wait_time >= 10:
+                        raise JockeyError('Timeout while waiting for player to connect') from err
+
+                    # Print wait message only once
+                    if wait_time == 0:
+                        self._logger.debug('Waiting 10 sec for player to connect...')
+                    await sleep(0.1)
+                    wait_time += 0.1
+
+                # Remove cached Lavalink track and try again
+                invalidate_lavalink_track(item)
+                has_retried = True
+            else:
+                break
 
         # We don't want to play if the player is not idle
         # as that will effectively skip the current track.
