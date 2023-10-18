@@ -2,7 +2,7 @@
 Music player class for Blanco. Subclass of mafic.Player.
 """
 
-from asyncio import get_event_loop
+from asyncio import get_event_loop, sleep
 from time import time
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
@@ -10,7 +10,6 @@ from mafic import Player, PlayerNotConnected
 from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
                       StageChannel, VoiceChannel)
 
-from database.redis import REDIS
 from dataclass.custom_embed import CustomEmbed
 from utils.embeds import create_error_embed
 from utils.exceptions import (EndOfQueueError, JockeyError, JockeyException,
@@ -204,14 +203,27 @@ class Jockey(Player['BlancoBot']):
                 await self.play(item.lavalink_track, volume=self.volume)
             except PlayerNotConnected:
                 # If we've already retried, give up
-                if has_retried or REDIS is None:
+                if has_retried:
                     raise
 
-                # Remove cached Lavalink track and try again
+                # Wait until we're connected
+                wait_time = 0
                 self._logger.warning(
-                    'PlayerNotConnected raised while playing `%s\'. Retrying.',
+                    'PlayerNotConnected raised while trying to play `%s\', retrying...',
                     item.title
                 )
+                while not self.connected:
+                    if wait_time >= 10:
+                        self._logger.error('Timeout while waiting for player to connect')
+                        raise
+
+                    # Print wait message only once
+                    if wait_time == 0:
+                        self._logger.debug('Waiting 10 sec for player to connect...')
+                    await sleep(0.1)
+                    wait_time += 0.1
+
+                # Remove cached Lavalink track and try again
                 invalidate_lavalink_track(item)
                 has_retried = True
             else:
