@@ -201,10 +201,10 @@ class Jockey(Player['BlancoBot']):
         while True:
             try:
                 await self.play(item.lavalink_track, volume=self.volume)
-            except PlayerNotConnected:
+            except PlayerNotConnected as err:
                 # If we've already retried, give up
                 if has_retried:
-                    raise
+                    raise JockeyError(err.args[0]) from err
 
                 # Wait until we're connected
                 wait_time = 0
@@ -214,8 +214,7 @@ class Jockey(Player['BlancoBot']):
                 )
                 while not self.connected:
                     if wait_time >= 10:
-                        self._logger.error('Timeout while waiting for player to connect')
-                        raise
+                        raise JockeyError('Timeout while waiting for player to connect') from err
 
                     # Print wait message only once
                     if wait_time == 0:
