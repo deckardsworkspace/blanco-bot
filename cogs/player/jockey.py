@@ -10,6 +10,7 @@ from mafic import Player, PlayerNotConnected
 from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
                       StageChannel, VoiceChannel)
 
+from database.redis import REDIS
 from dataclass.custom_embed import CustomEmbed
 from utils.embeds import create_error_embed
 from utils.exceptions import (EndOfQueueError, JockeyError, JockeyException,
@@ -18,7 +19,8 @@ from utils.musicbrainz import annotate_track
 from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
 
-from .jockey_helpers import find_lavalink_track, parse_query
+from .jockey_helpers import (find_lavalink_track, invalidate_lavalink_track,
+                             parse_query)
 from .queue import QueueManager
 
 if TYPE_CHECKING:
@@ -196,7 +198,24 @@ class Jockey(Player['BlancoBot']):
                 raise RuntimeError(err.args[0]) from err
 
         # Play track
-        await self.play(item.lavalink_track, volume=self.volume)
+        has_retried = False
+        while True:
+            try:
+                await self.play(item.lavalink_track, volume=self.volume)
+            except PlayerNotConnected:
+                # If we've already retried, give up
+                if has_retried or REDIS is None:
+                    raise
+
+                # Remove cached Lavalink track and try again
+                self._logger.warning(
+                    'PlayerNotConnected raised while playing `%s\'. Retrying.',
+                    item.title
+                )
+                invalidate_lavalink_track(item)
+                has_retried = True
+            else:
+                break
 
         # We don't want to play if the player is not idle
         # as that will effectively skip the current track.

@@ -61,6 +61,17 @@ class RedisClient:
         self._logger.debug('Got cached Lavalink track for %s:%s', key_type, key)
         return self._client.get(f'lavalink:{key_type}:{key}') # type: ignore
 
+    def invalidate_lavalink_track(self, key: str, *, key_type: str):
+        """
+        Removes a cached Lavalink track.
+        
+        :param key: The key to remove the track for.
+        :param key_type: The type of key to remove the track for, e.g. 'isrc' or 'spotify_id'.
+        """
+        self._logger.debug('Invalidating Lavalink track for %s:%s', key_type, key)
+        if self._client.exists(f'lavalink:{key_type}:{key}'):
+            self._client.delete(f'lavalink:{key_type}:{key}')
+
     def set_spotify_track(self, spotify_id: str, track: 'SpotifyTrack'):
         """
         Save a Spotify track.
