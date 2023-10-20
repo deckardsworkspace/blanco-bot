@@ -491,7 +491,7 @@ class BlancoBot(Bot):
 
         # Send message silently
         flags = MessageFlags()
-        flags.suppress_notifications = True
+        flags.suppress_notifications = True # pylint: disable=assigning-non-slot
         msg = await channel.send(embed=embed, view=view, flags=flags)
 
         # Save now playing message ID
