@@ -48,6 +48,11 @@ CONFIDENCE_THRESHOLD = 55
 # has an ISRC or not at all.
 DURATION_THRESHOLD = 10 * 1000 # 10 seconds
 
+# Unpausing the player after this many seconds will cause Blanco
+# to re-enqueue the track and restart playback at the last known position
+# to work around a bug in the Lavalink unpausing logic.
+UNPAUSE_THRESHOLD = 60 # 1 minute
+
 SPOTIFY_403_ERR_MSG = ''.join([
     '**Error 403** encountered while trying to {}.\n',
     'This is likely because this instance of Blanco uses Spotify API credentials ',

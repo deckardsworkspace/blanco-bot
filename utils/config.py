@@ -35,6 +35,7 @@ REDIS_PORT = -1
 REDIS_PASSWORD = None
 DEBUG_ENABLED = False
 DEBUG_GUILDS = None
+REENQUEUE_PAUSED = False
 
 # Parse config file if it exists
 if isfile('config.yml'):
@@ -71,6 +72,7 @@ if isfile('config.yml'):
 
             # Add optional config values
             MATCH_AHEAD = config_file['bot'].get('match_ahead', False)
+            REENQUEUE_PAUSED = config_file['bot'].get('reenqueue_paused', False)
             if 'server' in config_file:
                 ENABLE_SERVER = config_file['server']['enabled']
                 SERVER_PORT = config_file['server'].get('port', 8080)
@@ -106,6 +108,8 @@ SENTRY_ENV = environ.get('BLANCO_SENTRY_ENV', SENTRY_ENV)
 REDIS_HOST = environ.get('BLANCO_REDIS_HOST', REDIS_HOST)
 REDIS_PORT = int(environ.get('BLANCO_REDIS_PORT', REDIS_PORT))
 REDIS_PASSWORD = environ.get('BLANCO_REDIS_PASSWORD', REDIS_PASSWORD)
+if 'BLANCO_REENQUEUE_PAUSED' in environ:
+    REENQUEUE_PAUSED = environ['BLANCO_REENQUEUE_PAUSED'].lower() == 'true'
 if 'BLANCO_MATCH_AHEAD' in environ:
     MATCH_AHEAD = environ['BLANCO_MATCH_AHEAD'].lower() == 'true'
 if 'BLANCO_DEBUG' in environ:
@@ -184,5 +188,6 @@ config = Config(
     discord_oauth_id=DISCORD_OAUTH_ID,
     discord_oauth_secret=DISCORD_OAUTH_SECRET,
     lastfm_api_key=LASTFM_API_KEY,
-    lastfm_shared_secret=LASTFM_SHARED_SECRET
+    lastfm_shared_secret=LASTFM_SHARED_SECRET,
+    reenqueue_paused=REENQUEUE_PAUSED
 )

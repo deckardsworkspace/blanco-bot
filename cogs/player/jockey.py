@@ -11,6 +11,7 @@ from nextcord import (Colour, Forbidden, HTTPException, Message, NotFound,
                       StageChannel, VoiceChannel)
 
 from dataclass.custom_embed import CustomEmbed
+from utils.constants import UNPAUSE_THRESHOLD
 from utils.embeds import create_error_embed
 from utils.exceptions import (EndOfQueueError, JockeyError, JockeyException,
                               LavalinkSearchError, SpotifyNoResultsError)
@@ -48,6 +49,9 @@ class Jockey(Player['BlancoBot']):
         # Database
         self._db = client.database
         client.database.init_guild(channel.guild.id)
+
+        # Pause timestamp
+        self._pause_ts: Optional[int] = None
 
         # Queue
         self._queue_mgr = QueueManager(channel.guild.id, client.database)
@@ -182,7 +186,7 @@ class Jockey(Player['BlancoBot']):
 
         return None
 
-    async def _play(self, item: 'QueueItem') -> bool:
+    async def _play(self, item: 'QueueItem', position: Optional[int] = None) -> bool:
         if item.lavalink_track is None:
             try:
                 assert self._bot.config is not None
@@ -200,7 +204,13 @@ class Jockey(Player['BlancoBot']):
         has_retried = False
         while True:
             try:
-                await self.play(item.lavalink_track, volume=self.volume)
+                await self.play(
+                    item.lavalink_track,
+                    volume=self.volume,
+                    start_time=position,
+                    replace=True,
+                    pause=False
+                )
             except PlayerNotConnected as err:
                 # If we've already retried, give up
                 if has_retried:
@@ -226,12 +236,11 @@ class Jockey(Player['BlancoBot']):
                 invalidate_lavalink_track(item)
                 has_retried = True
             else:
-                break
+                # Clear pause timestamp for new track
+                if position is None:
+                    self._pause_ts = None
 
-        # We don't want to play if the player is not idle
-        # as that will effectively skip the current track.
-        if not self.playing:
-            await self.resume()
+                break
 
         # Save start time for scrobbling
         item.start_time = int(time())
@@ -387,6 +396,22 @@ class Jockey(Player['BlancoBot']):
         )
         return embed.get()
 
+    async def pause(self, pause: bool = True):
+        """
+        Pauses the player and stores the time at which playback was paused.
+
+        The timestamp is necessary because Lavalink 4.0.0 (beta) does not
+        properly resume tracks when they are paused for an extended period,
+        causing the track to skip to the next one in the queue after a few
+        seconds of resumed playback.
+
+        :param pause: Whether to pause or resume playback.
+        """
+        await super().pause(pause=pause)
+
+        # Store pause timestamp
+        self._pause_ts = int(time())
+
     async def play_impl(self, query: str, requester: int) -> str:
         """
         Adds an item to the player queue and begins playback if necessary.
@@ -448,6 +473,28 @@ class Jockey(Player['BlancoBot']):
 
         # Return removed track details
         return removed_track.title, removed_track.artist
+
+    async def resume(self):
+        """
+        Resumes the player from a paused state.
+
+        If the player was paused for an extended period, the current track
+        will be re-enqueued and played from the last position to work around
+        a bug in Lavalink 4.0.0 (beta).
+        """
+        # Check if we were paused for too long or if reenqueuing is disabled
+        assert self._bot.config is not None
+        if not self._bot.config.reenqueue_paused or (
+            self._pause_ts is None or int(time()) - self._pause_ts < UNPAUSE_THRESHOLD):
+            await super().resume()
+            return
+
+        # We were paused for too long, re-enqueue the current track
+        # and play from a little bit before the last position
+        last_pos = max(self.position - 10, 0)
+        self._pause_ts = None
+        self._logger.debug('Unpaused beyond %d sec threshold, re-enqueueing', UNPAUSE_THRESHOLD)
+        await self._play(self._queue_mgr.current, last_pos)
 
     async def set_volume(self, volume: int, /):
         """
