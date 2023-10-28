@@ -69,6 +69,7 @@ class Config:
     match_ahead: bool = False
     debug_enabled: bool = False
     debug_guild_ids: Optional[List[int]] = None
+    reenqueue_paused: bool = False
 
     # Convenience
     @property
