@@ -179,11 +179,14 @@ class BlancoBot(Bot):
         embed = create_error_embed(str(error))
 
         # Check if we can reply to this interaction
-        if itx.response.is_done():
-            if isinstance(itx.channel, PartialMessageable):
-                await itx.channel.send(embed=embed)
-        else:
-            await itx.response.send_message(embed=embed)
+        try:
+            if itx.response.is_done():
+                if isinstance(itx.channel, PartialMessageable):
+                    await itx.channel.send(embed=embed)
+            else:
+                await itx.response.send_message(embed=embed)
+        except NotFound:
+            self._logger.warning('Error 404 while sending error msg for interaction %d', itx.id)
 
     async def on_jockey_disconnect(self, jockey: 'Jockey'):
         """
