@@ -352,7 +352,7 @@ class PlayerCog(Cog):
         try:
             playlists = spotify.get_user_playlists()
         except HTTPError as err:
-            if err.response.status_code == 403:
+            if err.response is not None and err.response.status_code == 403:
                 return await itx.followup.send(embed=create_error_embed(
                     message=SPOTIFY_403_ERR_MSG.format('get your playlists')
                 ), ephemeral=True)
