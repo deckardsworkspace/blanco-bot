@@ -121,7 +121,7 @@ class PrivateSpotify:
         except HTTPError as err:
             self._logger.error(
                 'Error %d getting Spotify playlists for user %d.\n%s',
-                err.response.status_code,
+                err.response.status_code if err.response is not None else -1,
                 self._credentials.user_id,
                 err
             )
@@ -162,7 +162,7 @@ class PrivateSpotify:
         except HTTPError as err:
             self._logger.error(
                 'Error %d while trying to Like track %s.\n%s',
-                err.response.status_code,
+                err.response.status_code if err.response is not None else -1,
                 spotify_id,
                 err
             )
