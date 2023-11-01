@@ -6,6 +6,7 @@ from asyncio import get_event_loop
 from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
+from aiohttp.client_exceptions import ClientConnectorError
 from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
                       Interaction, NotFound, PartialMessageable, StageChannel,
@@ -457,15 +458,25 @@ class BlancoBot(Bot):
                     node.id
                 )
 
-            await self._pool.create_node(
-                host=node.host,
-                port=node.port,
-                password=node.password,
-                regions=regions,
-                resuming_session_id=session_id,
-                label=node.id,
-                secure=node.secure
-            )
+            try:
+                await self._pool.create_node(
+                    host=node.host,
+                    port=node.port,
+                    password=node.password,
+                    regions=regions,
+                    resuming_session_id=session_id,
+                    label=node.id,
+                    secure=node.secure
+                )
+            except ClientConnectorError:
+                self._logger.error(
+                    'Lavalink node `%s\' refused connection',
+                    node.id
+                )
+
+        # Check if we have any nodes
+        if len(self._pool.nodes) == 0:
+            self._logger.critical('No Lavalink nodes available')
 
         self._pool_initialized = True
 

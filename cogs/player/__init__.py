@@ -275,6 +275,12 @@ class PlayerCog(Cog):
             raise RuntimeError('[player::play] itx.channel is not Messageable')
         self._bot.set_status_channel(guild_id, channel)
 
+        # Check if Lavalink is ready
+        if not self._bot.pool_initialized or len(self._bot.pool.nodes) == 0:
+            return await itx.response.send_message(embed=create_error_embed(
+                message='No Lavalink nodes available. Try again later.'
+            ))
+
         # Connect to voice
         await itx.response.defer()
         voice_channel = itx.user.voice.channel
