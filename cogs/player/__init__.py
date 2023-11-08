@@ -314,8 +314,7 @@ class PlayerCog(Cog):
 
         # Add Last.fm integration promo if enabled
         assert self._bot.config is not None
-        server_enabled = self._bot.config.enable_server
-        if (server_enabled and self._bot.config.base_url is not None and
+        if (self._bot.config.base_url is not None and
             self._bot.config.lastfm_api_key is not None and
             self._bot.config.lastfm_shared_secret is not None):
             # Check if the user has connected their Last.fm account
