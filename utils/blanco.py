@@ -11,7 +11,7 @@ from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
                       Interaction, NotFound, PartialMessageable, StageChannel,
                       TextChannel, Thread, VoiceChannel, MessageFlags)
-from nextcord.ext.commands import Bot
+from nextcord.ext.commands import Bot, ExtensionNotLoaded
 
 from cogs.player.jockey_helpers import find_lavalink_track
 from database import Database
@@ -135,10 +135,21 @@ class BlancoBot(Bot):
             raise RuntimeError('Received on_ready event before config was initialized')
 
         self._logger.info('Logged in as %s', self.user)
+
+        # Try to unload cogs first if the bot was restarted
+        try:
+            self.unload_extension('cogs')
+        except ExtensionNotLoaded:
+            pass
         self.load_extension('cogs')
 
         # Load server extension if server is enabled
         if self._config.enable_server:
+            # Try to unload server first if the bot was restarted
+            try:
+                self.unload_extension('server')
+            except ExtensionNotLoaded:
+                pass
             self._logger.info('Starting web server...')
             self.load_extension('server')
         else:
