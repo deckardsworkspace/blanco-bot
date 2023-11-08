@@ -103,7 +103,6 @@ class DebugCog(Cog):
         )
 
     @slash_command(name='stats')
-    @application_checks.is_owner()
     async def stats(self, itx: Interaction):
         """
         Shows bot statistics.
