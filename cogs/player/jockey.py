@@ -396,6 +396,41 @@ class Jockey(Player['BlancoBot']):
         )
         return embed.get()
 
+    async def on_load_failed(self, failed_source: 'Track'):
+        """
+        Called when a track fails to load.
+        Sends an error message to the status channel
+        and skips to the next track in queue.
+
+        :param failed_track: The track that failed to load. Must be an instance of mafic.Track.
+        """
+        # Get current track and its index
+        failed_track = self._queue_mgr.current
+        index = self._queue_mgr.current_shuffled_index + 1
+        queue_size = self._queue_mgr.size
+        
+        # Send error embed
+        embed = CustomEmbed(
+            color=Colour.red(),
+            title=':warning:｜Failed to load track',
+            description=[
+                'This could be due to a temporary issue with the source,',
+                'a bot outage, or the track may be unavailable for playback.',
+                'You can try playing the track again later.'
+            ],
+            fields=[
+                ['Track', f'`{failed_track.title}`\n{failed_track.artist}'],
+                ['Position in queue', f'{index} of {queue_size}'],
+                ['Playback source', f'`{failed_source.title}`\n{failed_source.author}'],
+                ['Playback URL', f'[{failed_source.source}]({failed_source.uri})'],
+            ],
+            footer='Skipping to next track...',
+        )
+        await self.status_channel.send(embed=embed.get())
+
+        # Skip to next track
+        await self.skip()
+
     async def pause(self, pause: bool = True):
         """
         Pauses the player and stores the time at which playback was paused.
@@ -509,6 +544,9 @@ class Jockey(Player['BlancoBot']):
 
         :param forward: Whether to skip forward or backward.
         :param index: The index of the track to skip to.
+        :param auto: Whether this is an automatic skip, i.e. not part of a user's command.
+            This is True when the player skips to the next track automatically,
+            such as when the current track ends.
         """
         # It takes a while for the player to skip,
         # so let's remove the player controls while we wait

@@ -72,7 +72,7 @@ def annotate_track(
             try:
                 mbid = mb_lookup_isrc(track)
             except HTTPError as err:
-                if err.response.status_code == 404:
+                if err.response is not None and err.response.status_code == 404:
                     mbid, isrc = mb_lookup(track)
                 else:
                     raise
@@ -148,7 +148,7 @@ def mb_lookup(track: 'QueueItem') -> Tuple[str | None, str | None]:
     except HTTPError as err:
         LOGGER.error(
             'Error %d looking up track `%s\' on MusicBrainz.\n%s',
-            err.response.status_code,
+            err.response.status_code if err.response is not None else -1,
             track.title,
             err
         )

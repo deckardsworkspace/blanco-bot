@@ -275,6 +275,12 @@ class PlayerCog(Cog):
             raise RuntimeError('[player::play] itx.channel is not Messageable')
         self._bot.set_status_channel(guild_id, channel)
 
+        # Check if Lavalink is ready
+        if not self._bot.pool_initialized or len(self._bot.pool.nodes) == 0:
+            return await itx.response.send_message(embed=create_error_embed(
+                message='No Lavalink nodes available. Try again later.'
+            ))
+
         # Connect to voice
         await itx.response.defer()
         voice_channel = itx.user.voice.channel
@@ -308,8 +314,7 @@ class PlayerCog(Cog):
 
         # Add Last.fm integration promo if enabled
         assert self._bot.config is not None
-        server_enabled = self._bot.config.enable_server
-        if (server_enabled and self._bot.config.base_url is not None and
+        if (self._bot.config.base_url is not None and
             self._bot.config.lastfm_api_key is not None and
             self._bot.config.lastfm_shared_secret is not None):
             # Check if the user has connected their Last.fm account
@@ -352,7 +357,7 @@ class PlayerCog(Cog):
         try:
             playlists = spotify.get_user_playlists()
         except HTTPError as err:
-            if err.response.status_code == 403:
+            if err.response is not None and err.response.status_code == 403:
                 return await itx.followup.send(embed=create_error_embed(
                     message=SPOTIFY_403_ERR_MSG.format('get your playlists')
                 ), ephemeral=True)

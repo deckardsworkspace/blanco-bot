@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from utils.blanco import BlancoBot
 
 
-class ShuffleButton(Button['NowPlayingView']):
+class ShuffleButton(Button):
     """
     Shuffle button for the Now Playing view.
     """
@@ -173,11 +173,18 @@ class NowPlayingView(View):
         try:
             spotify.save_track(self._spotify_id)
         except HTTPError as err:
-            if err.response.status_code == 403:
-                message = SPOTIFY_403_ERR_MSG.format('Like this track')
+            if err.response is not None:
+                if err.response.status_code == 403:
+                    message = SPOTIFY_403_ERR_MSG.format('Like this track')
+                else:
+                    message = ''.join([
+                        f'**Error {err.response.status_code}** while trying to Like this track.',
+                        'Please try again later.\n',
+                        f'```\n{err}```'
+                    ])
             else:
                 message = ''.join([
-                    f'**Error {err.response.status_code}** while trying to Like this track.',
+                    'Error while trying to Like this track.',
                     'Please try again later.\n',
                     f'```\n{err}```'
                 ])

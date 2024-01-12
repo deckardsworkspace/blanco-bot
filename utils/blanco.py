@@ -6,11 +6,12 @@ from asyncio import get_event_loop
 from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
+from aiohttp.client_exceptions import ClientConnectorError
 from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import (Activity, ActivityType, Forbidden, HTTPException,
                       Interaction, NotFound, PartialMessageable, StageChannel,
                       TextChannel, Thread, VoiceChannel, MessageFlags)
-from nextcord.ext.commands import Bot
+from nextcord.ext.commands import Bot, ExtensionNotLoaded
 
 from cogs.player.jockey_helpers import find_lavalink_track
 from database import Database
@@ -134,10 +135,21 @@ class BlancoBot(Bot):
             raise RuntimeError('Received on_ready event before config was initialized')
 
         self._logger.info('Logged in as %s', self.user)
+
+        # Try to unload cogs first if the bot was restarted
+        try:
+            self.unload_extension('cogs')
+        except ExtensionNotLoaded:
+            pass
         self.load_extension('cogs')
 
         # Load server extension if server is enabled
         if self._config.enable_server:
+            # Try to unload server first if the bot was restarted
+            try:
+                self.unload_extension('server')
+            except ExtensionNotLoaded:
+                pass
             self._logger.info('Starting web server...')
             self.load_extension('server')
         else:
@@ -179,11 +191,14 @@ class BlancoBot(Bot):
         embed = create_error_embed(str(error))
 
         # Check if we can reply to this interaction
-        if itx.response.is_done():
-            if isinstance(itx.channel, PartialMessageable):
-                await itx.channel.send(embed=embed)
-        else:
-            await itx.response.send_message(embed=embed)
+        try:
+            if itx.response.is_done():
+                if isinstance(itx.channel, PartialMessageable):
+                    await itx.channel.send(embed=embed)
+            else:
+                await itx.response.send_message(embed=embed)
+        except NotFound:
+            self._logger.warning('Error 404 while sending error msg for interaction %d', itx.id)
 
     async def on_jockey_disconnect(self, jockey: 'Jockey'):
         """
@@ -305,6 +320,9 @@ class BlancoBot(Bot):
                 event.track.title,
                 event.player.guild.name
             )
+
+            # Call load failed hook
+            await event.player.on_load_failed(event.track)
         else:
             self._logger.error(
                 'Unhandled %s in %s for `%s\'',
@@ -454,15 +472,25 @@ class BlancoBot(Bot):
                     node.id
                 )
 
-            await self._pool.create_node(
-                host=node.host,
-                port=node.port,
-                password=node.password,
-                regions=regions,
-                resuming_session_id=session_id,
-                label=node.id,
-                secure=node.secure
-            )
+            try:
+                await self._pool.create_node(
+                    host=node.host,
+                    port=node.port,
+                    password=node.password,
+                    regions=regions,
+                    resuming_session_id=session_id,
+                    label=node.id,
+                    secure=node.secure
+                )
+            except ClientConnectorError:
+                self._logger.error(
+                    'Lavalink node `%s\' refused connection',
+                    node.id
+                )
+
+        # Check if we have any nodes
+        if len(self._pool.nodes) == 0:
+            self._logger.critical('No Lavalink nodes available')
 
         self._pool_initialized = True
 
