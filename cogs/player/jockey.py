@@ -396,6 +396,22 @@ class Jockey(Player['BlancoBot']):
         )
         return embed.get()
 
+    async def on_load_failed(self, failed_track: 'Track'):
+        """
+        Called when a track fails to load.
+        Sends an error message to the status channel
+        and skips to the next track in queue.
+
+        :param failed_track: The track that failed to load.
+        """
+        # Send error embed
+        await self.status_channel.send(embed=create_error_embed(
+            f'Failed to load track `{failed_track.title}`'
+        ))
+
+        # Skip to next track
+        await self.skip()
+
     async def pause(self, pause: bool = True):
         """
         Pauses the player and stores the time at which playback was paused.
@@ -509,6 +525,9 @@ class Jockey(Player['BlancoBot']):
 
         :param forward: Whether to skip forward or backward.
         :param index: The index of the track to skip to.
+        :param auto: Whether this is an automatic skip, i.e. not part of a user's command.
+            This is True when the player skips to the next track automatically,
+            such as when the current track ends.
         """
         # It takes a while for the player to skip,
         # so let's remove the player controls while we wait

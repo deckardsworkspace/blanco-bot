@@ -320,6 +320,9 @@ class BlancoBot(Bot):
                 event.track.title,
                 event.player.guild.name
             )
+
+            # Call load failed hook
+            await event.player.on_load_failed(event.track)
         else:
             self._logger.error(
                 'Unhandled %s in %s for `%s\'',
