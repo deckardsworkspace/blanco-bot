@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from utils.blanco import BlancoBot
 
 
-class ShuffleButton(Button['NowPlayingView']):
+class ShuffleButton(Button):
     """
     Shuffle button for the Now Playing view.
     """
