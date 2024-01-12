@@ -396,18 +396,37 @@ class Jockey(Player['BlancoBot']):
         )
         return embed.get()
 
-    async def on_load_failed(self, failed_track: 'Track'):
+    async def on_load_failed(self, failed_source: 'Track'):
         """
         Called when a track fails to load.
         Sends an error message to the status channel
         and skips to the next track in queue.
 
-        :param failed_track: The track that failed to load.
+        :param failed_track: The track that failed to load. Must be an instance of mafic.Track.
         """
+        # Get current track and its index
+        failed_track = self._queue_mgr.current
+        index = self._queue_mgr.current_shuffled_index + 1
+        queue_size = self._queue_mgr.size
+        
         # Send error embed
-        await self.status_channel.send(embed=create_error_embed(
-            f'Failed to load track `{failed_track.title}`'
-        ))
+        embed = CustomEmbed(
+            color=Colour.red(),
+            title=':warning:｜Failed to load track',
+            description=[
+                'This could be due to a temporary issue with the source,',
+                'a bot outage, or the track may be unavailable for playback.',
+                'You can try playing the track again later.'
+            ],
+            fields=[
+                ['Track', f'`{failed_track.title}`\n{failed_track.artist}'],
+                ['Position in queue', f'{index} of {queue_size}'],
+                ['Playback source', f'`{failed_source.title}`\n{failed_source.author}'],
+                ['Playback URL', f'[{failed_source.source}]({failed_source.uri})'],
+            ],
+            footer='Skipping to next track...',
+        )
+        await self.status_channel.send(embed=embed.get())
 
         # Skip to next track
         await self.skip()
