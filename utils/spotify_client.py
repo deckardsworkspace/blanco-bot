@@ -4,6 +4,10 @@ Wrapper for the spotipy Spotify client which supports pagination by default.
 
 from typing import Any, Dict, List, Optional, Tuple
 
+from requests.exceptions import ConnectionError
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_fixed, wait_random)
+
 import spotipy
 
 from dataclass.spotify import SpotifyResult, SpotifyTrack
@@ -191,6 +195,11 @@ class Spotify:
 
         return [extract_track_info(track) for track in response['tracks']['items']]
 
+    @retry(
+        retry=retry_if_exception_type(ConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2)
+    )
     def search(self, query: str, search_type: str) -> List[SpotifyResult]:
         """
         Searches Spotify for a given artist, album, or playlist,
