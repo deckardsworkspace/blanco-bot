@@ -202,11 +202,11 @@ class Spotify:
         if response is None or len(response['tracks']['items']) == 0:
             raise SpotifyNoResultsError
 
-        # Filter out tracks with blacklisted words in the title
+        # Filter out tracks with blacklisted words not in the original query
         results = []
         for result in response['tracks']['items']:
             for word in BLACKLIST:
-                if word in result['name'].lower():
+                if word in result['name'].lower() and word not in query.lower():
                     break
             else:
                 results.append(extract_track_info(result))
