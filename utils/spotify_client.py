@@ -83,6 +83,11 @@ class Spotify:
             return default
         return art[0]['url']
 
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2)
+    )
     def get_artist_top_tracks(self, artist_id: str) -> List[SpotifyTrack]:
         """
         Returns a list of SpotifyTrack objects for a given artist's
@@ -94,6 +99,11 @@ class Spotify:
 
         return [extract_track_info(track) for track in response['tracks']]
 
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2)
+    )
     def get_track_art(self, track_id: str) -> str:
         """
         Returns the track artwork for a given track ID.
@@ -103,6 +113,11 @@ class Spotify:
             raise SpotifyInvalidURLError(f'spotify:track:{track_id}')
         return self.__get_art(result['album']['images'])
 
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2)
+    )
     def get_track(self, track_id: str) -> SpotifyTrack:
         """
         Returns a SpotifyTrack object for a given track ID.
@@ -123,6 +138,11 @@ class Spotify:
 
         return extract_track_info(result)
 
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2)
+    )
     def get_tracks(self, list_type: str, list_id: str) -> Tuple[str, str, List[SpotifyTrack]]:
         """
         Returns a list of SpotifyTrack objects for a given album or playlist ID.
