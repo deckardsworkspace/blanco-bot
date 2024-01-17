@@ -32,7 +32,7 @@ def filter_results(query: str, search_results: List['Track']) -> List[LavalinkRe
         # if the original query did not ask for it
         valid = True
         for word in BLACKLIST:
-            if word in result.title.lower() and not word in query.lower():
+            if word in result.title.lower() and word not in query.lower():
                 valid = False
                 break
 
