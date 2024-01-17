@@ -594,8 +594,11 @@ class Jockey(Player['BlancoBot']):
         # Edit message
         try:
             await np_msg.edit(embed=self.now_playing())
-        except (HTTPException, Forbidden):
-            self._logger.warning(
-                'Failed to edit now playing message for %s',
-                self.guild.name
-            )
+        except (HTTPException, Forbidden) as exc:
+            # Ignore 404
+            if not isinstance(exc, NotFound):
+                self._logger.warning(
+                    'Failed to edit now playing message for %s: %s',
+                    self.guild.name,
+                    exc
+                )
