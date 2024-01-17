@@ -185,6 +185,11 @@ class Spotify:
             for x in tracks
         ]
 
+    @retry(
+        retry=retry_if_exception_type(ConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2)
+    )
     def search_track(self, query, limit: int = 1) -> List[SpotifyTrack]:
         """
         Searches Spotify for a given query and returns a list of SpotifyTrack objects.
