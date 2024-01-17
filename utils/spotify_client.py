@@ -4,7 +4,7 @@ Wrapper for the spotipy Spotify client which supports pagination by default.
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError as RequestsConnectionError
 from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
                       wait_fixed, wait_random)
 
@@ -187,7 +187,7 @@ class Spotify:
         ]
 
     @retry(
-        retry=retry_if_exception_type(ConnectionError),
+        retry=retry_if_exception_type(RequestsConnectionError),
         stop=stop_after_attempt(3),
         wait=wait_fixed(1) + wait_random(0, 2)
     )
@@ -214,7 +214,7 @@ class Spotify:
         return results[:limit]
 
     @retry(
-        retry=retry_if_exception_type(ConnectionError),
+        retry=retry_if_exception_type(RequestsConnectionError),
         stop=stop_after_attempt(3),
         wait=wait_fixed(1) + wait_random(0, 2)
     )
