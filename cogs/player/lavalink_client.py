@@ -9,32 +9,12 @@ from typing import TYPE_CHECKING, List, Optional
 from mafic import Playlist, SearchType, TrackLoadException
 
 from dataclass.lavalink_result import LavalinkResult
+from utils.constants import BLACKLIST
 from utils.exceptions import LavalinkSearchError
 from utils.fuzzy import check_similarity
 
 if TYPE_CHECKING:
     from mafic import Node, Track
-
-
-BLACKLIST = (
-    '3d'
-    '8d',
-    'cover',
-    'instrumental',
-    'karaoke',
-    'live',
-    'loop',
-    'mashup',
-    'minus one',
-    'performance',
-    'piano',
-    'remix',
-    'rendition',
-    'reverb',
-    'slowed',
-    'sped',
-    'speed'
-)
 
 
 def filter_results(query: str, search_results: List['Track']) -> List[LavalinkResult]:

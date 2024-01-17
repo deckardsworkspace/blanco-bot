@@ -13,6 +13,7 @@ import spotipy
 from dataclass.spotify import SpotifyResult, SpotifyTrack
 from database.redis import REDIS
 
+from .constants import BLACKLIST
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
 from .time import human_readable_time
 
@@ -193,12 +194,24 @@ class Spotify:
     def search_track(self, query, limit: int = 1) -> List[SpotifyTrack]:
         """
         Searches Spotify for a given query and returns a list of SpotifyTrack objects.
+
+        :param query: The name of a track to search for.
+        :param limit: The maximum number of results to return.
         """
-        response = self._client.search(query, limit=limit, type='track')
+        response = self._client.search(query, limit=20, type='track')
         if response is None or len(response['tracks']['items']) == 0:
             raise SpotifyNoResultsError
 
-        return [extract_track_info(track) for track in response['tracks']['items']]
+        # Filter out tracks with blacklisted words in the title
+        results = []
+        for result in response['tracks']['items']:
+            for word in BLACKLIST:
+                if word in result['name'].lower():
+                    break
+            else:
+                results.append(extract_track_info(result))
+
+        return results[:limit]
 
     @retry(
         retry=retry_if_exception_type(ConnectionError),
