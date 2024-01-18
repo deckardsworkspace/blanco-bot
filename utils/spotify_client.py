@@ -4,18 +4,51 @@ Wrapper for the spotipy Spotify client which supports pagination by default.
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from requests.exceptions import ConnectionError as RequestsConnectionError
-from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
-                      wait_fixed, wait_random)
-
 import spotipy
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from tenacity import (RetryCallState, retry, retry_if_exception_type,
+                      stop_after_attempt, wait_fixed, wait_random)
 
-from dataclass.spotify import SpotifyResult, SpotifyTrack
 from database.redis import REDIS
+from dataclass.spotify import SpotifyResult, SpotifyTrack
 
 from .constants import BLACKLIST
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
+from .logger import create_logger
 from .time import human_readable_time
+
+# Retry logger
+RETRY_LOGGER = create_logger('spotify_retry')
+
+
+def log_call(retry_state: RetryCallState) -> None:
+    """
+    Logs an API call
+    """
+    RETRY_LOGGER.debug(
+        'Calling Spotify API: %s(%s, %s)',
+        retry_state.fn,
+        retry_state.args,
+        retry_state.kwargs
+    )
+
+
+def log_failure(retry_state: RetryCallState) -> None:
+    """
+    Logs a retry attempt.
+    """
+    # Log outcome
+    if retry_state.outcome is not None:
+        RETRY_LOGGER.debug('%s() failed: %s', retry_state.fn, retry_state.outcome)
+        RETRY_LOGGER.debug('  Exception: %s', retry_state.outcome.exception())
+        RETRY_LOGGER.debug('  Args: %s', retry_state.args)
+        RETRY_LOGGER.debug('  Kwargs: %s', retry_state.kwargs)
+    
+    RETRY_LOGGER.warning(
+        'Retrying %s(), attempt %s',
+        retry_state.fn,
+        retry_state.attempt_number
+    )
 
 
 def extract_track_info(
@@ -86,7 +119,9 @@ class Spotify:
     @retry(
         retry=retry_if_exception_type(RequestsConnectionError),
         stop=stop_after_attempt(3),
-        wait=wait_fixed(1) + wait_random(0, 2)
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
     )
     def get_artist_top_tracks(self, artist_id: str) -> List[SpotifyTrack]:
         """
@@ -102,7 +137,9 @@ class Spotify:
     @retry(
         retry=retry_if_exception_type(RequestsConnectionError),
         stop=stop_after_attempt(3),
-        wait=wait_fixed(1) + wait_random(0, 2)
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
     )
     def get_track_art(self, track_id: str) -> str:
         """
@@ -116,7 +153,9 @@ class Spotify:
     @retry(
         retry=retry_if_exception_type(RequestsConnectionError),
         stop=stop_after_attempt(3),
-        wait=wait_fixed(1) + wait_random(0, 2)
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
     )
     def get_track(self, track_id: str) -> SpotifyTrack:
         """
@@ -141,7 +180,9 @@ class Spotify:
     @retry(
         retry=retry_if_exception_type(RequestsConnectionError),
         stop=stop_after_attempt(3),
-        wait=wait_fixed(1) + wait_random(0, 2)
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
     )
     def get_tracks(self, list_type: str, list_id: str) -> Tuple[str, str, List[SpotifyTrack]]:
         """
@@ -209,7 +250,9 @@ class Spotify:
     @retry(
         retry=retry_if_exception_type(RequestsConnectionError),
         stop=stop_after_attempt(3),
-        wait=wait_fixed(1) + wait_random(0, 2)
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
     )
     def search_track(self, query, limit: int = 1) -> List[SpotifyTrack]:
         """
@@ -236,7 +279,9 @@ class Spotify:
     @retry(
         retry=retry_if_exception_type(RequestsConnectionError),
         stop=stop_after_attempt(3),
-        wait=wait_fixed(1) + wait_random(0, 2)
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
     )
     def search(self, query: str, search_type: str) -> List[SpotifyResult]:
         """
