@@ -5,12 +5,52 @@ Wrapper for the spotipy Spotify client which supports pagination by default.
 from typing import Any, Dict, List, Optional, Tuple
 
 import spotipy
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from tenacity import (RetryCallState, retry, retry_if_exception_type,
+                      stop_after_attempt, wait_fixed, wait_random)
 
-from dataclass.spotify import SpotifyResult, SpotifyTrack
 from database.redis import REDIS
+from dataclass.spotify import SpotifyResult, SpotifyTrack
 
+from .constants import BLACKLIST
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError
+from .logger import create_logger
 from .time import human_readable_time
+
+# Retry logger
+RETRY_LOGGER = create_logger('spotify_retry')
+
+
+def log_call(retry_state: RetryCallState) -> None:
+    """
+    Logs an API call
+    """
+    RETRY_LOGGER.debug(
+        'Calling Spotify API: %s(%s, %s)',
+        getattr(retry_state.fn, '__name__', repr(retry_state.fn)),
+        retry_state.args,
+        retry_state.kwargs
+    )
+
+
+def log_failure(retry_state: RetryCallState) -> None:
+    """
+    Logs a retry attempt.
+    """
+    func_name = getattr(retry_state.fn, '__name__', repr(retry_state.fn))
+
+    # Log outcome
+    if retry_state.outcome is not None:
+        RETRY_LOGGER.debug('%s() failed: %s', func_name, retry_state.outcome)
+        RETRY_LOGGER.debug('  Exception: %s', retry_state.outcome.exception())
+        RETRY_LOGGER.debug('  Args: %s', retry_state.args)
+        RETRY_LOGGER.debug('  Kwargs: %s', retry_state.kwargs)
+
+    RETRY_LOGGER.warning(
+        'Retrying %s(), attempt %s',
+        func_name,
+        retry_state.attempt_number
+    )
 
 
 def extract_track_info(
@@ -78,6 +118,13 @@ class Spotify:
             return default
         return art[0]['url']
 
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
+    )
     def get_artist_top_tracks(self, artist_id: str) -> List[SpotifyTrack]:
         """
         Returns a list of SpotifyTrack objects for a given artist's
@@ -89,6 +136,13 @@ class Spotify:
 
         return [extract_track_info(track) for track in response['tracks']]
 
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
+    )
     def get_track_art(self, track_id: str) -> str:
         """
         Returns the track artwork for a given track ID.
@@ -98,6 +152,13 @@ class Spotify:
             raise SpotifyInvalidURLError(f'spotify:track:{track_id}')
         return self.__get_art(result['album']['images'])
 
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
+    )
     def get_track(self, track_id: str) -> SpotifyTrack:
         """
         Returns a SpotifyTrack object for a given track ID.
@@ -118,6 +179,13 @@ class Spotify:
 
         return extract_track_info(result)
 
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
+    )
     def get_tracks(self, list_type: str, list_id: str) -> Tuple[str, str, List[SpotifyTrack]]:
         """
         Returns a list of SpotifyTrack objects for a given album or playlist ID.
@@ -181,16 +249,42 @@ class Spotify:
             for x in tracks
         ]
 
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
+    )
     def search_track(self, query, limit: int = 1) -> List[SpotifyTrack]:
         """
         Searches Spotify for a given query and returns a list of SpotifyTrack objects.
+
+        :param query: The name of a track to search for.
+        :param limit: The maximum number of results to return.
         """
-        response = self._client.search(query, limit=limit, type='track')
+        response = self._client.search(query, limit=20, type='track')
         if response is None or len(response['tracks']['items']) == 0:
             raise SpotifyNoResultsError
 
-        return [extract_track_info(track) for track in response['tracks']['items']]
+        # Filter out tracks with blacklisted words not in the original query
+        results = []
+        for result in response['tracks']['items']:
+            for word in BLACKLIST:
+                if word in result['name'].lower() and word not in query.lower():
+                    break
+            else:
+                results.append(extract_track_info(result))
 
+        return results[:limit]
+
+    @retry(
+        retry=retry_if_exception_type(RequestsConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(1) + wait_random(0, 2),
+        before=log_call,
+        before_sleep=log_failure
+    )
     def search(self, query: str, search_type: str) -> List[SpotifyResult]:
         """
         Searches Spotify for a given artist, album, or playlist,

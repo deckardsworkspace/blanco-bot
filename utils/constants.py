@@ -38,6 +38,28 @@ SPOTIFY_API_BASE_URL = URL.build(
     path='/v1'
 )
 
+# Results with these words in the title will be filtered out
+# unless the user's query also contains these words.
+BLACKLIST = (
+    '3d'
+    '8d',
+    'cover',
+    'instrumental',
+    'karaoke',
+    'live',
+    'loop',
+    'mashup',
+    'minus one',
+    'performance',
+    'piano',
+    'remix',
+    'rendition',
+    'reverb',
+    'slowed',
+    'sped',
+    'speed'
+)
+
 # A top search result below this threshold will not be considered for playback
 # and Blanco will fall back to YouTube search. See
 # jockey_helpers.py:check_similarity_weighted() for the computation.
