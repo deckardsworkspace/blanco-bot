@@ -45,7 +45,7 @@ def log_failure(retry_state: RetryCallState) -> None:
         RETRY_LOGGER.debug('  Exception: %s', retry_state.outcome.exception())
         RETRY_LOGGER.debug('  Args: %s', retry_state.args)
         RETRY_LOGGER.debug('  Kwargs: %s', retry_state.kwargs)
-    
+
     RETRY_LOGGER.warning(
         'Retrying %s(), attempt %s',
         func_name,
