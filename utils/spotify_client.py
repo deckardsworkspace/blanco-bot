@@ -27,7 +27,7 @@ def log_call(retry_state: RetryCallState) -> None:
     """
     RETRY_LOGGER.debug(
         'Calling Spotify API: %s(%s, %s)',
-        retry_state.fn,
+        getattr(retry_state.fn, '__name__', repr(retry_state.fn)),
         retry_state.args,
         retry_state.kwargs
     )
@@ -37,16 +37,18 @@ def log_failure(retry_state: RetryCallState) -> None:
     """
     Logs a retry attempt.
     """
+    func_name = getattr(retry_state.fn, '__name__', repr(retry_state.fn))
+
     # Log outcome
     if retry_state.outcome is not None:
-        RETRY_LOGGER.debug('%s() failed: %s', retry_state.fn, retry_state.outcome)
+        RETRY_LOGGER.debug('%s() failed: %s', func_name, retry_state.outcome)
         RETRY_LOGGER.debug('  Exception: %s', retry_state.outcome.exception())
         RETRY_LOGGER.debug('  Args: %s', retry_state.args)
         RETRY_LOGGER.debug('  Kwargs: %s', retry_state.kwargs)
     
     RETRY_LOGGER.warning(
         'Retrying %s(), attempt %s',
-        retry_state.fn,
+        func_name,
         retry_state.attempt_number
     )
 
