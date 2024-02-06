@@ -191,8 +191,12 @@ class PlayerCog(Cog):
 
         # Dispatch to jockey
         await itx.response.defer()
-        await jockey.skip(index=position - 1, auto=False)
-        await itx.followup.send(embed=create_success_embed(f'Jumped to track {str(position)}'))
+        try:
+            await jockey.skip(index=position - 1, auto=False)
+        except JockeyError as err:
+            await itx.followup.send(embed=create_error_embed(str(err)))
+        else:
+            await itx.followup.send(embed=create_success_embed(f'Jumped to track {str(position)}'))
 
     @slash_command(name='loop')
     @application_checks.check(check_mutual_voice)
