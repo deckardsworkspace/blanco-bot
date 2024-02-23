@@ -18,7 +18,7 @@ from database import Database
 from views.now_playing import NowPlayingView
 
 from .embeds import create_error_embed
-from .exceptions import EndOfQueueError
+from .exceptions import EndOfQueueError, LavalinkSearchError
 from .logger import create_logger
 from .scrobbler import Scrobbler
 from .spotify_client import Spotify
@@ -35,6 +35,21 @@ if TYPE_CHECKING:
 
 
 StatusChannel = Union[PartialMessageable, VoiceChannel, TextChannel, StageChannel, Thread]
+
+
+# Match-ahead wrapper for finding a Lavalink track with exception handling
+async def match_ahead(logger: 'Logger', *args, **kwargs):
+    """
+    Wrapper for find_lavalink_track with exception handling.
+    """
+    try:
+        return await find_lavalink_track(*args, **kwargs)
+    except LavalinkSearchError:
+        logger.warning('Failed to match track ahead')
+
+        # No need to do anything special, the user will see the causes
+        # when Blanco tries to play the track for real
+        return None
 
 
 class BlancoBot(Bot):
@@ -276,7 +291,8 @@ class BlancoBot(Bot):
                 next_track.title
             )
             task = get_event_loop().create_task(
-                find_lavalink_track(
+                match_ahead(
+                    self._logger,
                     node,
                     next_track,
                     deezer_enabled=deezer_enabled,

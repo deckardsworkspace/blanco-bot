@@ -153,7 +153,7 @@ class QueueManager:
             raise EmptyQueueError
 
         try:
-            i = self.calc_next_index(forward=True)
+            i = self.calc_next_index()
             track = self.queue[i]
         except EndOfQueueError as err:
             raise EndOfQueueError('No next track in queue.') from err
@@ -174,20 +174,20 @@ class QueueManager:
             raise EmptyQueueError
 
         try:
-            i = self.calc_next_index(forward=False)
+            i = self.calc_next_index(delta=-1)
             track = self.queue[i]
         except EndOfQueueError as err:
             raise EndOfQueueError('No previous track in queue.') from err
 
         return i, track
 
-    def calc_next_index(self, *, forward: bool) -> int:
+    def calc_next_index(self, *, delta: int = 1) -> int:
         """
         Calculate the next track index, accounting for shuffling and
         looping a single track.
 
         Args:
-            forward: Whether to go forward or backward in the queue.
+            delta: How far ahead or back to seek the next index.
 
         Returns:
             The next track index in self._queue.
@@ -196,7 +196,7 @@ class QueueManager:
             EndOfQueueError: If one of the ends of the queue is reached,
                 and the queue is not looping all tracks.
         """
-        delta = 1 if forward else -1
+        forward = delta > 0
 
         # Return the current index if the queue is looping a single track.
         next_i = self.current_index
@@ -372,7 +372,7 @@ class QueueManager:
 
         # If we're removing the current track, adjust the current track index.
         if adjusted_index == self.current_index:
-            self._i = self.calc_next_index(forward=True)
+            self._i = self.calc_next_index()
 
         # Remove the element from self._queue.
         return self.queue.pop(adjusted_index)

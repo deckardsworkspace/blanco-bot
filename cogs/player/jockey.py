@@ -139,7 +139,7 @@ class Jockey(Player['BlancoBot']):
                     exc
                 )
 
-    async def _enqueue(self, index: int, auto: bool = True) -> bool:
+    async def _enqueue(self, index: int, auto: bool = True):
         """
         Attempt to enqueue a track, for use with the skip() method.
 
@@ -148,28 +148,22 @@ class Jockey(Player['BlancoBot']):
         """
         try:
             track = self._queue_mgr.queue[index]
-            result = await self._play(track)
+            await self._play(track)
         except PlayerNotConnected:
             if not auto:
                 await self.status_channel.send(embed=create_error_embed(
                     'Attempted to skip while disconnected'
                 ))
-            return False
-        except Exception as exc: # pylint: disable=broad-exception-caught
-            self._logger.error('Failed to play next track: %s', exc)
-            if auto:
-                await self.status_channel.send(embed=create_error_embed(
-                    f'Unable to play next track: {exc}'
-                ))
-            return False
+            raise JockeyError('Player is not connected')
+        except JockeyError as err:
+            self._logger.error('Failed to enqueue track: %s', err)
+            raise
 
         # Scrobble if possible
         await self._scrobble(self._queue_mgr.current)
 
         # Update queue index
         self._queue_mgr.current_index = index
-
-        return result
 
     async def _get_now_playing(self) -> Optional[Message]:
         np_msg_id = self._db.get_now_playing(self.guild.id)
@@ -186,7 +180,7 @@ class Jockey(Player['BlancoBot']):
 
         return None
 
-    async def _play(self, item: 'QueueItem', position: Optional[int] = None) -> bool:
+    async def _play(self, item: 'QueueItem', position: Optional[int] = None):
         if item.lavalink_track is None:
             try:
                 assert self._bot.config is not None
@@ -198,7 +192,7 @@ class Jockey(Player['BlancoBot']):
                 )
             except LavalinkSearchError as err:
                 self._logger.critical('Failed to play `%s\'.', item.title)
-                raise RuntimeError(err.args[0]) from err
+                raise JockeyError(err.args[0]) from err
 
         # Play track
         has_retried = False
@@ -244,8 +238,6 @@ class Jockey(Player['BlancoBot']):
 
         # Save start time for scrobbling
         item.start_time = int(time())
-
-        return True
 
     async def _scrobble(self, item: 'QueueItem'):
         """
@@ -408,7 +400,7 @@ class Jockey(Player['BlancoBot']):
         failed_track = self._queue_mgr.current
         index = self._queue_mgr.current_shuffled_index + 1
         queue_size = self._queue_mgr.size
-        
+
         # Send error embed
         embed = CustomEmbed(
             color=Colour.red(),
@@ -486,7 +478,9 @@ class Jockey(Player['BlancoBot']):
             old_index = self._queue_mgr.current_index
             self._queue_mgr.current_index = old_size
 
-            if not await self._play(new_tracks[0]):
+            try:
+                await self._play(new_tracks[0])
+            except (JockeyError, PlayerNotConnected) as err:
                 # Remove enqueued tracks
                 for _ in range(old_size, self._queue_mgr.size):
                     self._queue_mgr.remove(old_size)
@@ -494,7 +488,7 @@ class Jockey(Player['BlancoBot']):
                 # Restore old index
                 self._queue_mgr.current_index = old_index
 
-                raise JockeyError(f'Failed to play "{first.title}"')
+                raise JockeyError(f'Failed to play "{first.title}"') from err
 
         # Send embed
         return first_name if len(new_tracks) == 1 else f'{len(new_tracks)} item(s)'
@@ -555,8 +549,15 @@ class Jockey(Player['BlancoBot']):
 
         # If index is specified, use that instead
         if index != -1:
-            if not await self._enqueue(index, auto=auto):
+            try:
+                await self._enqueue(index, auto=auto)
+            except JockeyError:
                 await self._edit_np_controls(show_controls=True)
+                await self.status_channel.send(embed=create_error_embed(
+                    f'Unable to skip to index {index}'
+                ))
+                raise
+
             return
 
         # Is this autoskipping?
@@ -564,23 +565,52 @@ class Jockey(Player['BlancoBot']):
             # Check if we're looping the current track
             if self._queue_mgr.is_looping_one:
                 # Re-enqueue the current track
-                await self._enqueue(self._queue_mgr.current_index, auto=auto)
+                try:
+                    await self._enqueue(self._queue_mgr.current_index, auto=auto)
+                except JockeyError as err:
+                    await self._edit_np_controls(show_controls=True)
+                    await self.status_channel.send(embed=create_error_embed(
+                        f'Unable to loop track: {err}'
+                    ))
+
                 return
 
         # Try to enqueue the next playable track
+        delta = 1 if forward else -1
         while True:
             # Get next index
             try:
-                next_i = self._queue_mgr.calc_next_index(forward=forward)
+                next_i = self._queue_mgr.calc_next_index(delta=delta)
             except EndOfQueueError:
                 # We've reached the end of the queue and looping is disabled
                 return
 
+            # Get details of next track for logging
+            next_track = self._queue_mgr.queue[next_i]
+            next_title = next_track.title if next_track.title is not None else 'Unknown track'
+            next_artist = next_track.artist if next_track.artist is not None else 'Unknown artist'
+
             # Try to enqueue the next track
-            if not await self._enqueue(next_i, auto=auto):
+            try:
+                await self._enqueue(next_i, auto=auto)
+            except JockeyError as err:
                 await self._edit_np_controls(show_controls=True)
+                delta += 1 if forward else -1
+
+                await self.status_channel.send(embed=CustomEmbed(
+                    color=Colour.red(),
+                    title=':warning:｜Failed to skip to track',
+                    description='It might be unavailable temporarily '
+                        'or restricted to specific regions.\n',
+                    fields=[
+                        ['Track', f'`{next_title}`\n{next_artist}'],
+                        ['Position in queue', f'{next_i + 1} of {self.queue_size}'],
+                        ['Error', f'```{err}```']
+                    ],
+                    footer='Skipping to next track...' if auto else None
+                ).get())
             else:
-                return
+                break
 
     async def update_now_playing(self):
         """
