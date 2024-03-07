@@ -137,7 +137,7 @@ class Database:
         dt = datetime.fromtimestamp(self._cur.fetchone()[0], tz=timezone.utc)
         return dt
 
-    def set_bump_inteval(self, guild_id: int, interval: int):
+    def set_bump_interval(self, guild_id: int, interval: int):
         """
         Set the bump interval for a guild.
         """
@@ -267,7 +267,7 @@ class Database:
         self._cur.execute(f'SELECT scopes FROM spotify_oauth WHERE user_id = {user_id}')
         return self._cur.fetchone()[0].split(',')
 
-    def set_bump(self, guild_id: int, url: str):
+    def set_bump(self, guild_id: int, url: str, title: str, author: str):
         """
         Set a bump for a guild.
         """
@@ -280,22 +280,48 @@ class Database:
             INSERT INTO bumps (
                 guild_id,
                 idx,
-                url
+                url,
+                title,
+                author
             ) VALUES (
                 {guild_id},
                 {idx},
-                "{url}"
+                "{url}",
+                "{title}",
+                "{author}"
             )
             '''
         )
         self._con.commit()
+
+    def get_bumps(self, guild_id: int) -> Optional[List[Bump]]:
+        """
+        Get every bump for a guild.
+        """
+        self._cur.execute(f'''SELECT idx, guild_id, url, title, author
+            FROM bumps WHERE guild_id = {guild_id}''')
+        rows = self._cur.fetchall()
+        if len(rows) == 0:
+            return None
+
+        return [
+            Bump(
+                idx=row[0],
+                guild_id=row[1],
+                url=row[2],
+                title=row[3],
+                author=row[4]
+            )
+            for row in rows
+        ]
 
     def get_bump(self, guild_id: int, idx: int) -> Optional[Bump]:
         """
         Get a guild bump by its index.
         """
         self._cur.execute(
-            f'''SELECT idx, guild_id, url FROM bumps WHERE guild_id = {guild_id} AND idx = {idx}
+            f'''SELECT idx, guild_id, url, title, author FROM bumps 
+            WHERE guild_id = {guild_id} AND idx = {idx}
             '''
         )
         row = self._cur.fetchone()
@@ -304,7 +330,9 @@ class Database:
         return Bump(
             idx=row[0],
             guild_id=row[1],
-            url=row[2]
+            url=row[2],
+            title=row[3],
+            author=row[4]
         )
 
     def get_bump_by_url(self, guild_id: int, url: str) -> Optional[Bump]:
@@ -312,7 +340,8 @@ class Database:
         Get a guild bump by its URL.
         """
         self._cur.execute(
-            f'''SELECT idx, guild_id, url FROM bumps WHERE guild_id = {guild_id} AND url = "{url}"
+            f'''SELECT idx, guild_id, url, title, author FROM bumps
+            WHERE guild_id = {guild_id} AND url = "{url}"
             '''
         )
         row = self._cur.fetchone()
@@ -321,7 +350,9 @@ class Database:
         return Bump(
             idx=row[0],
             guild_id=row[1],
-            url=row[2]
+            url=row[2],
+            title=row[3],
+            author=row[4]
         )
 
     def get_random_bump(self, guild_id: int) -> Optional[Bump]:
@@ -329,8 +360,8 @@ class Database:
         Get a random guild bump.
         """
         self._cur.execute(
-            f'''SELECT idx, guild_id, url FROM bumps WHERE guild_id =
-            {guild_id} ORDER BY RANDOM() LIMIT 1
+            f'''SELECT idx, guild_id, url, title, author FROM bumps WHERE
+            guild_id = {guild_id} ORDER BY RANDOM() LIMIT 1
             '''
         )
         row = self._cur.fetchone()
@@ -339,5 +370,14 @@ class Database:
         return Bump(
             idx=row[0],
             guild_id=row[1],
-            url=row[2]
+            url=row[2],
+            title=row[3],
+            author=row[4]
         )
+
+    def delete_bump(self, guild_id: int, idx: int):
+        """
+        Delete a guild bump by its index.
+        """
+        self._cur.execute(f'DELETE FROM bumps WHERE guild_id = {guild_id} AND idx = {idx}')
+        self._con.commit()

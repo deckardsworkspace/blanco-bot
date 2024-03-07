@@ -13,3 +13,5 @@ class Bump:
     idx: int
     guild_id: int
     url: str
+    title: str
+    author: str
