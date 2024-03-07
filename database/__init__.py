@@ -4,7 +4,7 @@ Database module for Blanco. Interfaces with the bot's SQLite database.
 
 import sqlite3 as sql
 from typing import List, Optional
-from datetime import datetime, timezone
+import time
 
 from dataclass.oauth import LastfmAuth, OAuth
 from dataclass.bump import Bump
@@ -122,20 +122,18 @@ class Database:
         """
         Set the last bump for a guild.
         """
-        utcnow = datetime.utcnow()
-        seconds = int(utcnow.timestamp())
+        seconds = int(time.time())
         self._cur.execute(
             f'UPDATE player_settings SET last_bump = {seconds} WHERE guild_id = {guild_id}'
         )
         self._con.commit()
 
-    def get_last_bump(self, guild_id: int) -> datetime:
+    def get_last_bump(self, guild_id: int) -> int:
         """
         Get the last bump for a guild.
         """
         self._cur.execute(f'SELECT last_bump FROM player_settings WHERE guild_id = {guild_id}')
-        dt = datetime.fromtimestamp(self._cur.fetchone()[0], tz=timezone.utc)
-        return dt
+        return self._cur.fetchone()[0]
 
     def set_bump_interval(self, guild_id: int, interval: int):
         """
