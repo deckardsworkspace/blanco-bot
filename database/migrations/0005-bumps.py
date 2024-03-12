@@ -25,7 +25,7 @@ def run(con: 'Connection'):
             title TEXT NOT NULL,
             author TEXT NOT NULL,
             url TEXT NOT NULL,
-                
+
             UNIQUE(guild_id, idx)
         )
     ''')
@@ -37,8 +37,22 @@ def run(con: 'Connection'):
             ALTER TABLE player_settings ADD COLUMN bump_interval INTEGER NOT NULL DEFAULT 20
         ''')
 
+        con.commit()
+    except OperationalError:
+        pass
+
+    try:
         cur.execute('''
             ALTER TABLE player_settings ADD COLUMN last_bump INTEGER NOT NULL DEFAULT 0
+        ''')
+
+        con.commit()
+    except OperationalError:
+        pass
+
+    try:
+        cur.execute('''
+            ALTER TABLE player_settings ADD COLUMN bumps_enabled INTEGER NOT NULL DEFAULT 0
         ''')
 
         con.commit()

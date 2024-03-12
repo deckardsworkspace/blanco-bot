@@ -40,6 +40,44 @@ class BumpCog(Cog):
         Base slash command for bumps.
         """
 
+
+    @bump.subcommand(name='toggle', description='Toggle the playback of bumps.')
+    async def bump_toggle(
+        self,
+        itx: Interaction,
+        toggle: bool = SlashOption(
+            name='toggle',
+            description='Turn bumps on or off?',
+            required=False
+        )
+    ):
+        """
+        Subcommand for toggling bumps.
+        """
+        if itx.guild is None:
+            raise RuntimeError('[bump::toggle] itx.guild is None')
+
+        if toggle is None:
+            enabled = self._bot.database.get_bumps_enabled(itx.guild.id)
+            status = "Bump playback is currently enabled." if enabled \
+                else "Bump playback is currently disabled."
+            return await itx.response.send_message(
+                embed=create_success_embed(
+                    title="Bumps status",
+                    body=status,
+                )
+            )
+
+        self._bot.database.set_bumps_enabled(itx.guild.id, toggle)
+        status = "Bump playback has been enabled." if toggle \
+            else "Bump playback has been disabled."
+        return await itx.response.send_message(
+            embed=create_success_embed(
+                title="Bumps toggled",
+                body=status,
+            )
+        )
+
     @bump.subcommand(name='add', description='Add a bump.')
     async def bump_add(
         self,

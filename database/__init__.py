@@ -135,6 +135,24 @@ class Database:
         self._cur.execute(f'SELECT last_bump FROM player_settings WHERE guild_id = {guild_id}')
         return self._cur.fetchone()[0]
 
+    def set_bumps_enabled(self, guild_id: int, enabled: bool):
+        """
+        Set whether bumps are enabled for a guild.
+        """
+        self._cur.execute(
+            f'UPDATE player_settings SET bumps_enabled = {int(enabled)} WHERE guild_id = {guild_id}'
+        )
+        self._con.commit()
+
+    def get_bumps_enabled(self, guild_id: int) -> bool:
+        """
+        Get whether bumps are enabled for a guild.
+        """
+        self._cur.execute(
+            f'SELECT bumps_enabled FROM player_settings WHERE guild_id = {guild_id}'
+        )
+        return self._cur.fetchone()[0] == 1
+
     def set_bump_interval(self, guild_id: int, interval: int):
         """
         Set the bump interval for a guild.
@@ -148,7 +166,9 @@ class Database:
         """
         Get the bump interval for a guild.
         """
-        self._cur.execute(f'SELECT bump_interval FROM player_settings WHERE guild_id = {guild_id}')
+        self._cur.execute(
+            f'SELECT bump_interval FROM player_settings WHERE guild_id = {guild_id}'
+        )
         return self._cur.fetchone()[0]
 
     def get_session_id(self, node_id: str) -> str:

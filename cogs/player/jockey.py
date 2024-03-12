@@ -646,6 +646,11 @@ class Jockey(Player['BlancoBot']):
         :return: A boolean denoting whether a bump was played or not.
         """
 
+        enabled = self._db.get_bumps_enabled(self.guild.id)
+        if not enabled:
+            self._logger.debug("Bumps are not enabled in this guild, returning...")
+            return False
+
         interval = self._db.get_bump_interval(self.guild.id) * 60
         last_bump = self._db.get_last_bump(self.guild.id)
 
