@@ -15,21 +15,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
-        run: pipx install poetry
+        run: pipx install poetry==1.8.2
       - uses: actions/setup-python@v4
         with:
           python-version: 3.12
           cache: 'poetry'
+          cache-dependency-path: poetry.lock
       - name: Install dependencies
         run: |
           poetry env use 3.12
           poetry install
-      - name: Run linter
+      - name: Run precommit hooks
         run: |
-          poetry run ruff check --no-fix --no-cache $(git ls-files '*.py')
-      - name: Run format checker
-        run: |
-          poetry run ruff format --check --no-cache $(git ls-files '*.py')
+          poetry run pre-commit run --all-files
   build:
     uses: ./.github/workflows/build.yml
 
