@@ -4,18 +4,18 @@ Adds routes to the application.
 
 from typing import TYPE_CHECKING
 
-from views.dashboard import dashboard
-from views.deleteaccount import delete_account
-from views.discordoauth import discordoauth
-from views.homepage import homepage
-from views.lastfmtoken import lastfm_token
-from views.linklastfm import link_lastfm
-from views.linkspotify import link_spotify
-from views.login import login
-from views.logout import logout
-from views.robotstxt import robotstxt
-from views.spotifyoauth import spotifyoauth
-from views.unlink import unlink
+from .views.dashboard import dashboard
+from .views.deleteaccount import delete_account
+from .views.discordoauth import discordoauth
+from .views.homepage import homepage
+from .views.lastfmtoken import lastfm_token
+from .views.linklastfm import link_lastfm
+from .views.linkspotify import link_spotify
+from .views.login import login
+from .views.logout import logout
+from .views.robotstxt import robotstxt
+from .views.spotifyoauth import spotifyoauth
+from .views.unlink import unlink
 
 if TYPE_CHECKING:
   from aiohttp.web import Application
