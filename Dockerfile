@@ -28,7 +28,8 @@ ENV POETRY_NO_INTERACTION=1 \
 # Install dependencies
 WORKDIR /app
 COPY pyproject.toml poetry.lock ./
-RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without dev --no-root
+RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without dev
+RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry add setuptools
 
 
 FROM python:3.12-slim AS main
