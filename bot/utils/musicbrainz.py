@@ -128,7 +128,7 @@ def mb_lookup(track: 'QueueItem') -> Tuple[str | None, str | None]:
   response = get(
     str(MUSICBRAINZ_API_BASE_URL / 'recording'),
     headers={'User-Agent': USER_AGENT, 'Accept': 'application/json'},
-    params={'query': query, 'limit': 10, 'inc': 'isrcs', 'fmt': 'json'},
+    params={'query': query, 'limit': '10', 'inc': 'isrcs', 'fmt': 'json'},
     timeout=5.0,
   )
   try:

@@ -39,7 +39,7 @@ async def find_lavalink_track(
   :param in_place: Whether to modify the QueueItem in place.
   :param lookup_mbid: Whether to look up the MBID for the track.
   """
-  results = []
+  results: List['LavalinkResult'] = []
 
   cached, redis_key, redis_key_type = _get_cached_track(item)
   if cached is not None:

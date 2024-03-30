@@ -429,7 +429,7 @@ class BlancoBot(Bot):
       channel = self.get_channel(channel_id)
       if channel is None:
         self._logger.error('Failed to get status channel for guild %d', guild_id)
-      elif not isinstance(channel, StatusChannel):
+      elif not isinstance(channel, (TextChannel, StageChannel, Thread)):
         self._logger.error('Status channel for guild %d is not Messageable', guild_id)
       else:
         self._status_channels[guild_id] = channel

@@ -228,7 +228,7 @@ class Jockey(Player['BlancoBot']):
           raise JockeyError(err.args[0]) from err
 
         # Wait until we're connected
-        wait_time = 0
+        wait_time = 0.0
         self._logger.warning(
           "PlayerNotConnected raised while trying to play `%s', retrying...",
           item.title,
@@ -238,7 +238,7 @@ class Jockey(Player['BlancoBot']):
             raise JockeyError('Timeout while waiting for player to connect') from err
 
           # Print wait message only once
-          if wait_time == 0:
+          if wait_time == 0.0:
             self._logger.debug('Waiting 10 sec for player to connect...')
           await sleep(0.1)
           wait_time += 0.1

@@ -32,7 +32,7 @@ class Paginator:
 
   def __init__(self, itx: Interaction):
     self.current = 0
-    self.embeds = []
+    self.embeds: List[Embed] = []
     self.home = 0
     self.itx = itx
     self.msg: Optional['Message'] = None
@@ -84,15 +84,17 @@ class Paginator:
         return await self.msg.edit(view=None)
 
   async def _switch_page(self, new_page: int) -> Optional['Message']:
-    self.current = new_page
-    if self.msg is not None:
-      try:
-        msg = await self.msg.edit(embed=self.embeds[self.current])
-      except (Forbidden, HTTPException):
-        return None
+    if self.msg is None:
+      return None
 
-      self.timeout = self.original_timeout
-      return msg
+    self.current = new_page
+    try:
+      msg = await self.msg.edit(embed=self.embeds[self.current])
+    except (Forbidden, HTTPException):
+      return None
+
+    self.timeout = self.original_timeout
+    return msg
 
   async def first_page(self):
     """

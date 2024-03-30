@@ -118,16 +118,6 @@ class QueueManager:
     """
     return self._i
 
-  @property
-  def current_shuffled_index(self) -> int:
-    """
-    Returns the current track index, accounting for shuffling.
-    This is the index of the current track in self._shuf_i.
-    """
-    if not self.is_shuffling:
-      return self.current_index
-    return self._shuf_i.index(self.current_index)
-
   @current_index.setter
   def current_index(self, i: int):
     """
@@ -139,6 +129,16 @@ class QueueManager:
             not self._shuf_i.
     """
     self._i = i
+
+  @property
+  def current_shuffled_index(self) -> int:
+    """
+    Returns the current track index, accounting for shuffling.
+    This is the index of the current track in self._shuf_i.
+    """
+    if not self.is_shuffling:
+      return self.current_index
+    return self._shuf_i.index(self.current_index)
 
   @property
   def next_track(self) -> Tuple[int, QueueItem]:
