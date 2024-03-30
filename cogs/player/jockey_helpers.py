@@ -2,9 +2,10 @@
 Helper functions for the music player.
 """
 
-from typing import TYPE_CHECKING, List, Tuple, TypeVar
+from typing import TYPE_CHECKING, List, Optional, Tuple, TypeVar
 
 from mafic import SearchType
+from requests.status_codes import codes
 from spotipy.exceptions import SpotifyException
 
 from database.redis import REDIS
@@ -91,7 +92,7 @@ def rank_results(
   return ranked
 
 
-async def find_lavalink_track(  # pylint: disable=too-many-statements
+async def find_lavalink_track(  # noqa: PLR0912, PLR0915
   node: 'Node',
   item: QueueItem,
   /,
@@ -102,6 +103,8 @@ async def find_lavalink_track(  # pylint: disable=too-many-statements
   """
   Finds a matching playable Lavalink track for a QueueItem.
 
+  TODO: Split this function into smaller parts.
+
   :param node: The Lavalink node to use for searching. Must be an instance of mafic.Node.
   :param item: The QueueItem to find a track for.
   :param deezer_enabled: Whether to use Deezer for searching.
@@ -110,27 +113,14 @@ async def find_lavalink_track(  # pylint: disable=too-many-statements
   """
   results = []
 
-  # Check Redis if enabled
-  redis_key = None
-  redis_key_type = None
-  if REDIS is not None:
-    # Determine key type
-    if item.spotify_id is not None:
-      redis_key = item.spotify_id
-      redis_key_type = 'spotify_id'
-    elif item.isrc is not None:
-      redis_key = item.isrc
-      redis_key_type = 'isrc'
+  cached, redis_key, redis_key_type = _get_cached_track(item)
+  if cached is not None:
+    LOGGER.info('Found cached Lavalink track for Spotify ID %s', item.spotify_id)
+    track = await node.decode_track(cached)
+    if in_place:
+      item.lavalink_track = track
 
-    # Get cached Lavalink track
-    if redis_key is not None and redis_key_type is not None:
-      encoded = REDIS.get_lavalink_track(redis_key, key_type=redis_key_type)
-      if encoded is not None:
-        LOGGER.info('Found cached Lavalink track for Spotify ID %s', item.spotify_id)
-        if in_place:
-          item.lavalink_track = await node.decode_track(encoded)
-
-        return await node.decode_track(encoded)
+    return track
 
   # Annotate track with ISRC and/or MBID
   if item.isrc is None or lookup_mbid:
@@ -218,13 +208,37 @@ async def find_lavalink_track(  # pylint: disable=too-many-statements
   lavalink_track = results[0].lavalink_track
   if in_place:
     item.lavalink_track = lavalink_track
-
-  # Save data to Redis if enabled
-  if REDIS is not None and redis_key_type is not None and redis_key is not None:
-    # Save Lavalink track
-    REDIS.set_lavalink_track(redis_key, lavalink_track.id, key_type=redis_key_type)
+  _set_cached_track(lavalink_track.id, key=redis_key, key_type=redis_key_type)
 
   return lavalink_track
+
+
+def _get_cached_track(
+  item: QueueItem,
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+  redis_key = None
+  redis_key_type = None
+  if item.spotify_id is not None:
+    redis_key = item.spotify_id
+    redis_key_type = 'spotify_id'
+  elif item.isrc is not None:
+    redis_key = item.isrc
+    redis_key_type = 'isrc'
+
+  cached = None
+  if REDIS is not None and redis_key is not None and redis_key_type is not None:
+    cached = REDIS.get_lavalink_track(redis_key, key_type=redis_key_type)
+
+  return cached, redis_key, redis_key_type
+
+
+def _set_cached_track(
+  lavalink_track: str,
+  key: Optional[str] = None,
+  key_type: Optional[str] = None,
+):
+  if REDIS is not None and key_type is not None and key is not None:
+    REDIS.set_lavalink_track(key, lavalink_track, key_type=key_type)
 
 
 def invalidate_lavalink_track(item: QueueItem):
@@ -375,7 +389,7 @@ async def parse_spotify_query(
       # Get playlist or album tracks from Spotify
       track_queue = spotify.get_tracks(sp_type, sp_id)[2]
   except SpotifyException as exc:
-    if exc.http_status == 404:
+    if exc.http_status == codes.not_found:
       # No tracks.
       raise SpotifyNoResultsError(
         f'The {sp_type} does not exist or is private.'

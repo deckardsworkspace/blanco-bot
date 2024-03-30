@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Optional, Tuple
 
 from ratelimit import limits, sleep_and_retry
 from requests import HTTPError, Timeout, get
+from requests.status_codes import codes
 
 from database.redis import REDIS
 
@@ -22,7 +23,7 @@ LOGGER = create_logger('musicbrainz')
 
 @limits(calls=25, period=1)
 @sleep_and_retry
-def annotate_track(
+def annotate_track(  # noqa: PLR0912
   track: 'QueueItem', *, in_place: bool = True
 ) -> Optional[Tuple[str | None, str | None]]:
   """
@@ -32,6 +33,8 @@ def annotate_track(
   is exceeded. This is because MusicBrainz has a rate limit of 50 requests per second,
   but we need to make at most two requests per track (one to search for the track by ISRC,
   and one to search for it by title and artist if the ISRC search fails).
+
+  TODO: Refactor to have fewer branches.
 
   :param track: The track to annotate. Must be an instance of
       dataclass.queue_item.QueueItem.
@@ -67,7 +70,7 @@ def annotate_track(
       try:
         mbid = mb_lookup_isrc(track)
       except HTTPError as err:
-        if err.response is not None and err.response.status_code == 404:
+        if err.response is not None and err.response.status_code == codes.not_found:
           mbid, isrc = mb_lookup(track)
         else:
           raise

@@ -13,9 +13,11 @@ from dataclass.oauth import OAuth
 from utils.constants import DISCORD_API_BASE_URL, USER_AGENT
 
 
-async def discordoauth(request: web.Request):
+async def discordoauth(request: web.Request):  # noqa: PLR0911
   """
   Exchange the code for an access token and store it in the database.
+
+  TODO: Refactor to have fewer returns.
   """
   # Get session
   session = await get_session(request)
