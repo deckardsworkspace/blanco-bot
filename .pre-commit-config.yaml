@@ -1,17 +1,26 @@
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v2.3.0
-  hooks:
-  - id: double-quote-string-fixer
-  - id: end-of-file-fixer
-  - id: trailing-whitespace
-  - id: no-commit-to-branch
-    args: ['--branch', 'main']
-  - id: mixed-line-ending
-  - id: check-merge-conflict
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.4
-  hooks:
-    - id: ruff
-      args: [ --fix ]
-    - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: double-quote-string-fixer
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: no-commit-to-branch
+        args: ['--branch', 'main']
+      - id: mixed-line-ending
+      - id: check-merge-conflict
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.4
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.9.0
+    hooks:
+      - id: mypy
+        args: ['--config-file=mypy.ini', '--check-untyped-defs']
+        additional_dependencies:
+          - types-pyyaml==6.0.1
+          - types-redis==4.6.0.20240311
+          - types-requests==2.31.0
