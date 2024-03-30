@@ -9,14 +9,15 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry
       - uses: actions/setup-python@v4
         with:
           python-version: 3.12
           cache: 'poetry'
       - name: Install dependencies
         run: |
-          python -m pip install poetry
           poetry env use 3.12
           poetry install
       - name: Run linter
