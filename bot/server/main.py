@@ -18,7 +18,7 @@ from bot.utils.logger import create_logger
 from .routes import setup_routes
 
 if TYPE_CHECKING:
-  from database import Database
+  from bot.database import Database
 from bot.dataclass.config import Config
 
 
@@ -52,7 +52,7 @@ async def run_app(database: 'Database', config: 'Config'):
   setup_sessions(app, EncryptedCookieStorage(urlsafe_b64decode(fernet_key)))
 
   # Setup templates and routes
-  aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('server/templates'))
+  aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader('dashboard/templates'))
   setup_routes(app)
 
   # Run app

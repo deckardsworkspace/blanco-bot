@@ -24,7 +24,7 @@ LOGGER = create_logger('track_finder')
 
 async def find_lavalink_track(
   node: 'Node',
-  item: QueueItem,
+  item: 'QueueItem',
   /,
   deezer_enabled: bool = False,
   in_place: bool = False,
@@ -113,7 +113,7 @@ async def find_lavalink_track(
 
 
 def _get_cached_track(
-  item: QueueItem,
+  item: 'QueueItem',
 ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
   redis_key = None
   redis_key_type = None

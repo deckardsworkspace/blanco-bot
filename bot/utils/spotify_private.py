@@ -19,7 +19,7 @@ from .constants import SPOTIFY_ACCOUNTS_BASE_URL, SPOTIFY_API_BASE_URL, USER_AGE
 from .logger import create_logger
 
 if TYPE_CHECKING:
-  from database import Database
+  from bot.database import Database
 from bot.dataclass.config import Config
 
 

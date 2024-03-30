@@ -10,7 +10,7 @@ from bot.utils.exceptions import EmptyQueueError, EndOfQueueError
 from bot.utils.logger import create_logger
 
 if TYPE_CHECKING:
-  from database import Database
+  from bot.database import Database
 
 
 class QueueManager:
@@ -23,7 +23,7 @@ class QueueManager:
     self._queue: List[QueueItem] = []
     self._shuf_i: List[int] = []
 
-    # Restore loop preferences from database
+    # Restore loop preferences from bot.database
     self._db = database
     self._loop_one = database.get_loop(guild_id)
     self._loop_all = database.get_loop_all(guild_id)

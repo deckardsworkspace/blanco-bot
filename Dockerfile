@@ -6,11 +6,11 @@ FROM node:lts-alpine AS tailwind
 # Compile Tailwind CSS
 RUN mkdir -p /opt/build
 COPY tailwind.config.js /opt/build/
-COPY server/ /opt/build/server
+COPY dashboard/ /opt/build/dashboard
 WORKDIR /opt/build
 RUN npm install -D tailwindcss && \
-    npx tailwindcss -i ./server/static/css/base.css \
-    -o ./server/static/css/main.css --minify
+    npx tailwindcss -i ./dashboard/static/css/base.css \
+    -o ./dashboard/static/css/main.css --minify
 
 
 FROM python:3.12 AS dependencies
@@ -39,11 +39,11 @@ LABEL maintainer="Jared Dantis <jareddantis@gmail.com>"
 # Copy bot files
 COPY . /opt/app
 COPY --from=dependencies /app/.venv /opt/venv
-COPY --from=tailwind /opt/build/server/static/css/main.css /opt/app/server/static/css/main.css
+COPY --from=tailwind /opt/build/dashboard/static/css/main.css /opt/app/dashboard/static/css/main.css
 WORKDIR /opt/app
 
 # Set release
-RUN sed -i "s/0.0.0-unknown/${RELEASE}/" utils/constants.py
+RUN sed -i "s/0.0.0-unknown/${RELEASE}/" bot/utils/constants.py
 
 # Run bot
 ENV PATH="/opt/venv/bin:${PATH}" \
@@ -51,4 +51,4 @@ ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1
 EXPOSE 8080
 ENTRYPOINT ["python"]
-CMD ["-m", "main"]
+CMD ["-m", "bot.main"]

@@ -9,8 +9,7 @@ import asyncio
 import threading
 from subprocess import run
 
-from database import Database
-
+from bot.database import Database
 from bot.server.main import run_app
 from bot.utils.config import config
 
@@ -24,9 +23,9 @@ def run_tailwind():
       [
         'tailwindcss',
         '-i',
-        './server/static/css/base.css',
+        './dashboard/static/css/base.css',
         '-o',
-        './server/static/css/main.css',
+        './dashboard/static/css/main.css',
         '--watch',
       ]
     ),

@@ -7,7 +7,6 @@ from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 from aiohttp.client_exceptions import ClientConnectorError
-from database import Database
 from mafic import EndReason, NodePool, VoiceRegion
 from nextcord import (
   Activity,
@@ -26,6 +25,7 @@ from nextcord import (
 from nextcord.ext.commands import Bot, ExtensionNotLoaded
 
 from bot.cogs.player.track_finder import find_lavalink_track
+from bot.database import Database
 from bot.views.now_playing import NowPlayingView
 
 from .embeds import create_error_embed
@@ -166,20 +166,20 @@ class BlancoBot(Bot):
 
     # Try to unload cogs first if the bot was restarted
     try:
-      self.unload_extension('cogs')
+      self.unload_extension('bot.cogs')
     except ExtensionNotLoaded:
       pass
-    self.load_extension('cogs')
+    self.load_extension('bot.cogs')
 
     # Load server extension if server is enabled
     if self._config.enable_server:
       # Try to unload server first if the bot was restarted
       try:
-        self.unload_extension('server')
+        self.unload_extension('bot.server')
       except ExtensionNotLoaded:
         pass
       self._logger.info('Starting web server...')
-      self.load_extension('server')
+      self.load_extension('bot.server')
     elif self._config.base_url is not None:
       self._logger.warning(
         'Server is disabled, but base URL is set to %s',
@@ -415,13 +415,13 @@ class BlancoBot(Bot):
     if guild_id in self._status_channels:
       return self._status_channels[guild_id]
 
-    # Get status channel ID from database
+    # Get status channel ID from bot.database
     channel_id = -1
     try:
       channel_id = self.database.get_status_channel(guild_id)
     except OperationalError:
       self._logger.warning(
-        'Failed to get status channel ID for guild %d from database', guild_id
+        'Failed to get status channel ID for guild %d from bot.database', guild_id
       )
 
     # Get status channel from ID
@@ -463,7 +463,7 @@ class BlancoBot(Bot):
       for region in node.regions:
         regions.append(VoiceRegion(region))
 
-      # Get session ID from database
+      # Get session ID from bot.database
       try:
         session_id = self.database.get_session_id(node.id)
       except (OperationalError, TypeError):
