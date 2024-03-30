@@ -85,7 +85,7 @@ class PlayerCog(Cog):
         and jockey.channel.members[0].id == member.guild.me.id  # type: ignore
         and after.channel is None
       ):
-        return await self._disconnect(jockey=jockey, reason='You left me alone :(')
+        return self._disconnect(jockey=jockey, reason='You left me alone :(')
 
       # Did we get server undeafened?
       if member.id == member.guild.me.id and before.deaf and not after.deaf:

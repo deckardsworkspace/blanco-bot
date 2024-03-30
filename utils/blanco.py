@@ -24,7 +24,7 @@ from nextcord import (
 )
 from nextcord.ext.commands import Bot, ExtensionNotLoaded
 
-from cogs.player.jockey_helpers import find_lavalink_track
+from cogs.player.track_finder import find_lavalink_track
 from database import Database
 from views.now_playing import NowPlayingView
 

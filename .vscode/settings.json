@@ -3,7 +3,7 @@
     "files.exclude": {
         "**/__pycache__": true
     },
-    "editor.tabSize": 4,
+    "editor.tabSize": 2,
     "css.lint.unknownAtRules": "ignore",
     "pylint.args": [
         "--disable=too-many-instance-attributes",

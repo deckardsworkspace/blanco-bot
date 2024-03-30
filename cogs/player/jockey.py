@@ -34,9 +34,10 @@ from utils.exceptions import (
 from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
 
-from .jockey_helpers import find_lavalink_track, invalidate_lavalink_track, parse_query
+from .jockey_helpers import invalidate_lavalink_track, parse_query
 from .queue import QueueManager
 from .scrobbler import ScrobbleHandler
+from .track_finder import find_lavalink_track
 
 if TYPE_CHECKING:
   from mafic import Track

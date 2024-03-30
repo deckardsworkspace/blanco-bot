@@ -2,7 +2,7 @@
 Helper functions for the music player.
 """
 
-from typing import TYPE_CHECKING, List, Optional, Tuple, TypeVar
+from typing import TYPE_CHECKING, List, Tuple, TypeVar
 
 from mafic import SearchType
 from requests.status_codes import codes
@@ -14,12 +14,10 @@ from utils.constants import CONFIDENCE_THRESHOLD
 from utils.exceptions import (
   JockeyException,
   LavalinkInvalidIdentifierError,
-  LavalinkSearchError,
   SpotifyNoResultsError,
 )
 from utils.fuzzy import check_similarity_weighted
 from utils.logger import create_logger
-from utils.musicbrainz import annotate_track
 from utils.spotify_client import Spotify
 from utils.url import (
   check_sc_url,
@@ -35,14 +33,12 @@ from utils.url import (
 )
 
 from .lavalink_client import (
-  get_deezer_matches,
-  get_deezer_track,
   get_soundcloud_matches,
   get_youtube_matches,
 )
 
 if TYPE_CHECKING:
-  from mafic import Node, Track
+  from mafic import Node
 
   from dataclass.spotify import SpotifyTrack
 
@@ -90,155 +86,6 @@ def rank_results(
     )
 
   return ranked
-
-
-async def find_lavalink_track(  # noqa: PLR0912, PLR0915
-  node: 'Node',
-  item: QueueItem,
-  /,
-  deezer_enabled: bool = False,
-  in_place: bool = False,
-  lookup_mbid: bool = False,
-) -> 'Track':
-  """
-  Finds a matching playable Lavalink track for a QueueItem.
-
-  TODO: Split this function into smaller parts.
-
-  :param node: The Lavalink node to use for searching. Must be an instance of mafic.Node.
-  :param item: The QueueItem to find a track for.
-  :param deezer_enabled: Whether to use Deezer for searching.
-  :param in_place: Whether to modify the QueueItem in place.
-  :param lookup_mbid: Whether to look up the MBID for the track.
-  """
-  results = []
-
-  cached, redis_key, redis_key_type = _get_cached_track(item)
-  if cached is not None:
-    LOGGER.info('Found cached Lavalink track for Spotify ID %s', item.spotify_id)
-    track = await node.decode_track(cached)
-    if in_place:
-      item.lavalink_track = track
-
-    return track
-
-  # Annotate track with ISRC and/or MBID
-  if item.isrc is None or lookup_mbid:
-    annotate_track(item)
-
-  # Use ISRC if present
-  if item.isrc is not None:
-    # Try to match ISRC on Deezer if enabled
-    if deezer_enabled:
-      try:
-        result = await get_deezer_track(node, item.isrc)
-      except LavalinkSearchError:
-        LOGGER.warning("No Deezer match for ISRC %s `%s'", item.isrc, item.title)
-      else:
-        results.append(result)
-        LOGGER.debug("Matched ISRC %s `%s' on Deezer", item.isrc, item.title)
-
-    # Try to match ISRC on YouTube
-    if len(results) == 0:
-      try:
-        results = await get_youtube_matches(
-          node, f'"{item.isrc}"', desired_duration_ms=item.duration
-        )
-      except LavalinkSearchError:
-        LOGGER.warning("No YouTube match for ISRC %s `%s'", item.isrc, item.title)
-      else:
-        LOGGER.debug("Matched ISRC %s `%s' on YouTube", item.isrc, item.title)
-  else:
-    LOGGER.warning(
-      "`%s' has no ISRC. Scrobbling might fail for this track.", item.title
-    )
-    item.is_imperfect = True
-
-  # Fallback to metadata search
-  if len(results) == 0:
-    query = f'{item.title} {item.artist}'
-
-    if item.isrc is not None:
-      LOGGER.warning(
-        "No ISRC match for `%s'. Falling back to metadata search.", item.title
-      )
-
-    # Try to match on Deezer if enabled
-    if deezer_enabled:
-      try:
-        dz_results = await get_deezer_matches(
-          node, query, desired_duration_ms=item.duration, auto_filter=True
-        )
-      except LavalinkSearchError:
-        LOGGER.warning("No Deezer results for `%s'", item.title)
-      else:
-        # Use top result if it's good enough
-        ranked = rank_results(query, dz_results, SearchType.DEEZER_SEARCH)
-        if ranked[0][1] >= CONFIDENCE_THRESHOLD:
-          LOGGER.warning(
-            "Using Deezer result `%s' (%s) for `%s'",
-            ranked[0][0].title,
-            ranked[0][0].lavalink_track.identifier,
-            item.title,
-          )
-          results.append(ranked[0][0])
-        else:
-          LOGGER.warning("No similar Deezer results for `%s'", item.title)
-
-    if len(results) == 0:
-      try:
-        yt_results = await get_youtube_matches(
-          node, query, desired_duration_ms=item.duration
-        )
-      except LavalinkSearchError as err:
-        LOGGER.error(err.message)
-        raise
-
-      # Use top result
-      ranked = rank_results(query, yt_results, SearchType.YOUTUBE)
-      LOGGER.warning(
-        "Using YouTube result `%s' (%s) for `%s'",
-        ranked[0][0].title,
-        ranked[0][0].lavalink_track.identifier,
-        item.title,
-      )
-      results.append(ranked[0][0])
-
-  # Save Lavalink result
-  lavalink_track = results[0].lavalink_track
-  if in_place:
-    item.lavalink_track = lavalink_track
-  _set_cached_track(lavalink_track.id, key=redis_key, key_type=redis_key_type)
-
-  return lavalink_track
-
-
-def _get_cached_track(
-  item: QueueItem,
-) -> Tuple[Optional[str], Optional[str], Optional[str]]:
-  redis_key = None
-  redis_key_type = None
-  if item.spotify_id is not None:
-    redis_key = item.spotify_id
-    redis_key_type = 'spotify_id'
-  elif item.isrc is not None:
-    redis_key = item.isrc
-    redis_key_type = 'isrc'
-
-  cached = None
-  if REDIS is not None and redis_key is not None and redis_key_type is not None:
-    cached = REDIS.get_lavalink_track(redis_key, key_type=redis_key_type)
-
-  return cached, redis_key, redis_key_type
-
-
-def _set_cached_track(
-  lavalink_track: str,
-  key: Optional[str] = None,
-  key_type: Optional[str] = None,
-):
-  if REDIS is not None and key_type is not None and key is not None:
-    REDIS.set_lavalink_track(key, lavalink_track, key_type=key_type)
 
 
 def invalidate_lavalink_track(item: QueueItem):
