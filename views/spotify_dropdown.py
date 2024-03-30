@@ -18,6 +18,9 @@ if TYPE_CHECKING:
   from utils.blanco import BlancoBot
 
 
+MAX_LINE_LENGTH = 100
+
+
 class SpotifyDropdown(Select):
   """
   Dropdown menu for selecting a Spotify entity.
@@ -40,7 +43,7 @@ class SpotifyDropdown(Select):
     for choice in choices:
       # Truncate names to 100 characters
       choice_name = choice.name
-      if len(choice_name) > 100:
+      if len(choice_name) > MAX_LINE_LENGTH:
         choice_name = choice_name[:97] + '...'
       elif len(choice_name) == 0:
         # Some playlists have empty names, for example:
@@ -49,7 +52,7 @@ class SpotifyDropdown(Select):
 
       # Truncate descriptions to 100 characters
       choice_desc = choice.description
-      if len(choice_desc) > 100:
+      if len(choice_desc) > MAX_LINE_LENGTH:
         choice_desc = choice_desc[:97] + '...'
 
       options.append(

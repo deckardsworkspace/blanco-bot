@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional
 from nextcord import ButtonStyle
 from nextcord.ui import Button, View, button
 from requests.exceptions import HTTPError, Timeout
+from requests.status_codes import codes
 
 from utils.constants import SPOTIFY_403_ERR_MSG
 from utils.embeds import create_error_embed, create_success_embed
@@ -177,7 +178,7 @@ class NowPlayingView(View):
       spotify.save_track(self._spotify_id)
     except HTTPError as err:
       if err.response is not None:
-        if err.response.status_code == 403:
+        if err.response.status_code == codes.forbidden:
           message = SPOTIFY_403_ERR_MSG.format('Like this track')
         else:
           message = ''.join(

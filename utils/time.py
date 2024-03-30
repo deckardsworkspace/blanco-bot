@@ -5,6 +5,8 @@ Utility methods for converting between human and machine readable time formats.
 from math import floor
 from typing import Tuple, Union
 
+NUM_COLON_DELIMITED_SEGMENTS = 3
+
 
 def get_time_components(msec: Union[int, float]) -> Tuple[int, int, int]:
   """
@@ -38,5 +40,7 @@ def machine_readable_time(colon_delimited_time: str) -> int:
   time_segments = colon_delimited_time.split(':')
   sec = int(time_segments[-1])
   minute = int(time_segments[-2])
-  hour = int(time_segments[0]) if len(time_segments) == 3 else 0
+  hour = (
+    int(time_segments[0]) if len(time_segments) == NUM_COLON_DELIMITED_SEGMENTS else 0
+  )
   return hour * 3600000 + minute * 60000 + sec * 1000

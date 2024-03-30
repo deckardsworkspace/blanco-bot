@@ -9,6 +9,9 @@ import validators
 
 from .exceptions import LavalinkInvalidIdentifierError, SpotifyInvalidURLError
 
+MIN_SPOTIFY_URL_SEGMENTS = 2
+NUM_SC_TRACK_URL_SEGMENTS = 2
+
 
 def check_contains_ytlistid(url: str) -> bool:
   """
@@ -102,7 +105,7 @@ def get_sctype_from_url(url: str) -> bool:
     raise LavalinkInvalidIdentifierError(
       url, reason='SoundCloud URL does not point to a track or set.'
     )
-  if len(path) == 2 and path[1] != 'sets':
+  if len(path) == NUM_SC_TRACK_URL_SEGMENTS and path[1] != 'sets':
     return True
   if path[1] == 'sets':
     return False
@@ -127,7 +130,7 @@ def get_spinfo_from_url(url: str) -> tuple[str, str]:
   elif re.match(r'^spotify:[a-z]', url):
     # We are dealing with a Spotify URI
     parsed_path = url.split(':')[1:]
-  if len(parsed_path) < 2 or parsed_path[0] not in (
+  if len(parsed_path) < MIN_SPOTIFY_URL_SEGMENTS or parsed_path[0] not in (
     'track',
     'album',
     'playlist',
