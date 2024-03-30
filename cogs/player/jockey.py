@@ -21,6 +21,7 @@ from dataclass.custom_embed import CustomEmbed
 from utils.constants import UNPAUSE_THRESHOLD
 from utils.embeds import create_error_embed
 from utils.exceptions import (
+  BlancoException,
   BumpError,
   BumpNotEnabledError,
   BumpNotReadyError,
@@ -30,12 +31,12 @@ from utils.exceptions import (
   LavalinkSearchError,
   SpotifyNoResultsError,
 )
-from utils.musicbrainz import annotate_track
 from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
 
 from .jockey_helpers import find_lavalink_track, invalidate_lavalink_track, parse_query
 from .queue import QueueManager
+from .scrobbler import ScrobbleHandler
 
 if TYPE_CHECKING:
   from mafic import Track
@@ -44,6 +45,10 @@ if TYPE_CHECKING:
 
   from dataclass.queue_item import QueueItem
   from utils.blanco import BlancoBot
+
+
+MAX_PLAYER_CONNECT_WAIT_SEC = 10
+MIN_TRACK_LENGTH_FOR_SCROBBLE_MSEC = 30000
 
 
 class Jockey(Player['BlancoBot']):
@@ -59,6 +64,9 @@ class Jockey(Player['BlancoBot']):
 
     if not isinstance(channel, StageChannel) and not isinstance(channel, VoiceChannel):
       raise TypeError(f'Channel must be a voice channel, not {type(channel)}')
+
+    # Scrobble handler
+    self._scrobbler = ScrobbleHandler(client, channel)
 
     # Database
     self._db = client.database
@@ -225,7 +233,7 @@ class Jockey(Player['BlancoBot']):
           item.title,
         )
         while not self.connected:
-          if wait_time >= 10:
+          if wait_time >= MAX_PLAYER_CONNECT_WAIT_SEC:
             raise JockeyError('Timeout while waiting for player to connect') from err
 
           # Print wait message only once
@@ -253,64 +261,17 @@ class Jockey(Player['BlancoBot']):
 
     :param item: The track to scrobble.
     """
-    get_event_loop().create_task(self._scrobble_impl(item))
+    loop = get_event_loop()
+    loop.create_task(self._scrobble_impl(item))
 
   async def _scrobble_impl(self, item: 'QueueItem'):
     """
-    Scrobbles a track for all users in the channel who have
-    linked their Last.fm accounts.
-
-    Called by _scrobble() in a separate thread.
-
-    :param item: The track to scrobble.
+    Wraps the scrobble method for logging purposes.
     """
-    if not isinstance(self.channel, VoiceChannel):
-      return
-
-    # Check if scrobbling is enabled
-    assert self._bot.config is not None
-    if not self._bot.config.lastfm_enabled:
-      return
-
-    # Check if track can be scrobbled
-    time_now = int(time())
     try:
-      duration = item.duration
-      if item.lavalink_track is not None:
-        duration = item.lavalink_track.length
-
-      if item.start_time is not None and duration is not None:
-        # Check if track is longer than 30 seconds
-        if duration < 30000:
-          raise ValueError('Track is too short')
-
-        # Check if enough time has passed (1/2 duration or 4 min, whichever is less)
-        elapsed_ms = (time_now - item.start_time) * 1000
-        if elapsed_ms < min(duration // 2, 240000):
-          raise ValueError('Not enough time has passed')
-      else:
-        # Default to current time for timestamp
-        item.start_time = time_now
-    except ValueError as err:
-      self._logger.warning("Failed to scrobble `%s': %s", item.title, err.args[0])
-      return
-
-    # Lookup MusicBrainz ID if needed
-    if item.mbid is None:
-      annotate_track(item)
-
-    # Don't scrobble with no MBID and ISRC,
-    # as the track probably isn't on Last.fm
-    if item.mbid is None and item.isrc is None:
-      self._logger.warning("Not scrobbling `%s': no MusicBrainz ID or ISRC", item.title)
-      return
-
-    # Scrobble for every user
-    for member in self.channel.members:
-      if not member.bot:
-        scrobbler = self._bot.get_scrobbler(member.id)
-        if scrobbler is not None:
-          scrobbler.scrobble(item)
+      self._scrobbler.scrobble(item)
+    except BlancoException as e:
+      self._logger.warning("Failed to scrobble `%s': %s", item.title, e)
 
   async def disconnect(self, *, force: bool = False):
     """
@@ -576,20 +537,18 @@ class Jockey(Player['BlancoBot']):
 
       return
 
-    # Is this autoskipping?
-    if auto:
-      # Check if we're looping the current track
-      if self._queue_mgr.is_looping_one:
-        # Re-enqueue the current track
-        try:
-          await self._enqueue(self._queue_mgr.current_index, auto=auto)
-        except JockeyError as err:
-          await self._edit_np_controls(show_controls=True)
-          await self.status_channel.send(
-            embed=create_error_embed(f'Unable to loop track: {err}')
-          )
+    # Check if we're looping the current track
+    if auto and self._queue_mgr.is_looping_one:
+      # Re-enqueue the current track
+      try:
+        await self._enqueue(self._queue_mgr.current_index, auto=auto)
+      except JockeyError as err:
+        await self._edit_np_controls(show_controls=True)
+        await self.status_channel.send(
+          embed=create_error_embed(f'Unable to loop track: {err}')
+        )
 
-        return
+      return
 
     # Try to enqueue the next playable track
     delta = 1 if forward else -1

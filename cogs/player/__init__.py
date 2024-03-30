@@ -20,12 +20,13 @@ from nextcord import (
 from nextcord.abc import Messageable
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
-from requests import HTTPError
+from requests import HTTPError, codes
 
 from dataclass.custom_embed import CustomEmbed
 from utils.constants import RELEASE, SPOTIFY_403_ERR_MSG
 from utils.embeds import create_error_embed, create_success_embed
 from utils.exceptions import (
+  BlancoException,
   EmptyQueueError,
   EndOfQueueError,
   JockeyError,
@@ -42,6 +43,9 @@ from .jockey import Jockey
 if TYPE_CHECKING:
   from dataclass.queue_item import QueueItem
   from utils.blanco import BlancoBot
+
+
+QUEUE_LINE_LENGTH = 50
 
 
 class PlayerCog(Cog):
@@ -291,10 +295,8 @@ class PlayerCog(Cog):
       or not itx.user.voice.channel
       or not isinstance(itx.guild, Guild)
     ):
-      return await itx.response.send_message(
-        embed=create_error_embed(
-          message='Connect to a server voice channel to use this command.'
-        ),
+      raise BlancoException(
+        'Connect to a server voice channel to use this command.',
         ephemeral=True,
       )
 
@@ -302,16 +304,12 @@ class PlayerCog(Cog):
     guild_id = itx.guild.id
     channel = itx.channel
     if not isinstance(channel, Messageable):
-      raise RuntimeError('[player::play] itx.channel is not Messageable')
+      raise BlancoException('[player::play] itx.channel is not Messageable')
     self._bot.set_status_channel(guild_id, channel)
 
     # Check if Lavalink is ready
     if not self._bot.pool_initialized or len(self._bot.pool.nodes) == 0:
-      return await itx.response.send_message(
-        embed=create_error_embed(
-          message='No Lavalink nodes available. Try again later.'
-        )
-      )
+      raise BlancoException('No Lavalink nodes available. Try again later.')
 
     # Connect to voice
     await itx.response.defer()
@@ -324,11 +322,7 @@ class PlayerCog(Cog):
         )
         await self._deafen(itx.guild.me, channel=channel)
       except AsyncioTimeoutError:
-        return await itx.followup.send(
-          embed=create_error_embed(
-            message='Timed out while connecting to voice. Try again later.'
-          )
-        )
+        raise BlancoException('Timed out while connecting to voice. Try again later.')
 
     # Dispatch to jockey
     jockey = await self._get_jockey(itx)
@@ -337,11 +331,11 @@ class PlayerCog(Cog):
     except JockeyError as err:
       # Disconnect if we're not playing anything
       if not jockey.playing:
-        return await self._disconnect(itx=itx, reason=f'Error: `{err}`')
+        await self._disconnect(itx=itx, reason=f'Error: `{err}`')
 
-      return await itx.followup.send(embed=create_error_embed(str(err)))
+      raise BlancoException(err) from err
     except JockeyException as exc:
-      return await itx.followup.send(embed=create_error_embed(str(exc)))
+      raise BlancoException(exc) from exc
 
     body = [f'{track_name}\n']
 
@@ -366,9 +360,7 @@ class PlayerCog(Cog):
       title='Added to queue',
       body='\n'.join(body),
     )
-    return await itx.followup.send(
-      embed=embed.set_footer(text=f'Blanco release {RELEASE}')
-    )
+    await itx.followup.send(embed=embed.set_footer(text=f'Blanco release {RELEASE}'))
 
   @slash_command(name='playlists')
   async def playlist(self, itx: Interaction):
@@ -393,7 +385,7 @@ class PlayerCog(Cog):
     try:
       playlists = spotify.get_user_playlists()
     except HTTPError as err:
-      if err.response is not None and err.response.status_code == 403:
+      if err.response is not None and err.response.status_code == codes.forbidden:
         return await itx.followup.send(
           embed=create_error_embed(
             message=SPOTIFY_403_ERR_MSG.format('get your playlists')
@@ -491,7 +483,7 @@ class PlayerCog(Cog):
         line = f'{line_prefix} {index} :: {title} - {artist}'
 
         # Truncate line if necessary
-        if len(line) > 50:
+        if len(line) > QUEUE_LINE_LENGTH:
           line = line[:47] + '...'
         else:
           line = f'{line:50.50}'
