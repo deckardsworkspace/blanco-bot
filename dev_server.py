@@ -15,28 +15,30 @@ from utils.config import config
 
 
 def run_tailwind():
-    """
-    Run the TailwindCSS compiler.
-    """
-    run(
-        ' '.join([
-            'tailwindcss',
-            '-i',
-            './server/static/css/base.css',
-            '-o',
-            './server/static/css/main.css',
-            '--watch'
-        ]),
-        check=False,
-        shell=True
-    )
+  """
+  Run the TailwindCSS compiler.
+  """
+  run(
+    ' '.join(
+      [
+        'tailwindcss',
+        '-i',
+        './server/static/css/base.css',
+        '-o',
+        './server/static/css/main.css',
+        '--watch',
+      ]
+    ),
+    check=False,
+    shell=True,
+  )
 
 
 if __name__ == '__main__':
-    thread = threading.Thread(target=run_tailwind)
-    thread.start()
+  thread = threading.Thread(target=run_tailwind)
+  thread.start()
 
-    db = Database(config.db_file)
-    loop = asyncio.new_event_loop()
-    loop.create_task(run_app(db, config))
-    loop.run_forever()
+  db = Database(config.db_file)
+  loop = asyncio.new_event_loop()
+  loop.create_task(run_app(db, config))
+  loop.run_forever()
