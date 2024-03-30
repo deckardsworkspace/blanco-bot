@@ -271,7 +271,7 @@ class Jockey(Player['BlancoBot']):
     try:
       self._scrobbler.scrobble(item)
     except BlancoException as e:
-      self._logger.warning("Failed to scrobble `%s': %s", item.title, e)
+      self._logger.warning(e)
 
   async def disconnect(self, *, force: bool = False):
     """
