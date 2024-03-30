@@ -94,6 +94,10 @@ class SpotifyNoResultsError(BlancoException):
   Raised when no results are found for a Spotify query.
   """
 
+  def __init__(self, query):
+    self.message = f'No results found for "{query}" on Spotify.'
+    super().__init__(self.message)
+
 
 class VoiceCommandError(BlancoException):
   """

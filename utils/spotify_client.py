@@ -275,7 +275,7 @@ class Spotify:
     """
     response = self._client.search(query, limit=20, type='track')
     if response is None or len(response['tracks']['items']) == 0:
-      raise SpotifyNoResultsError
+      raise SpotifyNoResultsError(query)
 
     # Filter out tracks with blacklisted words not in the original query
     results = []
@@ -312,7 +312,7 @@ class Spotify:
 
     response = self._client.search(query, limit=10, type=search_type)
     if response is None or len(response[f'{search_type}s']['items']) == 0:
-      raise SpotifyNoResultsError
+      raise SpotifyNoResultsError(query)
 
     # Parse results
     items = response[f'{search_type}s']['items']
