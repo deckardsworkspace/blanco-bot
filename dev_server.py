@@ -37,6 +37,6 @@ if __name__ == '__main__':
     thread.start()
 
     db = Database(config.db_file)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.create_task(run_app(db, config))
     loop.run_forever()
