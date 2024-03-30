@@ -12,17 +12,19 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.11
-          cache: 'pip'
+          python-version: 3.12
+          cache: 'poetry'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip wheel
-          pip install -r requirements.txt
-      - name: Install pylint
-        run: pip install pylint
-      - name: Run pylint
+          python -m pip install poetry
+          poetry env use 3.12
+          poetry install
+      - name: Run linter
         run: |
-          pylint --rcfile=.pylintrc --fail-under=9.0 $(git ls-files '*.py')
+          poetry run ruff check --no-fix --no-cache $(git ls-files '*.py')
+      - name: Run format checker
+        run: |
+          poetry run ruff format --check --no-cache $(git ls-files '*.py')
   build:
     uses: ./.github/workflows/build.yml
 
