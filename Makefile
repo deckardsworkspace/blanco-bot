@@ -1,4 +1,6 @@
+MAKEFLAGS += --jobs=2
 .PHONY: install dev
+all: install dev-frontend dev precommit image dev-image
 
 install:
 	poetry env use 3.12
@@ -13,3 +15,12 @@ dev: config.yml blanco.db
 
 precommit:
 	poetry run pre-commit run --all-files
+
+image:
+	docker build -t blanco-bot .
+
+dev-image: config.yml blanco.db image
+	docker run --rm -it \
+		-v $(PWD):/opt/app \
+		-p 8080:8080 \
+		blanco-bot
