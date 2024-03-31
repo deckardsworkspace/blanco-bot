@@ -5,7 +5,7 @@ Queue manager class for the player cog.
 from random import shuffle
 from typing import TYPE_CHECKING, List, Tuple
 
-from bot.dataclass.queue_item import QueueItem
+from bot.models.queue_item import QueueItem
 from bot.utils.exceptions import EmptyQueueError, EndOfQueueError
 from bot.utils.logger import create_logger
 

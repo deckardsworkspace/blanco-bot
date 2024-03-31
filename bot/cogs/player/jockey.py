@@ -17,7 +17,7 @@ from nextcord import (
   VoiceChannel,
 )
 
-from bot.dataclass.custom_embed import CustomEmbed
+from bot.models.custom_embed import CustomEmbed
 from bot.utils.constants import UNPAUSE_THRESHOLD
 from bot.utils.embeds import create_error_embed
 from bot.utils.exceptions import (
@@ -34,17 +34,17 @@ from bot.utils.exceptions import (
 from bot.utils.time import human_readable_time
 from bot.views.now_playing import NowPlayingView
 
-from .jockey_helpers import invalidate_lavalink_track, parse_query
-from .queue import QueueManager
-from .scrobbler import ScrobbleHandler
-from .track_finder import find_lavalink_track
+from .helpers.lavalink_track import find_lavalink_track, invalidate_cached_track
+from .helpers.parsers import parse_query
+from .helpers.queue_manager import QueueManager
+from .helpers.scrobble_handler import ScrobbleHandler
 
 if TYPE_CHECKING:
   from mafic import Track
   from nextcord import Embed
   from nextcord.abc import Connectable, Messageable
 
-  from bot.dataclass.queue_item import QueueItem
+  from bot.models.queue_item import QueueItem
   from bot.utils.blanco import BlancoBot
 
 
@@ -244,7 +244,7 @@ class Jockey(Player['BlancoBot']):
           wait_time += 0.1
 
         # Remove cached Lavalink track and try again
-        invalidate_lavalink_track(item)
+        invalidate_cached_track(item)
         has_retried = True
       else:
         # Clear pause timestamp for new track

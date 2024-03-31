@@ -8,7 +8,7 @@ from nextcord import Color, Interaction, PartialMessageable, SlashOption, slash_
 from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
 
-from bot.dataclass.custom_embed import CustomEmbed
+from bot.models.custom_embed import CustomEmbed
 from bot.utils.embeds import create_success_embed
 from bot.utils.logger import create_logger
 from bot.utils.paginator import Paginator

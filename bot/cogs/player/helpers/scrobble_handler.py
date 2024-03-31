@@ -9,7 +9,7 @@ from bot.utils.musicbrainz import annotate_track
 if TYPE_CHECKING:
   from nextcord.abc import Connectable
 
-  from bot.dataclass.queue_item import QueueItem
+  from bot.models.queue_item import QueueItem
   from bot.utils.blanco import BlancoBot
 
 

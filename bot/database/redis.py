@@ -6,7 +6,7 @@ from typing import Optional
 
 import redis
 
-from bot.dataclass.spotify import SpotifyTrack
+from bot.models.spotify import SpotifyTrack
 from bot.utils.config import REDIS_HOST, REDIS_PASSWORD, REDIS_PORT
 from bot.utils.logger import create_logger
 

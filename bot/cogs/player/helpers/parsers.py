@@ -1,22 +1,21 @@
 """
-Helper functions for the music player.
+Playback query parsers for the Player cog.
 """
 
-from typing import TYPE_CHECKING, List, Tuple, TypeVar
+from typing import TYPE_CHECKING, List
 
 from mafic import SearchType
 from requests.status_codes import codes
 from spotipy.exceptions import SpotifyException
 
-from bot.database.redis import REDIS
-from bot.dataclass.queue_item import QueueItem
+from bot.models.queue_item import QueueItem
 from bot.utils.constants import CONFIDENCE_THRESHOLD
 from bot.utils.exceptions import (
   JockeyException,
   LavalinkInvalidIdentifierError,
   SpotifyNoResultsError,
 )
-from bot.utils.fuzzy import check_similarity_weighted
+from bot.utils.fuzzy import rank_results
 from bot.utils.logger import create_logger
 from bot.utils.spotify_client import Spotify
 from bot.utils.url import (
@@ -32,7 +31,7 @@ from bot.utils.url import (
   get_ytlistid_from_url,
 )
 
-from .lavalink_client import (
+from .lavalink_search import (
   get_soundcloud_matches,
   get_youtube_matches,
 )
@@ -40,77 +39,9 @@ from .lavalink_client import (
 if TYPE_CHECKING:
   from mafic import Node
 
-from bot.dataclass.spotify import SpotifyTrack
+from bot.models.spotify import SpotifyTrack
 
 LOGGER = create_logger('jockey_helpers')
-T = TypeVar('T')
-
-
-def rank_results(
-  query: str, results: List[T], result_type: SearchType
-) -> List[Tuple[T, int]]:
-  """
-  Ranks search results based on similarity to a fuzzy query.
-
-  :param query: The query to check against.
-  :param results: The results to rank. Can be mafic.Track, dataclass.SpotifyTrack,
-      or any object with a title and author string attribute.
-  :param result_type: The type of result. See ResultType.
-  :return: A list of tuples containing the result and its similarity to the query.
-  """
-  # Rank results
-  similarities = [
-    check_similarity_weighted(
-      query,
-      f'{result.title} {result.author}',  # type: ignore
-      int(100 * (0.8**i)),
-    )
-    for i, result in enumerate(results)
-  ]
-  ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
-
-  # Print confidences for debugging
-  type_name = 'YouTube'
-  if result_type == SearchType.SPOTIFY_SEARCH:
-    type_name = 'Spotify'
-  elif result_type == SearchType.DEEZER_SEARCH:
-    type_name = 'Deezer'
-  LOGGER.debug('%s results and confidences for "%s":', type_name, query)
-  for result, confidence in ranked:
-    LOGGER.debug(
-      '  %3d  %-20s  %-25s',
-      confidence,
-      result.author[:20],  # type: ignore
-      result.title[:25],  # type: ignore
-    )
-
-  return ranked
-
-
-def invalidate_lavalink_track(item: QueueItem):
-  """
-  Removes a cached Lavalink track from Redis.
-
-  :param item: The QueueItem to invalidate the track for.
-  """
-  if REDIS is None:
-    return
-
-  # Determine key type
-  redis_key = None
-  redis_key_type = None
-  if item.spotify_id is not None:
-    redis_key = item.spotify_id
-    redis_key_type = 'spotify_id'
-  elif item.isrc is not None:
-    redis_key = item.isrc
-    redis_key_type = 'isrc'
-
-  # Invalidate cached Lavalink track
-  if redis_key is not None and redis_key_type is not None:
-    REDIS.invalidate_lavalink_track(redis_key, key_type=redis_key_type)
-  else:
-    LOGGER.warning("Could not invalidate cached track for `%s': no key", item.title)
 
 
 async def parse_query(

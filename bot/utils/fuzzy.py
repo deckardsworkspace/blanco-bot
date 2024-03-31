@@ -3,8 +3,15 @@ Utilities for fuzzy string matching.
 """
 
 from difflib import get_close_matches
+from typing import List, Tuple, TypeVar
 
+from mafic import SearchType
 from thefuzz import fuzz
+
+from .logger import create_logger
+
+LOGGER = create_logger('fuzzy')
+T = TypeVar('T')
 
 
 def check_similarity(actual: str, candidate: str) -> float:
@@ -55,3 +62,44 @@ def check_similarity_weighted(actual: str, candidate: str, candidate_rank: int) 
     + (tsor * 0.06)
     + (ptsr * 0.04)
   )
+
+
+def rank_results(
+  query: str, results: List[T], result_type: SearchType
+) -> List[Tuple[T, int]]:
+  """
+  Ranks search results based on similarity to a fuzzy query.
+
+  :param query: The query to check against.
+  :param results: The results to rank. Can be mafic.Track, dataclass.SpotifyTrack,
+      or any object with a title and author string attribute.
+  :param result_type: The type of result. See ResultType.
+  :return: A list of tuples containing the result and its similarity to the query.
+  """
+  # Rank results
+  similarities = [
+    check_similarity_weighted(
+      query,
+      f'{result.title} {result.author}',  # type: ignore
+      int(100 * (0.8**i)),
+    )
+    for i, result in enumerate(results)
+  ]
+  ranked = sorted(zip(results, similarities), key=lambda x: x[1], reverse=True)
+
+  # Print confidences for debugging
+  type_name = 'YouTube'
+  if result_type == SearchType.SPOTIFY_SEARCH:
+    type_name = 'Spotify'
+  elif result_type == SearchType.DEEZER_SEARCH:
+    type_name = 'Deezer'
+  LOGGER.debug('%s results and confidences for "%s":', type_name, query)
+  for result, confidence in ranked:
+    LOGGER.debug(
+      '  %3d  %-20s  %-25s',
+      confidence,
+      result.author[:20],  # type: ignore
+      result.title[:25],  # type: ignore
+    )
+
+  return ranked

@@ -11,9 +11,9 @@ import pylast
 if TYPE_CHECKING:
   from logging import Logger
 
-from bot.dataclass.config import Config
-from bot.dataclass.oauth import LastfmAuth
-from bot.dataclass.queue_item import QueueItem
+from bot.models.config import Config
+from bot.models.oauth import LastfmAuth
+from bot.models.queue_item import QueueItem
 
 
 class Scrobbler:

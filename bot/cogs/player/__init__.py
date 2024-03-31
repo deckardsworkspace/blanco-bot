@@ -23,7 +23,7 @@ from nextcord.ext import application_checks
 from nextcord.ext.commands import Cog
 from requests import HTTPError, codes
 
-from bot.dataclass.custom_embed import CustomEmbed
+from bot.models.custom_embed import CustomEmbed
 from bot.utils.constants import RELEASE, SPOTIFY_403_ERR_MSG
 from bot.utils.embeds import create_error_embed, create_success_embed
 from bot.utils.exceptions import (
@@ -42,7 +42,7 @@ from bot.views.spotify_dropdown import SpotifyDropdownView
 from .jockey import Jockey
 
 if TYPE_CHECKING:
-  from bot.dataclass.queue_item import QueueItem
+  from bot.models.queue_item import QueueItem
   from bot.utils.blanco import BlancoBot
 
 

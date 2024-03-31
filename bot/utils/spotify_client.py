@@ -16,7 +16,7 @@ from tenacity import (
 )
 
 from bot.database.redis import REDIS
-from bot.dataclass.spotify import SpotifyResult, SpotifyTrack
+from bot.models.spotify import SpotifyResult, SpotifyTrack
 
 from .constants import BLACKLIST
 from .exceptions import SpotifyInvalidURLError, SpotifyNoResultsError

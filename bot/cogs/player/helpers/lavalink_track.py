@@ -1,3 +1,9 @@
+"""
+Lavalink track helpers, which take care of finding a matching
+playable Lavalink track for a QueueItem, caching it, and
+invalidating it when necessary.
+"""
+
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from mafic import SearchType
@@ -5,19 +11,19 @@ from mafic import SearchType
 from bot.database.redis import REDIS
 from bot.utils.constants import CONFIDENCE_THRESHOLD
 from bot.utils.exceptions import LavalinkSearchError
+from bot.utils.fuzzy import rank_results
 from bot.utils.logger import create_logger
 from bot.utils.musicbrainz import annotate_track
 
-from .jockey_helpers import rank_results
-from .lavalink_client import get_deezer_matches, get_deezer_track, get_youtube_matches
+from .lavalink_search import get_deezer_matches, get_deezer_track, get_youtube_matches
 
 if TYPE_CHECKING:
   from mafic import Node, Track
 
-  from bot.dataclass.lavalink_result import LavalinkResult
-  from bot.dataclass.queue_item import QueueItem
+  from bot.models.lavalink_result import LavalinkResult
+  from bot.models.queue_item import QueueItem
 
-  from .lavalink_client import LavalinkSearchError
+  from .lavalink_search import LavalinkSearchError
 
 LOGGER = create_logger('track_finder')
 
@@ -112,19 +118,36 @@ async def find_lavalink_track(
   return lavalink_track
 
 
+def invalidate_cached_track(item: 'QueueItem'):
+  """
+  Removes a cached Lavalink track from Redis.
+
+  :param item: The QueueItem to invalidate the track for.
+  """
+  if REDIS is None:
+    return
+
+  redis_key, redis_key_type = _determine_cache_key(item)
+
+  # Invalidate cached Lavalink track
+  if redis_key is not None and redis_key_type is not None:
+    REDIS.invalidate_lavalink_track(redis_key, key_type=redis_key_type)
+  else:
+    LOGGER.warning("Could not invalidate cached track for `%s': no key", item.title)
+
+
 def _get_cached_track(
   item: 'QueueItem',
 ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
-  redis_key = None
-  redis_key_type = None
-  if item.spotify_id is not None:
-    redis_key = item.spotify_id
-    redis_key_type = 'spotify_id'
-  elif item.isrc is not None:
-    redis_key = item.isrc
-    redis_key_type = 'isrc'
+  """
+  Gets a cached Lavalink track from Redis.
 
+  :param item: The QueueItem to get the cached track for.
+  """
+
+  redis_key, redis_key_type = _determine_cache_key(item)
   cached = None
+
   if REDIS is not None and redis_key is not None and redis_key_type is not None:
     cached = REDIS.get_lavalink_track(redis_key, key_type=redis_key_type)
 
@@ -136,8 +159,35 @@ def _set_cached_track(
   key: Optional[str] = None,
   key_type: Optional[str] = None,
 ):
+  """
+  Caches a Lavalink track in Redis.
+
+  :param lavalink_track: The Lavalink track to cache.
+  :param key: The key to cache the track under.
+  :param key_type: The type of key to cache the track under.
+  """
   if REDIS is not None and key_type is not None and key is not None:
     REDIS.set_lavalink_track(key, lavalink_track, key_type=key_type)
+
+
+def _determine_cache_key(item: 'QueueItem') -> Tuple[Optional[str], Optional[str]]:
+  """
+  Determines the Redis key and key type for caching a Lavalink track.
+
+  :param item: The QueueItem to determine the cache key for.
+  """
+
+  redis_key = None
+  redis_key_type = None
+
+  if item.spotify_id is not None:
+    redis_key = item.spotify_id
+    redis_key_type = 'spotify_id'
+  elif item.isrc is not None:
+    redis_key = item.isrc
+    redis_key_type = 'isrc'
+
+  return redis_key, redis_key_type
 
 
 async def _append_deezer_results_for_isrc(

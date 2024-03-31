@@ -5,7 +5,7 @@ Database module for Blanco. Interfaces with the bot's SQLite database.
 import sqlite3 as sql
 from typing import List, Optional
 
-from bot.dataclass.oauth import LastfmAuth, OAuth
+from bot.models.oauth import LastfmAuth, OAuth
 from bot.utils.logger import create_logger
 
 from .migrations import run_migrations

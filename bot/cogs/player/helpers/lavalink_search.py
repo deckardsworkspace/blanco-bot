@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from mafic import Playlist, SearchType, TrackLoadException
 
-from bot.dataclass.lavalink_result import LavalinkResult
+from bot.models.lavalink_result import LavalinkResult
 from bot.utils.constants import BLACKLIST
 from bot.utils.exceptions import LavalinkSearchError
 from bot.utils.fuzzy import check_similarity

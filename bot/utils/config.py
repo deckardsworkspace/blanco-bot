@@ -12,7 +12,7 @@ from typing import Dict
 
 from yaml import safe_load
 
-from bot.dataclass.config import Config, LavalinkNode
+from bot.models.config import Config, LavalinkNode
 
 DATABASE_FILE = None
 DISCORD_TOKEN = None

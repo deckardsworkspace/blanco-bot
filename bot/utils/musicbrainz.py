@@ -15,7 +15,7 @@ from .fuzzy import check_similarity_weighted
 from .logger import create_logger
 
 if TYPE_CHECKING:
-  from bot.dataclass.queue_item import QueueItem
+  from bot.models.queue_item import QueueItem
 
 
 LOGGER = create_logger('musicbrainz')

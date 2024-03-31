@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING, List
 from nextcord import Colour, SelectOption
 from nextcord.ui import Select, View
 
-from bot.dataclass.custom_embed import CustomEmbed
+from bot.models.custom_embed import CustomEmbed
 
 if TYPE_CHECKING:
   from nextcord import Interaction
 
   from bot.cogs.player import PlayerCog
-  from bot.dataclass.spotify import SpotifyResult
+  from bot.models.spotify import SpotifyResult
   from bot.utils.blanco import BlancoBot
 
 

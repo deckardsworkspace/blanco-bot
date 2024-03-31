@@ -12,15 +12,15 @@ from typing import TYPE_CHECKING, List
 import requests
 from requests import HTTPError, Timeout
 
-from bot.dataclass.oauth import OAuth
-from bot.dataclass.spotify import SpotifyResult
+from bot.models.oauth import OAuth
+from bot.models.spotify import SpotifyResult
 
 from .constants import SPOTIFY_ACCOUNTS_BASE_URL, SPOTIFY_API_BASE_URL, USER_AGENT
 from .logger import create_logger
 
 if TYPE_CHECKING:
   from bot.database import Database
-from bot.dataclass.config import Config
+from bot.models.config import Config
 
 
 class PrivateSpotify:

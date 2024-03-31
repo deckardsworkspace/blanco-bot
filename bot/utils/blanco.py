@@ -24,7 +24,7 @@ from nextcord import (
 )
 from nextcord.ext.commands import Bot, ExtensionNotLoaded
 
-from bot.cogs.player.track_finder import find_lavalink_track
+from bot.cogs.player.helpers.lavalink_track import find_lavalink_track
 from bot.database import Database
 from bot.views.now_playing import NowPlayingView
 
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
   from mafic import Node, TrackEndEvent, TrackStartEvent
 
   from bot.cogs.player.jockey import Jockey
-from bot.dataclass.config import Config
+from bot.models.config import Config
 
 StatusChannel = Union[
   PartialMessageable, VoiceChannel, TextChannel, StageChannel, Thread

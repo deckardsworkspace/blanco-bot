@@ -6,7 +6,7 @@ from typing import Optional
 
 from nextcord import Colour, Embed
 
-from bot.dataclass.custom_embed import CustomEmbed
+from bot.models.custom_embed import CustomEmbed
 
 
 def create_error_embed(message: str) -> Embed:

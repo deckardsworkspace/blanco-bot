@@ -11,5 +11,6 @@
         "--disable=too-few-public-methods",
         "--disable=too-many-return-statements",
         "--disable=too-many-branches"
-    ]
+    ],
+    "editor.formatOnSave": true
 }

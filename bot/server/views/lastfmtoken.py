@@ -9,7 +9,7 @@ from aiohttp import web
 from aiohttp_session import get_session
 from requests.exceptions import HTTPError, Timeout
 
-from bot.dataclass.oauth import LastfmAuth
+from bot.models.oauth import LastfmAuth
 from bot.utils.constants import LASTFM_API_BASE_URL, USER_AGENT
 
 

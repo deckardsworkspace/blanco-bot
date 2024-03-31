@@ -9,7 +9,7 @@ from aiohttp import web
 from aiohttp_session import get_session
 
 if TYPE_CHECKING:
-  from bot.dataclass.oauth import LastfmAuth, OAuth
+  from bot.models.oauth import LastfmAuth, OAuth
 
 
 @aiohttp_jinja2.template('dashboard.html')
