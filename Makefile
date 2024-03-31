@@ -3,7 +3,7 @@ MAKEFLAGS += --jobs=2
 all: install dev-frontend dev precommit image dev-image
 
 install:
-	poetry env use 3.12
+	poetry env use 3.11
 	poetry install
 	poetry run pre-commit install
 
@@ -17,7 +17,7 @@ precommit:
 	poetry run pre-commit run --all-files
 
 image:
-	docker build -t blanco-bot .
+	docker buildx build -t blanco-bot .
 
 dev-image: config.yml blanco.db image
 	docker run --rm -it \

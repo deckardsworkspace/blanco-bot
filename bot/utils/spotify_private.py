@@ -134,7 +134,7 @@ class PrivateSpotify:
     return [
       SpotifyResult(
         name=playlist['name'],
-        description=f'{playlist['tracks']['total']} tracks',
+        description=f"{playlist['tracks']['total']} tracks",
         spotify_id=playlist['id'],
       )
       for playlist in parsed['items']

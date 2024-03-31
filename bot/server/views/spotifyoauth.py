@@ -78,7 +78,7 @@ async def spotifyoauth(request: web.Request):  # noqa: PLR0911
   user_info = requests.get(
     str(SPOTIFY_API_BASE_URL / 'me'),
     headers={
-      'Authorization': f'Bearer {parsed['access_token']}',
+      'Authorization': f"Bearer {parsed['access_token']}",
       'User-Agent': USER_AGENT,
     },
     timeout=5,

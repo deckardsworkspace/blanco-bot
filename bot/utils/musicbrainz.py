@@ -169,7 +169,7 @@ def mb_lookup(track: 'QueueItem') -> Tuple[str | None, str | None]:
     similarities = [
       check_similarity_weighted(
         query,
-        f'{result['title']} {result['artist-credit'][0]['name']}',
+        f"{result['title']} {result['artist-credit'][0]['name']}",
         result['score'],
       )
       for result in results

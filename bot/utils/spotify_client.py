@@ -322,7 +322,7 @@ class Spotify:
       results = [
         SpotifyResult(
           name=entity['name'],
-          description=f'{entity['followers']['total']} followers',
+          description=f"{entity['followers']['total']} followers",
           spotify_id=entity['id'],
         )
         for entity in items
@@ -332,9 +332,9 @@ class Spotify:
       results = [
         SpotifyResult(
           name=entity['name'],
-          description=f'{entity['artists'][0]['name']} '
-          f'({entity['total_tracks']} tracks, '
-          f'released {entity['release_date']})',
+          description=f"{entity['artists'][0]['name']} "
+          f"({entity['total_tracks']} tracks, "
+          f"released {entity['release_date']})",
           spotify_id=entity['id'],
         )
         for entity in items
@@ -344,8 +344,8 @@ class Spotify:
       results = [
         SpotifyResult(
           name=entity['name'],
-          description=f'{entity['owner']['display_name']} '
-          f'({entity['tracks']['total']} tracks)',
+          description=f"{entity['owner']['display_name']} "
+          f"({entity['tracks']['total']} tracks)",
           spotify_id=entity['id'],
         )
         for entity in items
@@ -354,9 +354,9 @@ class Spotify:
       # Include artist name and release date in track results
       results = [
         SpotifyResult(
-          name=f'{entity['name']} ' f'({human_readable_time(entity['duration_ms'])})',
-          description=f'{entity['artists'][0]['name']} - '
-          f'{entity['album']['name']} ',
+          name=f"{entity['name']} ' f'({human_readable_time(entity['duration_ms'])})",
+          description=f"{entity['artists'][0]['name']} - "
+          f"{entity['album']['name']} ",
           spotify_id=entity['id'],
         )
         for entity in items
