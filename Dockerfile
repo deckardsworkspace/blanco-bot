@@ -23,11 +23,10 @@ RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without dev
 
 # Compile Tailwind CSS
 RUN echo "Downloading Tailwind CLI for ${TARGETARCH}" && \
-    if [ "${TARGETARCH}" = "arm64" ]; then \
-      curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-arm64 -o ./tailwindcss; \
+    if [ "${TARGETARCH}" = "amd64" ]; then \
+      curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 -o ./tailwindcss; \
     else \
-      echo "Downloading amd64 version of Tailwind CSS"; \
-      curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-amd64 -o ./tailwindcss; \
+      curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-${TARGETARCH} -o ./tailwindcss; \
     fi && \
     chmod +x ./tailwindcss && \
     ./tailwindcss -i ./base.css -o ./main.css --minify
