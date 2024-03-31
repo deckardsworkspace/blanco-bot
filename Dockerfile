@@ -1,22 +1,11 @@
 ARG RELEASE="0.0.0-unknown"
 
 
-FROM node:lts-alpine AS tailwind
-
-# Compile Tailwind CSS
-RUN mkdir -p /opt/build
-COPY tailwind.config.js /opt/build/
-COPY dashboard/ /opt/build/dashboard
-WORKDIR /opt/build
-RUN npm install -D tailwindcss && \
-    npx tailwindcss -i ./dashboard/static/css/base.css \
-    -o ./dashboard/static/css/main.css --minify
-
-
-FROM python:3.12 AS dependencies
+FROM --platform=$BUILDPLATFORM python:3.11 AS dependencies
+ARG TARGETARCH
 
 # Install build-essential for building Python packages
-RUN apt-get update && apt-get install -y build-essential
+RUN apt-get update && apt-get install -y build-essential curl
 
 # Install Poetry
 RUN pip install poetry==1.8.2
@@ -25,21 +14,33 @@ ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_CREATE=1 \
     POETRY_CACHE_DIR=/tmp/poetry_cache
 
-# Install dependencies
+# Copy files
 WORKDIR /app
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml poetry.lock tailwind.config.js dashboard/static/css/base.css ./
+
+# Install dependencies
 RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without dev
-RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry add setuptools
+
+# Compile Tailwind CSS
+RUN echo "Downloading Tailwind CLI for ${TARGETARCH}" && \
+    if [ "${TARGETARCH}" = "arm64" ]; then \
+      curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-arm64 -o ./tailwindcss; \
+    else \
+      echo "Downloading amd64 version of Tailwind CSS"; \
+      curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-amd64 -o ./tailwindcss; \
+    fi && \
+    chmod +x ./tailwindcss && \
+    ./tailwindcss -i ./base.css -o ./main.css --minify
 
 
-FROM python:3.12-slim AS main
+FROM python:3.11-slim AS main
 ARG RELEASE
 LABEL maintainer="Jared Dantis <jareddantis@gmail.com>"
 
 # Copy bot files
 COPY . /opt/app
 COPY --from=dependencies /app/.venv /opt/venv
-COPY --from=tailwind /opt/build/dashboard/static/css/main.css /opt/app/dashboard/static/css/main.css
+COPY --from=dependencies /app/main.css /opt/app/dashboard/static/css/main.css
 WORKDIR /opt/app
 
 # Set release
