@@ -66,6 +66,7 @@ class Config:
   base_url: Optional[str] = None
   discord_oauth_id: Optional[str] = None
   discord_oauth_secret: Optional[str] = None
+  jwt_secret: Optional[str] = None
   lastfm_api_key: Optional[str] = None
   lastfm_shared_secret: Optional[str] = None
   match_ahead: bool = False

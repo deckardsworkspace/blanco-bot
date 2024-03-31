@@ -10,6 +10,9 @@ install:
 dev-frontend: config.yml blanco.db
 	poetry run python -m bot.dev_server
 
+dev-backend: config.yml blanco.db
+	poetry run python -m bot.api.main
+
 dev: config.yml blanco.db
 	poetry run python -m bot.main
 

@@ -12,7 +12,10 @@ from .config import DEBUG_ENABLED, SENTRY_DSN, SENTRY_ENV
 from .constants import RELEASE
 
 # Log line format
-LOG_FMT_STR = '{0}%(asctime)s.%(msecs)03d {1}[%(levelname)s]{2} %(message)s (%(filename)s:%(lineno)d)'  # pylint: disable=line-too-long
+DATE_FMT_STR = '%Y-%m-%d %H:%M:%S'
+LOG_FMT_STR = (
+  '{0}%(asctime)s {1}[%(levelname)s]{2} %(message)s (%(filename)s:%(lineno)d)'
+)
 
 # ANSI terminal colors (for logging)
 ANSI_BLUE = '\x1b[36;20m'
@@ -50,7 +53,7 @@ class ColorFormatter(logging.Formatter):
 
   def format(self, record: logging.LogRecord):
     log_fmt = LOG_FMT_COLOR.get(record.levelno)
-    formatter = logging.Formatter(fmt=log_fmt, datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = logging.Formatter(fmt=log_fmt, datefmt=DATE_FMT_STR)
     return formatter.format(record)
 
 

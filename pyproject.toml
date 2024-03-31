@@ -24,11 +24,15 @@ spotipy = "^2.23.0"
 tenacity = "^8.2.3"
 thefuzz = "^0.22.1"
 validators = "^0.24.0"
+fastapi = "^0.110.0"
+uvicorn = {extras = ["standard"], version = "^0.29.0"}
+pyjwt = "^2.8.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.9.0"
 pre-commit = "^3.7.0"
 ruff = "^0.3.4"
+watchfiles = "^0.21.0"
 
 [tool.ruff]
 indent-width = 2

@@ -19,7 +19,7 @@ from .routes import setup_routes
 
 if TYPE_CHECKING:
   from bot.database import Database
-from bot.models.config import Config
+  from bot.models.config import Config
 
 
 class AccessLogger(AbstractAccessLogger):

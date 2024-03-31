@@ -175,11 +175,11 @@ class BlancoBot(Bot):
     if self._config.enable_server:
       # Try to unload server first if the bot was restarted
       try:
-        self.unload_extension('bot.server')
+        self.unload_extension('bot.api.extension')
       except ExtensionNotLoaded:
         pass
       self._logger.info('Starting web server...')
-      self.load_extension('bot.server')
+      self.load_extension('bot.api.extension')
     elif self._config.base_url is not None:
       self._logger.warning(
         'Server is disabled, but base URL is set to %s',

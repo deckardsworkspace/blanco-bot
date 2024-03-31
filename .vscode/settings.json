@@ -12,5 +12,6 @@
         "--disable=too-many-return-statements",
         "--disable=too-many-branches"
     ],
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff"
 }

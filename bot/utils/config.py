@@ -22,6 +22,7 @@ MATCH_AHEAD = False
 ENABLE_SERVER = False
 SERVER_PORT = 8080
 SERVER_BASE_URL = None
+SERVER_JWT_SECRET = None
 DISCORD_OAUTH_ID = None
 DISCORD_OAUTH_SECRET = None
 LASTFM_API_KEY = None
@@ -76,6 +77,7 @@ if isfile('config.yml'):
         ENABLE_SERVER = config_file['server']['enabled']
         SERVER_PORT = config_file['server'].get('port', 8080)
         SERVER_BASE_URL = config_file['server'].get('base_url', None)
+        SERVER_JWT_SECRET = config_file['server'].get('jwt_secret', None)
         DISCORD_OAUTH_ID = config_file['server'].get('oauth_id', None)
         DISCORD_OAUTH_SECRET = config_file['server'].get('oauth_secret', None)
       if 'lastfm' in config_file:
@@ -118,6 +120,7 @@ if 'BLANCO_ENABLE_SERVER' in environ:
   ENABLE_SERVER = environ['BLANCO_ENABLE_SERVER'].lower() == 'true'
   SERVER_PORT = int(environ.get('BLANCO_SERVER_PORT', SERVER_PORT))
   SERVER_BASE_URL = environ.get('BLANCO_BASE_URL', SERVER_BASE_URL)
+  SERVER_JWT_SECRET = environ.get('BLANCO_JWT_SECRET', SERVER_JWT_SECRET)
   DISCORD_OAUTH_ID = environ.get('BLANCO_OAUTH_ID', DISCORD_OAUTH_ID)
   DISCORD_OAUTH_SECRET = environ.get('BLANCO_OAUTH_SECRET', DISCORD_OAUTH_SECRET)
 
@@ -167,10 +170,13 @@ if SPOTIFY_CLIENT_ID is None:
 if SPOTIFY_CLIENT_SECRET is None:
   raise ValueError('No Spotify client secret specified')
 if ENABLE_SERVER and (
-  DISCORD_OAUTH_ID is None or DISCORD_OAUTH_SECRET is None or SERVER_BASE_URL is None
+  DISCORD_OAUTH_ID is None
+  or DISCORD_OAUTH_SECRET is None
+  or SERVER_BASE_URL is None
+  or SERVER_JWT_SECRET is None
 ):
   raise ValueError(
-    'Discord OAuth ID, secret, and base URL must be specified to enable server'
+    'Discord OAuth ID, secret, base URL, and JWT secret must be specified to enable server'
   )
 
 
@@ -189,6 +195,7 @@ config = Config(
   base_url=SERVER_BASE_URL,
   discord_oauth_id=DISCORD_OAUTH_ID,
   discord_oauth_secret=DISCORD_OAUTH_SECRET,
+  jwt_secret=SERVER_JWT_SECRET,
   lastfm_api_key=LASTFM_API_KEY,
   lastfm_shared_secret=LASTFM_SHARED_SECRET,
   reenqueue_paused=REENQUEUE_PAUSED,
