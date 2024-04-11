@@ -114,7 +114,7 @@ class BumpCog(Cog):
                 )
             )
 
-        self._bot.database.set_bump(itx.guild.id, url, title, author)
+        self._bot.database.add_bump(itx.guild.id, url, title, author)
         return await itx.response.send_message(
             embed=create_success_embed(
                 title='Bump added',

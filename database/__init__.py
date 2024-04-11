@@ -285,7 +285,7 @@ class Database:
         self._cur.execute(f'SELECT scopes FROM spotify_oauth WHERE user_id = {user_id}')
         return self._cur.fetchone()[0].split(',')
 
-    def set_bump(self, guild_id: int, url: str, title: str, author: str):
+    def add_bump(self, guild_id: int, url: str, title: str, author: str):
         """
         Set a bump for a guild.
         """
