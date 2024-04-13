@@ -14,7 +14,8 @@ from dataclass.custom_embed import CustomEmbed
 from utils.constants import UNPAUSE_THRESHOLD
 from utils.embeds import create_error_embed
 from utils.exceptions import (EndOfQueueError, JockeyError, JockeyException,
-                              LavalinkSearchError, SpotifyNoResultsError)
+                              LavalinkSearchError, SpotifyNoResultsError,
+                              BumpError, BumpNotReadyError, BumpNotEnabledError)
 from utils.musicbrainz import annotate_track
 from utils.time import human_readable_time
 from views.now_playing import NowPlayingView
@@ -547,6 +548,18 @@ class Jockey(Player['BlancoBot']):
         # to prevent the user from spamming them.
         await self._edit_np_controls(show_controls=False)
 
+        try:
+            await self.play_bump()
+            return
+        except (JockeyException, SpotifyNoResultsError) as err:
+            self._logger.error('Error parsing bump into track: %s', err)
+        except BumpError as err:
+            self._logger.error('Error playing bump: %s', err)
+        except BumpNotEnabledError:
+            self._logger.debug('Bumps are not enabled in this guild.')
+        except BumpNotReadyError:
+            self._logger.debug('Not ready to play a bump yet.')
+
         # If index is specified, use that instead
         if index != -1:
             try:
@@ -632,3 +645,39 @@ class Jockey(Player['BlancoBot']):
                     self.guild.name,
                     exc
                 )
+
+    async def play_bump(self):
+        """
+        Check and attempt to play a bump if it's been long enough.
+        """
+
+        enabled = self._db.get_bumps_enabled(self.guild.id)
+        if not enabled:
+            raise BumpNotEnabledError
+
+        interval = self._db.get_bump_interval(self.guild.id) * 60
+        last_bump = self._db.get_last_bump(self.guild.id)
+
+        if last_bump == 0:
+            self._db.set_last_bump(self.guild.id)
+            raise BumpNotReadyError
+
+        if int(time()) - last_bump < interval:
+            raise BumpNotReadyError
+
+        bump = self._db.get_random_bump(self.guild.id)
+        if bump is None:
+            raise BumpError('Guild has no bumps.')
+
+        requester = self._bot.user.id if self._bot.user is not None else self.guild.me.id
+
+        try:
+            tracks = await parse_query(self.node, self._bot.spotify, bump.url, requester)
+        except (JockeyException, SpotifyNoResultsError):
+            raise
+
+        if len(tracks) == 0:
+            raise BumpError('Unable to parse bump URL into tracks.')
+
+        await self._play(tracks[0])
+        self._db.set_last_bump(self.guild.id)
