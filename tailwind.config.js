@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./server/templates/*.html"],
+  content: ["./dashboard/templates/*.html"],
   theme: {
     fontFamily: {
       sans: ['IBM Plex Mono', 'sans-serif'],

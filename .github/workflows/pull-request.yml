@@ -5,24 +5,29 @@ on:
     branches:
       - 'main'
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry==1.8.2
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.11
-          cache: 'pip'
+          python-version: 3.12
+          cache: 'poetry'
+          cache-dependency-path: poetry.lock
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip wheel
-          pip install -r requirements.txt
-      - name: Install pylint
-        run: pip install pylint
-      - name: Run pylint
+          poetry env use 3.12
+          poetry install
+      - name: Run precommit hooks
         run: |
-          pylint --rcfile=.pylintrc --fail-under=9.0 $(git ls-files '*.py')
+          poetry run pre-commit run --all-files
   build:
     uses: ./.github/workflows/build.yml
 

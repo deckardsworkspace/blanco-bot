@@ -1,46 +1,54 @@
 ARG RELEASE="0.0.0-unknown"
 
 
-FROM node:lts-alpine AS tailwind
-
-# Compile Tailwind CSS
-RUN mkdir -p /opt/build
-COPY tailwind.config.js /opt/build/
-COPY server/ /opt/build/server
-WORKDIR /opt/build
-RUN npm install -D tailwindcss && \
-    npx tailwindcss -i ./server/static/css/base.css \
-    -o ./server/static/css/main.css --minify
-
-
-FROM python:3.11 AS dependencies
+FROM --platform=$BUILDPLATFORM python:3.11 AS dependencies
+ARG TARGETARCH
 
 # Install build-essential for building Python packages
-RUN apt-get update && apt-get install -y build-essential
+RUN apt-get update && apt-get install -y build-essential curl
 
-# Install pip requirements under virtualenv
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:${PATH}"
-COPY requirements.txt .
-RUN pip install --upgrade pip wheel && pip install -r requirements.txt
+# Install Poetry
+RUN pip install poetry==1.8.2
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+# Copy files
+WORKDIR /app
+COPY pyproject.toml poetry.lock tailwind.config.js dashboard/static/css/base.css ./
+
+# Install dependencies
+RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without dev
+
+# Compile Tailwind CSS
+RUN echo "Downloading Tailwind CLI for ${TARGETARCH}" && \
+    if [ "${TARGETARCH}" = "amd64" ]; then \
+      curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 -o ./tailwindcss; \
+    else \
+      curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-${TARGETARCH} -o ./tailwindcss; \
+    fi && \
+    chmod +x ./tailwindcss && \
+    ./tailwindcss -i ./base.css -o ./main.css --minify
 
 
 FROM python:3.11-slim AS main
 ARG RELEASE
-COPY --from=dependencies /opt/venv /opt/venv
 LABEL maintainer="Jared Dantis <jareddantis@gmail.com>"
 
 # Copy bot files
 COPY . /opt/app
-COPY --from=tailwind /opt/build/server/static/css/main.css /opt/app/server/static/css/main.css
+COPY --from=dependencies /app/.venv /opt/venv
+COPY --from=dependencies /app/main.css /opt/app/dashboard/static/css/main.css
 WORKDIR /opt/app
 
 # Set release
-RUN sed -i "s/0.0.0-unknown/${RELEASE}/" utils/constants.py
+RUN sed -i "s/0.0.0-unknown/${RELEASE}/" bot/utils/constants.py
 
 # Run bot
-ENV PATH="/opt/venv/bin:${PATH}"
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PATH="/opt/venv/bin:${PATH}" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 EXPOSE 8080
-CMD ["python3", "main.py"]
+ENTRYPOINT ["python"]
+CMD ["-m", "bot.main"]
