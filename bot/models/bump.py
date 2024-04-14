@@ -1,6 +1,7 @@
 """
 Dataclass for guild bumps.
 """
+
 from dataclasses import dataclass
 
 

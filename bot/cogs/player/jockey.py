@@ -405,6 +405,42 @@ class Jockey(Player['BlancoBot']):
     # Store pause timestamp
     self._pause_ts = int(time())
 
+  async def play_bump(self):
+    """
+    Check and attempt to play a bump if it's been long enough.
+    """
+
+    enabled = self._db.get_bumps_enabled(self.guild.id)
+    if not enabled:
+      raise BumpNotEnabledError
+
+    interval = self._db.get_bump_interval(self.guild.id) * 60
+    last_bump = self._db.get_last_bump(self.guild.id)
+
+    if last_bump == 0:
+      self._db.set_last_bump(self.guild.id)
+      raise BumpNotReadyError
+
+    if int(time()) - last_bump < interval:
+      raise BumpNotReadyError
+
+    bump = self._db.get_random_bump(self.guild.id)
+    if bump is None:
+      raise BumpError('Guild has no bumps.')
+
+    requester = self._bot.user.id if self._bot.user is not None else self.guild.me.id
+
+    try:
+      tracks = await parse_query(self.node, self._bot.spotify, bump.url, requester)
+    except (JockeyException, SpotifyNoResultsError):
+      raise
+
+    if len(tracks) == 0:
+      raise BumpError('Unable to parse bump URL into tracks.')
+
+    await self._play(tracks[0])
+    self._db.set_last_bump(self.guild.id)
+
   async def play_impl(self, query: str, requester: int) -> str:
     """
     Adds an item to the player queue and begins playback if necessary.
@@ -498,7 +534,7 @@ class Jockey(Player['BlancoBot']):
     await super().set_volume(volume)
     self.volume = volume
 
-  async def skip(self, *, forward: bool = True, index: int = -1, auto: bool = True):
+  async def skip(self, *, forward: bool = True, index: int = -1, auto: bool = True):  # noqa: PLR0912
     """
     Skips the current track and plays the next one in the queue.
 

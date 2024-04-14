@@ -8,16 +8,16 @@ from sqlite3 import OperationalError
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sqlite3 import Connection
+  from sqlite3 import Connection
 
 
 def run(con: 'Connection'):
-    """
-    Run the migration.
-    """
-    cur = con.cursor()
+  """
+  Run the migration.
+  """
+  cur = con.cursor()
 
-    cur.execute('''
+  cur.execute("""
         CREATE TABLE IF NOT EXISTS bumps (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             idx INTEGER NOT NULL,
@@ -28,33 +28,33 @@ def run(con: 'Connection'):
 
             UNIQUE(guild_id, idx)
         )
-    ''')
+    """)
+
+  con.commit()
+
+  try:
+    cur.execute("""
+            ALTER TABLE player_settings ADD COLUMN bump_interval INTEGER NOT NULL DEFAULT 20
+        """)
 
     con.commit()
+  except OperationalError:
+    pass
 
-    try:
-        cur.execute('''
-            ALTER TABLE player_settings ADD COLUMN bump_interval INTEGER NOT NULL DEFAULT 20
-        ''')
-
-        con.commit()
-    except OperationalError:
-        pass
-
-    try:
-        cur.execute('''
+  try:
+    cur.execute("""
             ALTER TABLE player_settings ADD COLUMN last_bump INTEGER NOT NULL DEFAULT 0
-        ''')
+        """)
 
-        con.commit()
-    except OperationalError:
-        pass
+    con.commit()
+  except OperationalError:
+    pass
 
-    try:
-        cur.execute('''
+  try:
+    cur.execute("""
             ALTER TABLE player_settings ADD COLUMN bumps_enabled INTEGER NOT NULL DEFAULT 0
-        ''')
+        """)
 
-        con.commit()
-    except OperationalError:
-        pass
+    con.commit()
+  except OperationalError:
+    pass

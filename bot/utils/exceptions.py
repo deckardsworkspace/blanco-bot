@@ -104,15 +104,18 @@ class VoiceCommandError(BlancoException):
   Raised when a command that requires a voice channel is invoked outside of one.
   """
 
+
 class BumpError(Exception):
   """
   Raised when encountering an error while playing a bump.
   """
 
+
 class BumpNotReadyError(Exception):
   """
   Raised when it hasn't been long enough between bumps.
   """
+
 
 class BumpNotEnabledError(Exception):
   """

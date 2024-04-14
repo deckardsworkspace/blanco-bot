@@ -5,10 +5,10 @@ and therefore all of the commands.
 
 from typing import TYPE_CHECKING
 
+from .bumps import BumpCog
 from .debug import DebugCog
 from .player import PlayerCog
 
-from .bumps import BumpCog
 if TYPE_CHECKING:
   from bot.utils.blanco import BlancoBot
 

@@ -7,7 +7,7 @@ but with support for custom home page and adapted for Interaction responses.
 
 from asyncio import sleep
 from itertools import islice
-from typing import TYPE_CHECKING, Callable, List, Optional, Any, Generator
+from typing import TYPE_CHECKING, Any, Callable, Generator, List, Optional
 
 from nextcord import Embed, Forbidden, HTTPException, Interaction
 
@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 
 
 def list_chunks(data: List[Any]) -> Generator[List[Any], Any, Any]:
-    """
-    Yield 10-element chunks of a list. Used for pagination.
-    """
-    for i in range(0, len(data), 10):
-        yield list(islice(data, i, i + 10))
+  """
+  Yield 10-element chunks of a list. Used for pagination.
+  """
+  for i in range(0, len(data), 10):
+    yield list(islice(data, i, i + 10))
 
 
 class Paginator:
