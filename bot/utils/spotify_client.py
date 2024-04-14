@@ -354,7 +354,7 @@ class Spotify:
       # Include artist name and release date in track results
       results = [
         SpotifyResult(
-          name=f"{entity['name']} ' f'({human_readable_time(entity['duration_ms'])})",
+          name=f"{entity['name']} ({human_readable_time(entity['duration_ms'])})",
           description=f"{entity['artists'][0]['name']} - "
           f"{entity['album']['name']} ",
           spotify_id=entity['id'],
