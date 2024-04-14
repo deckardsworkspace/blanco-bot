@@ -16,7 +16,7 @@ from bot.utils.config import config as bot_config
 from bot.utils.logger import DATE_FMT_STR, LOG_FMT_COLOR, create_logger
 
 from .routes.account import account_router
-from .routes.oauth import oauth_router
+from .routes.callback import callback_router
 from .utils.session import SessionManager
 
 if TYPE_CHECKING:
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(account_router)
-app.include_router(oauth_router)
+app.include_router(callback_router)
 
 
 @app.get('/')

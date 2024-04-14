@@ -16,7 +16,7 @@ if TYPE_CHECKING:
   from bot.database import Database
 
 
-async def discord_oauth(
+async def discord_callback(
   request: Request,
   response: Response,
   code: str,
@@ -83,7 +83,7 @@ def _exchange_code_for_token(
       'client_secret': client_secret,
       'grant_type': 'authorization_code',
       'code': code,
-      'redirect_uri': f'{base_url}/oauth/discord',
+      'redirect_uri': f'{base_url}/callback/discord',
     },
     headers={
       'Content-Type': 'application/x-www-form-urlencoded',

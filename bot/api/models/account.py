@@ -17,3 +17,10 @@ class AccountResponse(BaseModel):
   lastfm_username: Optional[str] = Field(
     default=None, description="The user's Last.fm username, if logged in."
   )
+
+
+class UnlinkRequest(BaseModel):
+  service: str = Field(
+    description='The service to unlink from the user account.',
+    examples=['spotify', 'lastfm'],
+  )

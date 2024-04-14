@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional
 from fastapi import Depends
 
 from bot.api.depends.database import database_dependency
-from bot.api.depends.session import session_dependency
+from bot.api.depends.user import user_dependency
 from bot.api.models.account import AccountResponse
 
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 async def get_logged_in_user(
-  user: 'OAuth' = Depends(session_dependency),
+  user: 'OAuth' = Depends(user_dependency),
   db: 'Database' = Depends(database_dependency),
 ) -> AccountResponse:
   spotify_username = None
